@@ -370,11 +370,16 @@ def autosuggest():
 # ============================================
 # VECTOR SEARCH ENDPOINT
 # ============================================
+# ============================================
+# IMPROVED AI VECTOR SEARCH ENDPOINT
+# Replace the /api/ai/search endpoint in app.py
+# ============================================
+
 @app.route("/api/ai/search", methods=["POST"])
 def ai_vector_search():
     """
-    Vector-based semantic search using FAISS
-    Body: {query: "how to renew passport?", top_k: 5, language: "en"}
+    IMPROVED: Vector-based semantic search with better relevance
+    Body: {query: "how to apply for examinations?", top_k: 5, language: "en"}
     """
     payload = request.json or {}
     query = payload.get("query", "").strip()
@@ -387,13 +392,32 @@ def ai_vector_search():
     try:
         # Load model and generate embedding
         model = get_embedding_model()
-        q_embedding = model.encode([query], convert_to_numpy=True)
+        
+        # Preprocess query: expand with common synonyms
+        query_expanded = query.lower()
+        
+        # Add common variations
+        if "exam" in query_expanded:
+            query_expanded += " examination test assessment"
+        if "apply" in query_expanded:
+            query_expanded += " application register registration"
+        if "renew" in query_expanded:
+            query_expanded += " renewal update extend"
+        if "certificate" in query_expanded:
+            query_expanded += " document certification proof"
+        
+        print(f"🔍 Search query: '{query}' → Expanded: '{query_expanded}'")
+        
+        # Generate embedding
+        q_embedding = model.encode([query_expanded], convert_to_numpy=True)
+        
+        # Normalize for cosine similarity
         q_embedding = q_embedding / (np.linalg.norm(q_embedding, axis=1, keepdims=True) + 1e-10)
         
         # Load metadata
         if not META_PATH.exists():
             return jsonify({
-                "error": "Search index not built. Please run: python build_ai_index.py",
+                "error": "Search index not built. Please run: python rebuild_search_index.py",
                 "query": query,
                 "results": []
             }), 500
@@ -406,57 +430,136 @@ def ai_vector_search():
         # Search with FAISS (preferred)
         if FAISS_AVAILABLE and INDEX_PATH.exists():
             index = faiss.read_index(str(INDEX_PATH))
-            distances, indices = index.search(q_embedding.astype(np.float32), top_k)
             
+            # Search for more results initially, then filter
+            search_k = min(top_k * 3, len(metadata))
+            distances, indices = index.search(q_embedding.astype(np.float32), search_k)
+            
+            print(f"📊 FAISS returned {len(indices[0])} results")
+            
+            # Filter and format results
             for dist, idx in zip(distances[0], indices[0]):
                 if idx < len(metadata):
-                    doc = metadata[idx].copy()
-                    doc['score'] = float(dist)
+                    doc = metadata[idx]
+                    
+                    # Calculate relevance score (0-1)
+                    # Higher is better for Inner Product
+                    score = float(dist)
+                    
+                    # Skip very low relevance results
+                    if score < 0.3:
+                        continue
                     
                     # Format for language
-                    doc['question_text'] = doc.get('question', {}).get(language, 
-                                                    doc.get('question', {}).get('en', ''))
-                    doc['answer_text'] = doc.get('answer', {}).get(language,
-                                                  doc.get('answer', {}).get('en', ''))
+                    question_text = doc.get('question', {}).get(language, 
+                                            doc.get('question', {}).get('en', ''))
+                    answer_text = doc.get('answer', {}).get(language,
+                                          doc.get('answer', {}).get('en', ''))
                     
-                    results.append(doc)
+                    # Fallback to question_text/answer_text fields if question/answer objects don't exist
+                    if not question_text:
+                        question_text = doc.get('question_text', 'N/A')
+                    if not answer_text:
+                        answer_text = doc.get('answer_text', 'N/A')
+                    
+                    result = {
+                        "doc_id": doc.get("doc_id"),
+                        "service_id": doc.get("service_id"),
+                        "service_name": doc.get("service_name", "Unknown Service"),
+                        "subservice_name": doc.get("subservice_name", ""),
+                        "category": doc.get("category", ""),
+                        "question_text": question_text,
+                        "answer_text": answer_text,
+                        "question": doc.get("question", {}),
+                        "answer": doc.get("answer", {}),
+                        "metadata": doc.get("metadata", {}),
+                        "score": score,
+                        "relevance": "high" if score > 0.7 else "medium" if score > 0.5 else "low"
+                    }
+                    
+                    results.append(result)
+                    
+                    if len(results) >= top_k:
+                        break
+            
+            print(f"✅ Returning {len(results)} relevant results (score > 0.3)")
         
         # Fallback: linear scan
         elif EMBED_PATH.exists():
             embeddings = np.load(EMBED_PATH)
             similarities = (embeddings @ q_embedding[0]).tolist()
-            top_indices = np.argsort(similarities)[::-1][:top_k]
+            top_indices = np.argsort(similarities)[::-1][:top_k * 2]
             
             for idx in top_indices:
-                doc = metadata[idx].copy()
-                doc['score'] = float(similarities[idx])
-                doc['question_text'] = doc.get('question', {}).get(language, 
-                                                doc.get('question', {}).get('en', ''))
-                doc['answer_text'] = doc.get('answer', {}).get(language,
-                                              doc.get('answer', {}).get('en', ''))
-                results.append(doc)
+                if similarities[idx] < 0.3:
+                    continue
+                    
+                doc = metadata[idx]
+                
+                question_text = doc.get('question', {}).get(language, 
+                                        doc.get('question', {}).get('en', ''))
+                answer_text = doc.get('answer', {}).get(language,
+                                      doc.get('answer', {}).get('en', ''))
+                
+                if not question_text:
+                    question_text = doc.get('question_text', 'N/A')
+                if not answer_text:
+                    answer_text = doc.get('answer_text', 'N/A')
+                
+                results.append({
+                    "doc_id": doc.get("doc_id"),
+                    "service_id": doc.get("service_id"),
+                    "service_name": doc.get("service_name", "Unknown"),
+                    "question_text": question_text,
+                    "answer_text": answer_text,
+                    "question": doc.get("question", {}),
+                    "answer": doc.get("answer", {}),
+                    "metadata": doc.get("metadata", {}),
+                    "score": float(similarities[idx]),
+                    "relevance": "high" if similarities[idx] > 0.7 else "medium"
+                })
+                
+                if len(results) >= top_k:
+                    break
         
         else:
             return jsonify({
-                "error": "Neither FAISS nor embeddings found. Run build_ai_index.py",
+                "error": "Neither FAISS nor embeddings found. Run: python rebuild_search_index.py",
                 "query": query,
                 "results": []
             }), 500
+        
+        # Log search for analytics
+        try:
+            eng_col.insert_one({
+                "user_id": session.get("user_id"),
+                "query": query,
+                "results_count": len(results),
+                "timestamp": datetime.utcnow(),
+                "search_type": "vector"
+            })
+        except:
+            pass  # Don't fail search if logging fails
         
         return jsonify({
             "query": query,
             "results": results,
             "count": len(results),
             "language": language,
-            "method": "faiss" if FAISS_AVAILABLE else "linear"
+            "method": "faiss" if FAISS_AVAILABLE else "linear",
+            "status": "success"
         })
     
     except Exception as e:
-        print(f"Vector search error: {e}")
+        print(f"❌ Vector search error: {e}")
+        import traceback
+        traceback.print_exc()
+        
         return jsonify({
             "error": str(e),
             "query": query,
-            "results": []
+            "results": [],
+            "status": "error"
         }), 500
 
 # ============================================

@@ -5,7 +5,7 @@ let categories = [];
 let currentServiceName = "";
 let currentSub = null;
 let profile_id = null;
-
+let allOfficers = [];
 // ============================================
 // INITIALIZATION
 // ============================================
@@ -63,7 +63,16 @@ async function loadServices() {
         console.error("Error loading services:", error);
     }
 }
-
+// Load officers on page load
+async function loadOfficers() {
+    try {
+        const res = await fetch("/api/officers");
+        allOfficers = await res.json();
+        console.log(`✅ Loaded ${allOfficers.length} officers`);
+    } catch (error) {
+        console.error("Error loading officers:", error);
+    }
+}
 async function loadAds() {
     try {
         const res = await fetch("/api/ads");
@@ -123,7 +132,223 @@ async function loadMinistriesInCategory(cat) {
         });
     }
 }
+// Show officers for a specific ministry
+function showOfficersForMinistry(ministryId) {
+    const officers = allOfficers.filter(o => o.ministry_id === ministryId);
+    
+    if (officers.length === 0) {
+        return ''; // No officers for this ministry
+    }
+    
+    let html = `
+        <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-top:20px; border-left:4px solid #0b3b8c;">
+            <h4 style="margin:0 0 15px 0; color:#0b3b8c;">
+                👤 Contact Officers
+            </h4>
+    `;
+    
+    officers.forEach(officer => {
+        html += `
+            <div style="background:white; padding:12px; margin:10px 0; border-radius:6px; border:1px solid #e5e7eb;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    ${officer.photo ? 
+                        `<img src="${officer.photo}" alt="${officer.name}" style="width:50px; height:50px; border-radius:50%; object-fit:cover;">` :
+                        `<div style="width:50px; height:50px; border-radius:50%; background:#0b3b8c; color:white; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:bold;">
+                            ${officer.name.charAt(0)}
+                        </div>`
+                    }
+                    <div style="flex:1;">
+                        <div style="font-weight:600; color:#333; margin-bottom:2px;">
+                            ${officer.name}
+                        </div>
+                        <div style="font-size:12px; color:#666; margin-bottom:4px;">
+                            ${officer.role}
+                        </div>
+                        <div style="font-size:12px; color:#0b3b8c;">
+                            📧 <a href="mailto:${officer.contact.email}" style="color:#0b3b8c; text-decoration:none;">
+                                ${officer.contact.email}
+                            </a>
+                            ${officer.contact.phone ? 
+                                `<span style="margin-left:10px;">📞 ${officer.contact.phone}</span>` : 
+                                ''
+                            }
+                        </div>
+                    </div>
+                    <button onclick="contactOfficer('${officer.id}')" style="padding:6px 12px; background:#0b3b8c; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px; white-space:nowrap;">
+                        Contact
+                    </button>
+                </div>
+                ${officer.bio ? 
+                    `<p style="margin:8px 0 0 62px; font-size:12px; color:#666; font-style:italic;">${officer.bio}</p>` : 
+                    ''
+                }
+            </div>
+        `;
+    });
+    
+    html += `</div>`;
+    return html;
+}
 
+// Contact officer (opens email or shows modal)
+function contactOfficer(officerId) {
+    const officer = allOfficers.find(o => o.id === officerId);
+    if (!officer) return;
+    
+    // Log engagement
+    logEngagement(`Contact Officer: ${officer.name}`, officer.ministry_id);
+    
+    // Open email client
+    const subject = encodeURIComponent(`Inquiry regarding ${officer.role}`);
+    const body = encodeURIComponent(`Dear ${officer.name},\n\nI would like to inquire about:\n\n[Your question here]\n\nThank you.`);
+    
+    window.location.href = `mailto:${officer.contact.email}?subject=${subject}&body=${body}`;
+}
+
+// Show all officers directory
+function showOfficersDirectory() {
+    if (allOfficers.length === 0) {
+        return `
+            <div style="padding:40px; text-align:center; color:#666;">
+                <p>No officers information available</p>
+            </div>
+        `;
+    }
+    
+    // Group officers by ministry
+    const officersByMinistry = {};
+    allOfficers.forEach(officer => {
+        if (!officersByMinistry[officer.ministry_id]) {
+            officersByMinistry[officer.ministry_id] = [];
+        }
+        officersByMinistry[officer.ministry_id].push(officer);
+    });
+    
+    let html = `
+        <div style="padding:20px;">
+            <h2 style="color:#0b3b8c; margin-bottom:20px;">
+                👥 Government Officers Directory
+            </h2>
+    `;
+    
+    // Get ministry names from services
+    services.forEach(ministry => {
+        const ministryOfficers = officersByMinistry[ministry.id];
+        if (!ministryOfficers) return;
+        
+        html += `
+            <div style="background:white; padding:20px; margin-bottom:20px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+                <h3 style="color:#0b3b8c; margin-bottom:15px; border-bottom:2px solid #e5e7eb; padding-bottom:10px;">
+                    ${ministry.name[lang] || ministry.name.en}
+                </h3>
+                <div style="display:grid; gap:15px;">
+        `;
+        
+        ministryOfficers.forEach(officer => {
+            html += `
+                <div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #e5e7eb;">
+                    <div style="display:flex; align-items:start; gap:15px;">
+                        ${officer.photo ? 
+                            `<img src="${officer.photo}" alt="${officer.name}" style="width:60px; height:60px; border-radius:50%; object-fit:cover;">` :
+                            `<div style="width:60px; height:60px; border-radius:50%; background:#0b3b8c; color:white; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:bold; flex-shrink:0;">
+                                ${officer.name.charAt(0)}
+                            </div>`
+                        }
+                        <div style="flex:1;">
+                            <div style="font-weight:600; font-size:16px; color:#333; margin-bottom:4px;">
+                                ${officer.name}
+                            </div>
+                            <div style="font-size:14px; color:#666; margin-bottom:8px;">
+                                ${officer.role}
+                            </div>
+                            ${officer.bio ? 
+                                `<p style="font-size:13px; color:#666; margin-bottom:8px; line-height:1.4;">${officer.bio}</p>` : 
+                                ''
+                            }
+                            <div style="font-size:13px; margin-top:8px;">
+                                <div style="margin-bottom:4px;">
+                                    📧 <a href="mailto:${officer.contact.email}" style="color:#0b3b8c; text-decoration:none;">
+                                        ${officer.contact.email}
+                                    </a>
+                                </div>
+                                ${officer.contact.phone ? 
+                                    `<div>📞 <span style="color:#333;">${officer.contact.phone}</span></div>` : 
+                                    ''
+                                }
+                            </div>
+                        </div>
+                        <button onclick="contactOfficer('${officer.id}')" style="padding:8px 16px; background:#0b3b8c; color:white; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:600; white-space:nowrap;">
+                            📧 Contact
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `</div>`;
+    return html;
+}
+
+// Open officers directory in modal or new section
+function openOfficersDirectory() {
+    const modal = document.getElementById("officers-modal");
+    if (!modal) {
+        // Create modal if it doesn't exist
+        const modalHTML = `
+            <div id="officers-modal" class="modal" style="display:none;">
+                <div class="modal-content" style="max-width:900px; max-height:80vh; overflow-y:auto;">
+                    <span class="modal-close" onclick="closeOfficersModal()">&times;</span>
+                    <div id="officers-modal-content"></div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+    }
+    
+    document.getElementById("officers-modal-content").innerHTML = showOfficersDirectory();
+    document.getElementById("officers-modal").style.display = "flex";
+    
+    // Log engagement
+    logEngagement("Viewed Officers Directory", "System");
+}
+
+function closeOfficersModal() {
+    document.getElementById("officers-modal").style.display = "none";
+}
+
+// ============================================
+// INTEGRATION: Update existing functions
+// ============================================
+
+// Modify loadQuestions() to show officers
+const originalLoadQuestions = loadQuestions;
+loadQuestions = function(service, sub) {
+    // Call original function
+    originalLoadQuestions(service, sub);
+    
+    // Add officers section after questions
+    const officersHTML = showOfficersForMinistry(service.id);
+    if (officersHTML) {
+        // Insert after question list
+        const qList = document.getElementById("question-list");
+        qList.insertAdjacentHTML('afterend', officersHTML);
+    }
+};
+
+// Modify window.onload to load officers
+const originalOnload = window.onload;
+window.onload = async function() {
+    if (originalOnload) await originalOnload();
+    await loadOfficers();
+};
+
+console.log("✅ Officers feature loaded");
 // ============================================
 // SERVICE NAVIGATION
 // ============================================

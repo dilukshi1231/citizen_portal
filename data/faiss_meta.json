@@ -1,9 +1,9 @@
 [
   {
-    "doc_id": "ministry_it::it_cert::How to apply for an IT certificate?",
+    "doc_id": "ministry_it::it_cert::1",
     "service_id": "ministry_it",
     "service_name": "Ministry of IT & Digital Affairs",
-    "category": "uncategorized",
+    "category": "cat_it",
     "subservice_id": "it_cert",
     "subservice_name": "IT Certificates",
     "question_text": "How to apply for an IT certificate?",
@@ -18,7 +18,12 @@
       "si": "ඔන්ලයින් ෆෝරමය පුරවා NIC උඩුගත කරන්න.",
       "ta": "ஆன்லைனில் படிவத்தை நிரப்பி NIC ஐ பதிவேற்று."
     },
-    "content": "Ministry of IT & Digital Affairs | IT Certificates | Q: How to apply for an IT certificate? | A: Fill online form and upload NIC.",
+    "content": "Ministry: Ministry of IT & Digital Affairs\n            Service: IT Certificates\n            Question: How to apply for an IT certificate?\n            Answer: Fill online form and upload NIC.\n            Keywords: application registration process certificate document proof procedure steps guide instructions\n            Category: cat_it",
+    "keywords": [
+      "application registration process",
+      "certificate document proof",
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [
         "/static/forms/it_cert_form.pdf"
@@ -28,10 +33,10 @@
     }
   },
   {
-    "doc_id": "ministry_education::schools::How to register a school?",
+    "doc_id": "ministry_education::schools::2",
     "service_id": "ministry_education",
     "service_name": "Ministry of Education",
-    "category": "uncategorized",
+    "category": "cat_education",
     "subservice_id": "schools",
     "subservice_name": "Schools",
     "question_text": "How to register a school?",
@@ -46,7 +51,11 @@
       "si": "ලියාපදිංචි ෆෝරමය පුරවා ලේඛන ඉදිරිපත් කරන්න.",
       "ta": "பதிவு படிவத்தை பூர்த்தி செய்து ஆவணங்களை சமர்ப்பிக்கவும்."
     },
-    "content": "Ministry of Education | Schools | Q: How to register a school? | A: Complete registration form and submit documents.",
+    "content": "Ministry: Ministry of Education\n            Service: Schools\n            Question: How to register a school?\n            Answer: Complete registration form and submit documents.\n            Keywords: application registration process procedure steps guide instructions\n            Category: cat_education",
+    "keywords": [
+      "application registration process",
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [
         "/static/forms/school_reg.pdf"
@@ -56,10 +65,10 @@
     }
   },
   {
-    "doc_id": "ministry_education::exams::How to apply for national exam?",
+    "doc_id": "ministry_education::exams::3",
     "service_id": "ministry_education",
     "service_name": "Ministry of Education",
-    "category": "uncategorized",
+    "category": "cat_education",
     "subservice_id": "exams",
     "subservice_name": "Exams & Results",
     "question_text": "How to apply for national exam?",
@@ -74,7 +83,12 @@
       "si": "විභාග පෝර්ටල් හරහා ලියාපදිංචි වන්න.",
       "ta": "பரீட்சை போர்ட்டலின் மூலம் பதிவு செய்யவும்."
     },
-    "content": "Ministry of Education | Exams & Results | Q: How to apply for national exam? | A: Register via examination portal.",
+    "content": "Ministry: Ministry of Education\n            Service: Exams & Results\n            Question: How to apply for national exam?\n            Answer: Register via examination portal.\n            Keywords: application registration process examination test assessment procedure steps guide instructions\n            Category: cat_education",
+    "keywords": [
+      "application registration process",
+      "examination test assessment",
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -82,10 +96,10 @@
     }
   },
   {
-    "doc_id": "ministry_health::general::What health services are available?",
+    "doc_id": "ministry_health::general::4",
     "service_id": "ministry_health",
     "service_name": "Ministry of Health",
-    "category": "uncategorized",
+    "category": "cat_health",
     "subservice_id": "general",
     "subservice_name": "General Health Services",
     "question_text": "What health services are available?",
@@ -100,7 +114,8 @@
       "si": "ලබා ගත හැකි සේවා සඳහා සෞඛ්‍ය සේවා පෝර්ටලය පරීක්ෂා කරන්න.",
       "ta": "கிடைக்கும் சேவைகளுக்கு சுகாதார சேவைகள் போர்ட்டலைப் பார்க்கவும்."
     },
-    "content": "Ministry of Health | General Health Services | Q: What health services are available? | A: Check the health services portal for available services.",
+    "content": "Ministry: Ministry of Health\n            Service: General Health Services\n            Question: What health services are available?\n            Answer: Check the health services portal for available services.\n            Keywords: \n            Category: cat_health",
+    "keywords": [],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -108,10 +123,10 @@
     }
   },
   {
-    "doc_id": "ministry_transport::general::How to apply for driving license?",
+    "doc_id": "ministry_transport::general::5",
     "service_id": "ministry_transport",
     "service_name": "Ministry of Transport",
-    "category": "uncategorized",
+    "category": "cat_transport",
     "subservice_id": "general",
     "subservice_name": "Transport Services",
     "question_text": "How to apply for driving license?",
@@ -126,7 +141,11 @@
       "si": "අවශ්‍ය ලේඛන සමග DMV කාර්යාලයට පිවිසෙන්න.",
       "ta": "தேவையான ஆவணங்களுடன் DMV அலுவலகத்தை பார்வையிடவும்."
     },
-    "content": "Ministry of Transport | Transport Services | Q: How to apply for driving license? | A: Visit the DMV office with required documents.",
+    "content": "Ministry: Ministry of Transport\n            Service: Transport Services\n            Question: How to apply for driving license?\n            Answer: Visit the DMV office with required documents.\n            Keywords: application registration process procedure steps guide instructions\n            Category: cat_transport",
+    "keywords": [
+      "application registration process",
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -134,10 +153,10 @@
     }
   },
   {
-    "doc_id": "ministry_imm::general::How to renew passport?",
+    "doc_id": "ministry_imm::general::6",
     "service_id": "ministry_imm",
     "service_name": "Ministry of Immigration",
-    "category": "uncategorized",
+    "category": "cat_immigration",
     "subservice_id": "general",
     "subservice_name": "Immigration Services",
     "question_text": "How to renew passport?",
@@ -152,7 +171,11 @@
       "si": "වත්මන් විදේශ ගමන් බලපත්‍රය සහ ජාතික හැඳුනුම්පත සමඟ ආගමන දෙපාර්තමේන්තුවට යන්න.",
       "ta": "தற்போதைய கடவுச்சீட்டு மற்றும் NIC உடன் குடிவரவு நிலையத்திற்குச் செல்லவும்."
     },
-    "content": "Ministry of Immigration | Immigration Services | Q: How to renew passport? | A: Visit immigration with current passport and NIC.",
+    "content": "Ministry: Ministry of Immigration\n            Service: Immigration Services\n            Question: How to renew passport?\n            Answer: Visit immigration with current passport and NIC.\n            Keywords: renewal update procedure steps guide instructions\n            Category: cat_immigration",
+    "keywords": [
+      "renewal update",
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -160,10 +183,10 @@
     }
   },
   {
-    "doc_id": "ministry_foreign::general::How to get document attestation?",
+    "doc_id": "ministry_foreign::general::7",
     "service_id": "ministry_foreign",
     "service_name": "Ministry of Foreign Affairs",
-    "category": "uncategorized",
+    "category": "cat_immigration",
     "subservice_id": "general",
     "subservice_name": "Consular Services",
     "question_text": "How to get document attestation?",
@@ -178,7 +201,12 @@
       "si": "සත්‍යාපනය සඳහා ලේඛන විදේශ අමාත්‍යාංශයට ඉදිරිපත් කරන්න.",
       "ta": "சான்றிதழுக்காக ஆவணங்களை வெளியுறவு அமைச்சகத்தில் சமர்ப்பிக்கவும்."
     },
-    "content": "Ministry of Foreign Affairs | Consular Services | Q: How to get document attestation? | A: Submit documents to foreign ministry for attestation.",
+    "content": "Ministry: Ministry of Foreign Affairs\n            Service: Consular Services\n            Question: How to get document attestation?\n            Answer: Submit documents to foreign ministry for attestation.\n            Keywords: examination test assessment certificate document proof procedure steps guide instructions\n            Category: cat_immigration",
+    "keywords": [
+      "examination test assessment",
+      "certificate document proof",
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -186,10 +214,10 @@
     }
   },
   {
-    "doc_id": "ministry_finance::general::How to file tax returns?",
+    "doc_id": "ministry_finance::general::8",
     "service_id": "ministry_finance",
     "service_name": "Ministry of Finance",
-    "category": "uncategorized",
+    "category": "cat_public",
     "subservice_id": "general",
     "subservice_name": "Financial Services",
     "question_text": "How to file tax returns?",
@@ -204,7 +232,10 @@
       "si": "ප්‍රකාශන ගොනු කිරීමට ඔන්ලයින් බදු පෝර්ටලය භාවිතා කරන්න.",
       "ta": "வருமானத்தை தாக்கல் செய்ய ஆன்லைன் வரி நுழைவாயிலைப் பயன்படுத்தவும்."
     },
-    "content": "Ministry of Finance | Financial Services | Q: How to file tax returns? | A: Use online tax portal to file returns.",
+    "content": "Ministry: Ministry of Finance\n            Service: Financial Services\n            Question: How to file tax returns?\n            Answer: Use online tax portal to file returns.\n            Keywords: procedure steps guide instructions\n            Category: cat_public",
+    "keywords": [
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -212,10 +243,10 @@
     }
   },
   {
-    "doc_id": "ministry_labour::general::How to register for job seeking?",
+    "doc_id": "ministry_labour::general::9",
     "service_id": "ministry_labour",
     "service_name": "Ministry of Labour",
-    "category": "uncategorized",
+    "category": "cat_public",
     "subservice_id": "general",
     "subservice_name": "Employment Services",
     "question_text": "How to register for job seeking?",
@@ -230,7 +261,11 @@
       "si": "ජාතික රැකියා පෝර්ටලයේ ලියාපදිංචි වන්න.",
       "ta": "தேசிய வேலை வாய்ப்பு நுழைவாயிலில் பதிவு செய்யவும்."
     },
-    "content": "Ministry of Labour | Employment Services | Q: How to register for job seeking? | A: Register on national job portal.",
+    "content": "Ministry: Ministry of Labour\n            Service: Employment Services\n            Question: How to register for job seeking?\n            Answer: Register on national job portal.\n            Keywords: application registration process procedure steps guide instructions\n            Category: cat_public",
+    "keywords": [
+      "application registration process",
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -238,10 +273,10 @@
     }
   },
   {
-    "doc_id": "ministry_public::general::How to apply for government jobs?",
+    "doc_id": "ministry_public::general::10",
     "service_id": "ministry_public",
     "service_name": "Ministry of Public Administration",
-    "category": "uncategorized",
+    "category": "cat_public",
     "subservice_id": "general",
     "subservice_name": "Public Services",
     "question_text": "How to apply for government jobs?",
@@ -256,7 +291,11 @@
       "si": "පුරප්පාඩු සඳහා රජයේ රැකියා පෝර්ටලය පරීක්ෂා කරන්න.",
       "ta": "காலியிடங்களுக்கு அரசாங்க வேலை வாய்ப்பு போர்ட்டலைச் சரிபார்க்கவும்."
     },
-    "content": "Ministry of Public Administration | Public Services | Q: How to apply for government jobs? | A: Check government job portal for vacancies.",
+    "content": "Ministry: Ministry of Public Administration\n            Service: Public Services\n            Question: How to apply for government jobs?\n            Answer: Check government job portal for vacancies.\n            Keywords: application registration process procedure steps guide instructions\n            Category: cat_public",
+    "keywords": [
+      "application registration process",
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -264,10 +303,10 @@
     }
   },
   {
-    "doc_id": "ministry_justice::general::How to get legal aid?",
+    "doc_id": "ministry_justice::general::11",
     "service_id": "ministry_justice",
     "service_name": "Ministry of Justice",
-    "category": "uncategorized",
+    "category": "cat_public",
     "subservice_id": "general",
     "subservice_name": "Legal Services",
     "question_text": "How to get legal aid?",
@@ -282,7 +321,10 @@
       "si": "නීති ආධාර කොමිෂන් සභාව හරහා අයදුම් කරන්න.",
       "ta": "சட்ட உதவி ஆணையம் மூலம் விண்ணப்பிக்கவும்."
     },
-    "content": "Ministry of Justice | Legal Services | Q: How to get legal aid? | A: Apply through legal aid commission.",
+    "content": "Ministry: Ministry of Justice\n            Service: Legal Services\n            Question: How to get legal aid?\n            Answer: Apply through legal aid commission.\n            Keywords: procedure steps guide instructions\n            Category: cat_public",
+    "keywords": [
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -290,10 +332,10 @@
     }
   },
   {
-    "doc_id": "ministry_housing::general::How to apply for housing scheme?",
+    "doc_id": "ministry_housing::general::12",
     "service_id": "ministry_housing",
     "service_name": "Ministry of Housing",
-    "category": "uncategorized",
+    "category": "cat_public",
     "subservice_id": "general",
     "subservice_name": "Housing Services",
     "question_text": "How to apply for housing scheme?",
@@ -308,7 +350,11 @@
       "si": "නිවාස පෝර්ටලය හරහා අයදුම්පත ඉදිරිපත් කරන්න.",
       "ta": "வீட்டு நுழைவாயில் மூலம் விண்ணப்பத்தை சமர்ப்பிக்கவும்."
     },
-    "content": "Ministry of Housing | Housing Services | Q: How to apply for housing scheme? | A: Submit application through housing portal.",
+    "content": "Ministry: Ministry of Housing\n            Service: Housing Services\n            Question: How to apply for housing scheme?\n            Answer: Submit application through housing portal.\n            Keywords: application registration process procedure steps guide instructions\n            Category: cat_public",
+    "keywords": [
+      "application registration process",
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -316,10 +362,10 @@
     }
   },
   {
-    "doc_id": "ministry_agri::general::How to get farming subsidies?",
+    "doc_id": "ministry_agri::general::13",
     "service_id": "ministry_agri",
     "service_name": "Ministry of Agriculture",
-    "category": "uncategorized",
+    "category": "cat_public",
     "subservice_id": "general",
     "subservice_name": "Agricultural Services",
     "question_text": "How to get farming subsidies?",
@@ -334,7 +380,10 @@
       "si": "ගොවිජන සේවා කාර්යාලය හරහා අයදුම් කරන්න.",
       "ta": "விவசாய சேவைகள் அலுவலகம் மூலம் விண்ணப்பிக்கவும்."
     },
-    "content": "Ministry of Agriculture | Agricultural Services | Q: How to get farming subsidies? | A: Apply through agrarian services office.",
+    "content": "Ministry: Ministry of Agriculture\n            Service: Agricultural Services\n            Question: How to get farming subsidies?\n            Answer: Apply through agrarian services office.\n            Keywords: procedure steps guide instructions\n            Category: cat_public",
+    "keywords": [
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -342,10 +391,10 @@
     }
   },
   {
-    "doc_id": "ministry_youth::general::What youth programs are available?",
+    "doc_id": "ministry_youth::general::14",
     "service_id": "ministry_youth",
     "service_name": "Ministry of Youth Affairs",
-    "category": "uncategorized",
+    "category": "cat_public",
     "subservice_id": "general",
     "subservice_name": "Youth Services",
     "question_text": "What youth programs are available?",
@@ -360,7 +409,8 @@
       "si": "වැඩසටහන් සඳහා තරුණ සේවා පෝර්ටලය පරීක්ෂා කරන්න.",
       "ta": "திட்டங்களுக்கு இளைஞர் சேவைகள் போர்ட்டலைப் பார்க்கவும்."
     },
-    "content": "Ministry of Youth Affairs | Youth Services | Q: What youth programs are available? | A: Check youth services portal for programs.",
+    "content": "Ministry: Ministry of Youth Affairs\n            Service: Youth Services\n            Question: What youth programs are available?\n            Answer: Check youth services portal for programs.\n            Keywords: \n            Category: cat_public",
+    "keywords": [],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -368,10 +418,10 @@
     }
   },
   {
-    "doc_id": "ministry_defence::general::How to join armed forces?",
+    "doc_id": "ministry_defence::general::15",
     "service_id": "ministry_defence",
     "service_name": "Ministry of Defence",
-    "category": "uncategorized",
+    "category": "cat_public",
     "subservice_id": "general",
     "subservice_name": "Defence Services",
     "question_text": "How to join armed forces?",
@@ -386,7 +436,10 @@
       "si": "නිල බඳවා ගැනීම් පෝර්ටලය හරහා අයදුම් කරන්න.",
       "ta": "அதிகாரப்பூர்வ ஆட்சேர்ப்பு போர்ட்டல் மூலம் விண்ணப்பிக்கவும்."
     },
-    "content": "Ministry of Defence | Defence Services | Q: How to join armed forces? | A: Apply through official recruitment portal.",
+    "content": "Ministry: Ministry of Defence\n            Service: Defence Services\n            Question: How to join armed forces?\n            Answer: Apply through official recruitment portal.\n            Keywords: procedure steps guide instructions\n            Category: cat_public",
+    "keywords": [
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -394,10 +447,10 @@
     }
   },
   {
-    "doc_id": "ministry_tourism::general::How to register tourism business?",
+    "doc_id": "ministry_tourism::general::16",
     "service_id": "ministry_tourism",
     "service_name": "Ministry of Tourism",
-    "category": "uncategorized",
+    "category": "cat_public",
     "subservice_id": "general",
     "subservice_name": "Tourism Services",
     "question_text": "How to register tourism business?",
@@ -412,7 +465,11 @@
       "si": "සංචාරක සංවර්ධන අධිකාරිය හරහා අයදුම් කරන්න.",
       "ta": "சுற்றுலா மேம்பாட்டு ஆணையம் மூலம் விண்ணப்பிக்கவும்."
     },
-    "content": "Ministry of Tourism | Tourism Services | Q: How to register tourism business? | A: Apply through tourism development authority.",
+    "content": "Ministry: Ministry of Tourism\n            Service: Tourism Services\n            Question: How to register tourism business?\n            Answer: Apply through tourism development authority.\n            Keywords: application registration process procedure steps guide instructions\n            Category: cat_public",
+    "keywords": [
+      "application registration process",
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -420,10 +477,10 @@
     }
   },
   {
-    "doc_id": "ministry_trade::general::How to register a business?",
+    "doc_id": "ministry_trade::general::17",
     "service_id": "ministry_trade",
     "service_name": "Ministry of Industry & Trade",
-    "category": "uncategorized",
+    "category": "cat_public",
     "subservice_id": "general",
     "subservice_name": "Trade Services",
     "question_text": "How to register a business?",
@@ -438,7 +495,11 @@
       "si": "ව්‍යාපාර ලියාපදිංචි පෝර්ටලය හරහා ලියාපදිංචි වන්න.",
       "ta": "வணிக பதிவு நுழைவாயில் மூலம் பதிவு செய்யவும்."
     },
-    "content": "Ministry of Industry & Trade | Trade Services | Q: How to register a business? | A: Register through business registration portal.",
+    "content": "Ministry: Ministry of Industry & Trade\n            Service: Trade Services\n            Question: How to register a business?\n            Answer: Register through business registration portal.\n            Keywords: application registration process procedure steps guide instructions\n            Category: cat_public",
+    "keywords": [
+      "application registration process",
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -446,10 +507,10 @@
     }
   },
   {
-    "doc_id": "ministry_energy::general::How to apply for new electricity connection?",
+    "doc_id": "ministry_energy::general::18",
     "service_id": "ministry_energy",
     "service_name": "Ministry of Power & Energy",
-    "category": "uncategorized",
+    "category": "cat_public",
     "subservice_id": "general",
     "subservice_name": "Energy Services",
     "question_text": "How to apply for new electricity connection?",
@@ -464,7 +525,11 @@
       "si": "විදුලිබල මණ්ඩල ඔන්ලයින් පෝර්ටලය හරහා අයදුම් කරන්න.",
       "ta": "மின்சார வாரிய ஆன்லைன் நுழைவாயில் மூலம் விண்ணப்பிக்கவும்."
     },
-    "content": "Ministry of Power & Energy | Energy Services | Q: How to apply for new electricity connection? | A: Apply through electricity board online portal.",
+    "content": "Ministry: Ministry of Power & Energy\n            Service: Energy Services\n            Question: How to apply for new electricity connection?\n            Answer: Apply through electricity board online portal.\n            Keywords: application registration process procedure steps guide instructions\n            Category: cat_public",
+    "keywords": [
+      "application registration process",
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -472,10 +537,10 @@
     }
   },
   {
-    "doc_id": "ministry_water::general::How to get new water connection?",
+    "doc_id": "ministry_water::general::19",
     "service_id": "ministry_water",
     "service_name": "Ministry of Water Supply",
-    "category": "uncategorized",
+    "category": "cat_public",
     "subservice_id": "general",
     "subservice_name": "Water Services",
     "question_text": "How to get new water connection?",
@@ -490,7 +555,10 @@
       "si": "ජල මණ්ඩල පෝර්ටලය හරහා අයදුම් කරන්න.",
       "ta": "நீர் வாரிய நுழைவாயில் மூலம் விண்ணப்பிக்கவும்."
     },
-    "content": "Ministry of Water Supply | Water Services | Q: How to get new water connection? | A: Apply through water board portal.",
+    "content": "Ministry: Ministry of Water Supply\n            Service: Water Services\n            Question: How to get new water connection?\n            Answer: Apply through water board portal.\n            Keywords: procedure steps guide instructions\n            Category: cat_public",
+    "keywords": [
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -498,10 +566,10 @@
     }
   },
   {
-    "doc_id": "ministry_env::general::How to get environmental clearance?",
+    "doc_id": "ministry_env::general::20",
     "service_id": "ministry_env",
     "service_name": "Ministry of Environment",
-    "category": "uncategorized",
+    "category": "cat_public",
     "subservice_id": "general",
     "subservice_name": "Environmental Services",
     "question_text": "How to get environmental clearance?",
@@ -516,7 +584,10 @@
       "si": "ව්‍යාපෘති යෝජනාව පරිසර අධිකාරියට ඉදිරිපත් කරන්න.",
       "ta": "திட்ட முன்மொழிவை சுற்றுச்சூழல் ஆணையத்திற்கு சமர்ப்பிக்கவும்."
     },
-    "content": "Ministry of Environment | Environmental Services | Q: How to get environmental clearance? | A: Submit project proposal to environmental authority.",
+    "content": "Ministry: Ministry of Environment\n            Service: Environmental Services\n            Question: How to get environmental clearance?\n            Answer: Submit project proposal to environmental authority.\n            Keywords: procedure steps guide instructions\n            Category: cat_public",
+    "keywords": [
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
@@ -524,10 +595,10 @@
     }
   },
   {
-    "doc_id": "ministry_culture::general::How to register cultural organization?",
+    "doc_id": "ministry_culture::general::21",
     "service_id": "ministry_culture",
     "service_name": "Ministry of Culture",
-    "category": "uncategorized",
+    "category": "cat_public",
     "subservice_id": "general",
     "subservice_name": "Cultural Services",
     "question_text": "How to register cultural organization?",
@@ -542,7 +613,11 @@
       "si": "සංස්කෘතික කටයුතු දෙපාර්තමේන්තුව හරහා අයදුම් කරන්න.",
       "ta": "கலாச்சார விவகார துறை மூலம் விண்ணப்பிக்கவும்."
     },
-    "content": "Ministry of Culture | Cultural Services | Q: How to register cultural organization? | A: Apply through cultural affairs department.",
+    "content": "Ministry: Ministry of Culture\n            Service: Cultural Services\n            Question: How to register cultural organization?\n            Answer: Apply through cultural affairs department.\n            Keywords: application registration process procedure steps guide instructions\n            Category: cat_public",
+    "keywords": [
+      "application registration process",
+      "procedure steps guide instructions"
+    ],
     "metadata": {
       "downloads": [],
       "location": "",
