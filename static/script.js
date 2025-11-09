@@ -68,7 +68,7 @@ async function loadOfficers() {
     try {
         const res = await fetch("/api/officers");
         allOfficers = await res.json();
-        console.log(`✅ Loaded ${allOfficers.length} officers`);
+        console.log(`✅ Loaded ${allOfficers.length} officers:`, allOfficers);
     } catch (error) {
         console.error("Error loading officers:", error);
     }
