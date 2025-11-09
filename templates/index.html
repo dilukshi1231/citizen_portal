@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Citizen Services Portal</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="container">
+    <!-- Left Sidebar: Categories/Ministries -->
+    <aside class="sidebar">
+        <h2>Service Categories</h2>
+        <div id="category-list"></div>
+        
+        <h3 style="margin-top: 30px;">All Ministries</h3>
+        <ul id="service-list"></ul>
+        
+        <div class="lang-switch">
+            <button onclick="setLang('en')">English</button>
+            <button onclick="setLang('si')">සිංහල</button>
+            <button onclick="setLang('ta')">தமிழ்</button>
+        </div>
+        
+        <!-- Ads Area -->
+        <div class="ads" id="ads-area">
+            <h4>Announcements</h4>
+        </div>
+    </aside>
+    
+    <!-- Middle Panel: Subservices -->
+    <section class="middle">
+        <h2 id="sub-title">Select Subservice</h2>
+        <ul id="sub-list"></ul>
+    </section>
+    
+    <!-- Right Panel: Questions & Answers -->
+    <main class="content">
+        <!-- AI Search Bar -->
+        <div class="search-row">
+            <input id="search-input" placeholder="Search services or ask AI..." />
+            <button onclick="handleSearch()">🔍 Search</button>
+            <button onclick="window.location.href='/chatbot'" style="background:#10b981;">🤖 AI Chat</button>
+        </div>
+        
+        <!-- AI Search Results -->
+        <div id="ai-results" style="display:none; background:#f0f9ff; padding:15px; border-radius:8px; margin-bottom:20px;">
+            <h3 style="color:#0b3b8c; margin-top:0;">🤖 AI Search Results</h3>
+            <div id="ai-answer"></div>
+        </div>
+        
+        <h2 id="q-title">Select Question</h2>
+        <ul id="question-list"></ul>
+        
+        <!-- Answer Display -->
+        <div id="answer-box"></div>
+        
+        <!-- Progressive Profile Modal -->
+        <div id="profile-modal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <span class="modal-close" onclick="closeProfileModal()">&times;</span>
+                <h3 id="profile-step-title">Help us serve you better</h3>
+                
+                <div id="profile-step-1" class="profile-step">
+                    <p>We'd like to understand your needs better (optional)</p>
+                    <input id="p_name" placeholder="Full name (optional)"/>
+                    <input id="p_age" placeholder="Age" type="number"/>
+                    <button onclick="profileNext(1)">Next →</button>
+                    <button onclick="closeProfileModal()" style="background:#999;">Skip</button>
+                </div>
+                
+                <div id="profile-step-2" class="profile-step" style="display:none;">
+                    <input id="p_email" placeholder="Email (optional)"/>
+                    <input id="p_phone" placeholder="Mobile (optional)"/>
+                    <button onclick="profileBack(2)">← Back</button>
+                    <button onclick="profileNext(2)">Next →</button>
+                </div>
+                
+                <div id="profile-step-3" class="profile-step" style="display:none;">
+                    <input id="p_job" placeholder="Occupation (optional)"/>
+                    <label style="display:block; margin:10px 0;">
+                        <input type="checkbox" id="p_notify"/> Send me updates about relevant services
+                    </label>
+                    <button onclick="profileBack(3)">← Back</button>
+                    <button onclick="profileSubmit()">✓ Finish</button>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="/static/script.js"></script>
+</body>
+</html>

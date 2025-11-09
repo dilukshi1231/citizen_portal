@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Programs - Citizen Services</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <a href="/" class="text-blue-600 hover:text-blue-800">← Back to Portal</a>
+                <h1 class="text-2xl font-bold text-gray-900">🎓 Training Programs</h1>
+            </div>
+            <div class="flex gap-3">
+                <select id="lang-select" class="px-3 py-2 border rounded-lg">
+                    <option value="en">English</option>
+                    <option value="si">සිංහල</option>
+                    <option value="ta">தமிழ்</option>
+                </select>
+                <a href="/my-training" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    My Enrollments
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Filters -->
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">Filter Programs</h2>
+            <div class="grid md:grid-cols-4 gap-4">
+                <select id="category-filter" class="px-4 py-2 border rounded-lg">
+                    <option value="">All Categories</option>
+                    <option value="digital_literacy">Digital Literacy</option>
+                    <option value="cybersecurity">Cybersecurity</option>
+                    <option value="entrepreneurship">Entrepreneurship</option>
+                    <option value="government_services">Government Services</option>
+                    <option value="employment">Employment Skills</option>
+                </select>
+                <select id="level-filter" class="px-4 py-2 border rounded-lg">
+                    <option value="">All Levels</option>
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                </select>
+                <select id="free-filter" class="px-4 py-2 border rounded-lg">
+                    <option value="">All Programs</option>
+                    <option value="true">Free Only</option>
+                    <option value="false">Paid Only</option>
+                </select>
+                <button onclick="applyFilters()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Apply Filters
+                </button>
+            </div>
+        </div>
+
+        <!-- Programs Grid -->
+        <div id="programs-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Loading state -->
+            <div class="col-span-full text-center py-20">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p class="mt-4 text-gray-600">Loading programs...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Program Details Modal -->
+    <div id="program-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentLang = 'en';
+        let allPrograms = [];
+
+        // Load programs
+        async function loadPrograms() {
+            try {
+                const response = await fetch('/api/training-programs');
+                allPrograms = await response.json();
+                renderPrograms(allPrograms);
+            } catch (error) {
+                console.error('Error loading programs:', error);
+                document.getElementById('programs-grid').innerHTML = `
+                    <div class="col-span-full text-center py-20">
+                        <p class="text-red-600">❌ Failed to load programs</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderPrograms(programs) {
+            const grid = document.getElementById('programs-grid');
+            
+            if (programs.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-20">
+                        <p class="text-gray-600">No programs found matching your filters</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = programs.map(program => {
+                const title = program.title[currentLang] || program.title.en;
+                const description = program.description[currentLang] || program.description.en;
+                const spotsLeft = program.max_participants - program.current_enrollments;
+                const percentFull = (program.current_enrollments / program.max_participants * 100).toFixed(0);
+                const isFull = spotsLeft <= 0;
+                
+                return `
+                    <div class="card-hover bg-white rounded-xl shadow-md overflow-hidden cursor-pointer" onclick="showProgramDetails('${program.id}')">
+                        <!-- Featured Badge -->
+                        ${program.featured ? '<div class="bg-yellow-400 text-xs font-bold px-3 py-1 absolute top-4 right-4 rounded-full">⭐ FEATURED</div>' : ''}
+                        
+                        <!-- Program Header -->
+                        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+                            <h3 class="text-xl font-bold mb-2">${title}</h3>
+                            <div class="flex items-center gap-4 text-sm">
+                                <span>📅 ${program.duration}</span>
+                                <span>📊 ${program.level}</span>
+                                ${program.free ? '<span class="bg-green-500 px-2 py-1 rounded text-xs font-semibold">FREE</span>' : `<span class="bg-yellow-500 px-2 py-1 rounded text-xs font-semibold">${program.fee}</span>`}
+                            </div>
+                        </div>
+
+                        <!-- Program Body -->
+                        <div class="p-6">
+                            <p class="text-gray-600 mb-4 line-clamp-3">${description}</p>
+                            
+                            <!-- Progress Bar -->
+                            <div class="mb-4">
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-gray-600">Enrollment</span>
+                                    <span class="font-semibold ${isFull ? 'text-red-600' : 'text-blue-600'}">${percentFull}% Full</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="h-2 rounded-full ${isFull ? 'bg-red-500' : 'bg-blue-600'}" style="width: ${percentFull}%"></div>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">${spotsLeft} spots remaining</p>
+                            </div>
+
+                            <!-- Topics Preview -->
+                            <div class="mb-4">
+                                <p class="text-xs font-semibold text-gray-700 mb-2">Topics Covered:</p>
+                                <div class="flex flex-wrap gap-2">
+                                    ${program.topics.slice(0, 3).map(topic => 
+                                        `<span class="text-xs bg-gray-100 px-2 py-1 rounded">${topic}</span>`
+                                    ).join('')}
+                                    ${program.topics.length > 3 ? `<span class="text-xs text-blue-600">+${program.topics.length - 3} more</span>` : ''}
+                                </div>
+                            </div>
+
+                            <!-- Instructor -->
+                            <div class="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/>
+                                </svg>
+                                <span>${program.instructor}</span>
+                            </div>
+
+                            <!-- CTA Button -->
+                            <button class="w-full py-3 ${isFull ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white font-semibold rounded-lg transition-colors">
+                                ${isFull ? '🚫 Program Full' : program.enrollment_open ? '📝 View Details & Enroll' : '⏰ Enrollment Closed'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function showProgramDetails(programId) {
+            try {
+                const response = await fetch(`/api/training-programs/${programId}`);
+                const program = await response.json();
+                
+                const title = program.title[currentLang] || program.title.en;
+                const description = program.description[currentLang] || program.description.en;
+                
+                document.getElementById('modal-content').innerHTML = `
+                    <!-- Modal Header -->
+                    <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h2 class="text-2xl font-bold mb-2">${title}</h2>
+                                <div class="flex gap-4 text-sm">
+                                    <span>📅 ${program.duration}</span>
+                                    <span>📊 ${program.level}</span>
+                                    <span>⏰ ${program.hours_per_week}h/week</span>
+                                    ${program.free ? '<span class="bg-green-500 px-2 py-1 rounded">FREE</span>' : `<span class="bg-yellow-500 px-2 py-1 rounded">${program.fee}</span>`}
+                                </div>
+                            </div>
+                            <button onclick="closeModal()" class="text-white hover:text-gray-200 text-3xl font-bold">&times;</button>
+                        </div>
+                    </div>
+
+                    <!-- Modal Body -->
+                    <div class="p-6 space-y-6">
+                        <!-- Description -->
+                        <div>
+                            <h3 class="font-semibold text-lg mb-2">About This Program</h3>
+                            <p class="text-gray-700">${description}</p>
+                        </div>
+
+                        <!-- Topics -->
+                        <div>
+                            <h3 class="font-semibold text-lg mb-2">What You'll Learn</h3>
+                            <ul class="grid md:grid-cols-2 gap-2">
+                                ${program.topics.map(topic => `<li class="flex items-start gap-2"><span class="text-green-500">✓</span><span>${topic}</span></li>`).join('')}
+                            </ul>
+                        </div>
+
+                        <!-- Details Grid -->
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600 mb-1">Instructor</p>
+                                <p class="font-semibold">${program.instructor}</p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600 mb-1">Prerequisites</p>
+                                <p class="font-semibold">${program.prerequisites}</p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600 mb-1">Start Date</p>
+                                <p class="font-semibold">${new Date(program.start_date).toLocaleDateString()}</p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600 mb-1">Certificate</p>
+                                <p class="font-semibold">${program.certificate ? '✓ Yes' : '✗ No'}</p>
+                            </div>
+                        </div>
+
+                        <!-- Enrollment Status -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-semibold">Enrollment Status</span>
+                                <span class="text-blue-600 font-bold">${program.current_enrollments} / ${program.max_participants}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full" style="width: ${program.enrollment_percentage}%"></div>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-2">${program.spots_remaining} spots remaining</p>
+                        </div>
+
+                        <!-- Reviews (if any) -->
+                        ${program.total_reviews > 0 ? `
+                            <div>
+                                <h3 class="font-semibold text-lg mb-2">Reviews (${program.total_reviews})</h3>
+                                <div class="flex items-center gap-2 mb-4">
+                                    <span class="text-3xl font-bold text-yellow-500">${program.avg_rating.toFixed(1)}</span>
+                                    <div>
+                                        <div class="flex">
+                                            ${'★'.repeat(Math.round(program.avg_rating))}${'☆'.repeat(5 - Math.round(program.avg_rating))}
+                                        </div>
+                                        <p class="text-sm text-gray-600">Based on ${program.total_reviews} reviews</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <!-- Enroll Button -->
+                        <div class="flex gap-4">
+                            ${program.enrollment_open && !program.user_enrolled ? 
+                                `<button onclick="enrollInProgram('${program.id}')" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg">
+                                    📝 Enroll Now
+                                </button>` : 
+                            program.user_enrolled ?
+                                `<button class="flex-1 py-3 bg-green-600 text-white font-semibold rounded-lg cursor-default">
+                                    ✓ Already Enrolled
+                                </button>` :
+                                `<button class="flex-1 py-3 bg-gray-400 text-white font-semibold rounded-lg cursor-not-allowed">
+                                    🚫 Enrollment Closed
+                                </button>`
+                            }
+                            ${program.brochure ? `<a href="${program.brochure}" target="_blank" class="px-6 py-3 border-2 border-blue-600 text-blue-600 font-semibold rounded-lg hover:bg-blue-50">📄 Download Brochure</a>` : ''}
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('program-modal').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error loading program details:', error);
+                alert('Failed to load program details');
+            }
+        }
+
+        async function enrollInProgram(programId) {
+            if (!confirm('Confirm enrollment in this program?')) return;
+            
+            try {
+                const response = await fetch(`/api/training-programs/${programId}/enroll`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('✅ ' + data.message);
+                    closeModal();
+                    loadPrograms(); // Refresh
+                } else {
+                    alert('❌ ' + data.error);
+                }
+            } catch (error) {
+                console.error('Enrollment error:', error);
+                alert('Enrollment failed. Please try again.');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('program-modal').classList.add('hidden');
+        }
+
+        function applyFilters() {
+            const category = document.getElementById('category-filter').value;
+            const level = document.getElementById('level-filter').value;
+            const free = document.getElementById('free-filter').value;
+            
+            let filtered = allPrograms;
+            
+            if (category) {
+                filtered = filtered.filter(p => p.category === category);
+            }
+            if (level) {
+                filtered = filtered.filter(p => p.level === level);
+            }
+            if (free === 'true') {
+                filtered = filtered.filter(p => p.free === true);
+            } else if (free === 'false') {
+                filtered = filtered.filter(p => p.free === false);
+            }
+            
+            renderPrograms(filtered);
+        }
+
+        // Language selector
+        document.getElementById('lang-select').addEventListener('change', (e) => {
+            currentLang = e.target.value;
+            renderPrograms(allPrograms);
+        });
+
+        // Load on page load
+        loadPrograms();
+    </script>
+</body>
+</html>

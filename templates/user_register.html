@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Citizen Services</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen py-8 px-4">
+    <div class="w-full max-w-2xl mx-auto">
+        <div class="bg-white rounded-2xl shadow-2xl p-8">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-900">Create Your Account</h1>
+                <p class="text-gray-600 mt-2">Get personalized AI assistance for government services</p>
+                <p class="text-sm text-gray-500 mt-2">
+                    <span class="text-red-500">*</span> Required fields | All other information is optional
+                </p>
+            </div>
+
+            <!-- Alert Box -->
+            <div id="alert-box" class="hidden mb-4 p-4 rounded-lg"></div>
+
+            <!-- Registration Form -->
+            <form id="register-form" class="space-y-6">
+                <!-- MANDATORY SECTION -->
+                <div class="border-2 border-red-100 bg-red-50 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                        Required Information <span class="text-red-500">*</span>
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Email <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="email" 
+                                name="email" 
+                                required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="your.email@example.com"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Password <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="password" 
+                                name="password" 
+                                required
+                                minlength="6"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Minimum 6 characters"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OPTIONAL SECTION -->
+                <div class="border-b pb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                        Optional Information
+                        <span class="text-sm font-normal text-gray-500">(Help us personalize your experience)</span>
+                    </h3>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Full Name
+                            </label>
+                            <input 
+                                type="text" 
+                                name="full_name"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Nimal Perera (optional)"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Phone Number
+                            </label>
+                            <input 
+                                type="tel" 
+                                name="phone"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="+94771234567 (optional)"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Age
+                            </label>
+                            <input 
+                                type="number" 
+                                name="age"
+                                min="1"
+                                max="120"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="25 (optional)"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Occupation
+                            </label>
+                            <input 
+                                type="text" 
+                                name="job"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Software Engineer (optional)"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Location
+                            </label>
+                            <select 
+                                name="location"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">Select location (optional)</option>
+                                <option value="Colombo">Colombo</option>
+                                <option value="Kandy">Kandy</option>
+                                <option value="Galle">Galle</option>
+                                <option value="Jaffna">Jaffna</option>
+                                <option value="Anuradhapura">Anuradhapura</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Preferred Language
+                            </label>
+                            <select 
+                                name="language"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="en">English</option>
+                                <option value="si">සිංහල (Sinhala)</option>
+                                <option value="ta">தமிழ் (Tamil)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interests -->
+                <div class="pb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                        Areas of Interest
+                        <span class="text-sm font-normal text-gray-500">(Optional)</span>
+                    </h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" name="interests" value="education" class="rounded">
+                            <span class="text-sm">Education</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" name="interests" value="health" class="rounded">
+                            <span class="text-sm">Health</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" name="interests" value="immigration" class="rounded">
+                            <span class="text-sm">Immigration</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" name="interests" value="it" class="rounded">
+                            <span class="text-sm">IT Services</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" name="interests" value="employment" class="rounded">
+                            <span class="text-sm">Employment</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="checkbox" name="interests" value="finance" class="rounded">
+                            <span class="text-sm">Finance</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Terms & Privacy - MANDATORY -->
+                <div class="bg-red-50 border-2 border-red-100 p-4 rounded-lg">
+                    <label class="flex items-start space-x-3 cursor-pointer">
+                        <input type="checkbox" name="terms" required class="mt-1 rounded">
+                        <span class="text-sm text-gray-700">
+                            <span class="text-red-500">*</span> I agree to the Terms of Service and Privacy Policy. My information will be used to provide personalized government service assistance.
+                        </span>
+                    </label>
+                </div>
+
+                <!-- Submit Button -->
+                <button 
+                    type="submit" 
+                    id="register-btn"
+                    class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg"
+                >
+                    Create Account
+                </button>
+            </form>
+
+            <!-- Login Link -->
+            <div class="mt-6 text-center">
+                <span class="text-gray-600">Already have an account?</span>
+                <a href="/user/login" class="text-blue-600 hover:text-blue-700 font-medium ml-2">
+                    Sign in
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('register-btn');
+            const alertBox = document.getElementById('alert-box');
+            const formData = new FormData(e.target);
+            
+            // Collect interests
+            const interests = [];
+            document.querySelectorAll('input[name="interests"]:checked').forEach(cb => {
+                interests.push(cb.value);
+            });
+            
+            btn.disabled = true;
+            btn.textContent = 'Creating account...';
+            alertBox.classList.add('hidden');
+            
+            try {
+                const payload = {
+                    email: formData.get('email'),
+                    password: formData.get('password'),
+                    terms: formData.get('terms') ? true : false,
+                    // Optional fields - only send if filled
+                    full_name: formData.get('full_name') || undefined,
+                    phone: formData.get('phone') || undefined,
+                    age: formData.get('age') || undefined,
+                    job: formData.get('job') || undefined,
+                    location: formData.get('location') || undefined,
+                    language: formData.get('language') || 'en',
+                    interests: interests
+                };
+                
+                const response = await fetch('/api/user/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alertBox.className = 'mb-4 p-4 rounded-lg bg-green-100 text-green-700';
+                    alertBox.textContent = '✓ Account created successfully! Redirecting...';
+                    alertBox.classList.remove('hidden');
+                    
+                    setTimeout(() => {
+                        window.location.href = data.redirect;
+                    }, 1500);
+                } else {
+                    throw new Error(data.error || 'Registration failed');
+                }
+            } catch (error) {
+                alertBox.className = 'mb-4 p-4 rounded-lg bg-red-100 text-red-700';
+                alertBox.textContent = '✗ ' + error.message;
+                alertBox.classList.remove('hidden');
+                
+                btn.disabled = false;
+                btn.textContent = 'Create Account';
+            }
+        });
+    </script>
+</body>
+</html>
