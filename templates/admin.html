@@ -193,7 +193,121 @@
 </table>
 </div>
 </div>
-
+<script>
+// Load dashboard data
+async function loadDashboard() {
+  try {
+    const res = await fetch('/api/dashboard/analytics');
+    const data = await res.json();
+    
+    // Update metrics
+    document.getElementById('total-users').textContent = data.user_metrics.total_users;
+    document.getElementById('active-users').textContent = data.user_metrics.active_users;
+    document.getElementById('total-orders').textContent = data.store_metrics.total_orders;
+    document.getElementById('total-revenue').textContent = 'LKR ' + data.store_metrics.total_revenue.toLocaleString();
+    document.getElementById('conversion-rate').textContent = data.store_metrics.conversion_rate;
+    
+    // Age Chart
+    const ageCtx = document.getElementById('ageChart');
+    new Chart(ageCtx, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(data.age_groups || {}),
+        datasets: [{
+          label: 'Users by Age Group',
+          data: Object.values(data.age_groups || {}),
+          backgroundColor: 'rgba(54, 162, 235, 0.6)'
+        }]
+      }
+    });
+    
+    // Job Chart
+    const jobCtx = document.getElementById('jobChart');
+    new Chart(jobCtx, {
+      type: 'pie',
+      data: {
+        labels: Object.keys(data.jobs || {}).slice(0, 6),
+        datasets: [{
+          data: Object.values(data.jobs || {}).slice(0, 6),
+          backgroundColor: [
+            'rgba(255, 99, 132, 0.6)',
+            'rgba(54, 162, 235, 0.6)',
+            'rgba(255, 206, 86, 0.6)',
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(153, 102, 255, 0.6)',
+            'rgba(255, 159, 64, 0.6)'
+          ]
+        }]
+      }
+    });
+    
+    // Popular Products
+    const productsDiv = document.getElementById('popular-products');
+    if (data.popular_products && data.popular_products.length > 0) {
+      productsDiv.innerHTML = data.popular_products.map((p, i) => `
+        <div style="padding:12px; margin:8px 0; background:#f8f9fa; border-radius:6px; border-left:4px solid #0b3b8c;">
+          <div style="font-weight:600;">${i+1}. ${p.name}</div>
+          <div style="font-size:12px; color:#666; margin-top:4px;">
+            Rating: ${p.rating} ⭐ | Reviews: ${p.reviews_count} | LKR ${p.price.toLocaleString()}
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // User Segments
+    const segmentsDiv = document.getElementById('user-segments');
+    if (data.user_segments) {
+      segmentsDiv.innerHTML = Object.entries(data.user_segments).map(([segment, count]) => `
+        <div style="background:#e7f3ff; padding:15px; border-radius:8px; text-align:center;">
+          <div style="font-size:24px; font-weight:bold; color:#0b3b8c;">${count}</div>
+          <div style="font-size:13px; color:#666; margin-top:5px;">${segment.replace(/_/g, ' ')}</div>
+        </div>
+      `).join('');
+    }
+    
+    // Premium Suggestions
+    const premiumDiv = document.getElementById('premium-list');
+    if (data.premium_suggestions && data.premium_suggestions.length > 0) {
+      premiumDiv.innerHTML = data.premium_suggestions.map(p => `
+        <div style="background:#fff3cd; padding:12px; margin:8px 0; border-left:4px solid #ffc107; border-radius:4px;">
+          <strong>User:</strong> ${p.user || 'Anonymous'} | 
+          <strong>Question:</strong> ${p.question} | 
+          <strong>Asked ${p.count} times</strong>
+          <span style="float:right; background:#dc3545; color:white; padding:4px 8px; border-radius:12px; font-size:11px;">HIGH PRIORITY</span>
+        </div>
+      `).join('');
+    } else {
+      premiumDiv.innerHTML = '<p style="color:#999; text-align:center; padding:20px;">No premium help candidates yet</p>';
+    }
+    
+    // Recent Engagements
+    const engRes = await fetch('/api/admin/engagements');
+    const engagements = await engRes.json();
+    const tbody = document.querySelector('#engTable tbody');
+    tbody.innerHTML = '';
+    
+    engagements.slice(0, 50).forEach(eng => {
+      const chatType = eng.chat_type === 'ai_enhanced' 
+        ? '<span style="background:#28a745; color:white; padding:2px 6px; border-radius:3px; font-size:10px;">AI Enhanced</span>' 
+        : '';
+      
+      const row = `<tr>
+        <td style="padding:8px;">${eng.age || 'N/A'}</td>
+        <td style="padding:8px;">${eng.job || 'N/A'}</td>
+        <td style="padding:8px;">${(eng.question_clicked || 'N/A').substring(0, 50)}... ${chatType}</td>
+        <td style="padding:8px;">${eng.service || 'N/A'}</td>
+        <td style="padding:8px;">${eng.chat_type || 'standard'}</td>
+        <td style="padding:8px; font-size:11px;">${eng.timestamp || 'N/A'}</td>
+      </tr>`;
+      tbody.insertAdjacentHTML('beforeend', row);
+    });
+    
+  } catch (err) {
+    console.error('Dashboard error:', err);
+    alert('Error loading dashboard');
+  }
+}
+</script>
 <!-- Age Group Question Analytics -->
 <div class="admin-section" id="age-group-section">
     <h3>👥 Questions by Age Group & Language</h3>

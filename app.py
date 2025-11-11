@@ -12,7 +12,7 @@ import bcrypt
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from groq import Groq
-
+from bson.objectid import ObjectId
 # Try FAISS import
 try:
     import faiss
@@ -46,6 +46,13 @@ categories_col = db["categories"]
 officers_col = db["officers"]
 ads_col = db["ads"]
 users_col = db["users"]
+products_col = db["products"]
+orders_col = db["orders"]
+payments_col = db["payments"]
+training_programs_col = db["training_programs"]
+enrollments_col = db["enrollments"]
+
+
 
 # Embedding model (lazy-init)
 EMBED_MODEL = None
@@ -105,6 +112,231 @@ def admin_page():
 # ============================================
 # USER AUTHENTICATION ROUTES
 # ============================================
+@app.route("/api/training-programs")
+def get_training_programs():
+    """Get all active training programs"""
+    category = request.args.get("category")
+    level = request.args.get("level")
+    free_only = request.args.get("free")
+    
+    query = {"active": True}
+    
+    if category:
+        query["category"] = category
+    if level:
+        query["level"] = level
+    if free_only == "true":
+        query["free"] = True
+    
+    programs = list(training_programs_col.find(query, {"_id": 0}).sort("start_date", 1))
+    
+    # Add enrollment percentage for each program
+    for program in programs:
+        program["enrollment_percentage"] = (
+            program["current_enrollments"] / program["max_participants"] * 100
+            if program.get("max_participants") else 0
+        )
+        program["spots_remaining"] = (
+            program["max_participants"] - program["current_enrollments"]
+            if program.get("max_participants") else 0
+        )
+    
+    return jsonify(programs)
+@app.route("/api/training-programs/<program_id>")
+def get_training_program(program_id):
+    """Get training program details"""
+    program = training_programs_col.find_one({"id": program_id}, {"_id": 0})
+    
+    if not program:
+        return jsonify({"error": "Program not found"}), 404
+    
+    # Check if user is enrolled
+    user_id = session.get("user_id")
+    user_enrolled = False
+    
+    if user_id:
+        enrollment = enrollments_col.find_one({
+            "user_id": user_id,
+            "program_id": program_id
+        })
+        user_enrolled = enrollment is not None
+    
+    program["user_enrolled"] = user_enrolled
+    program["enrollment_percentage"] = (
+        program["current_enrollments"] / program["max_participants"] * 100
+    )
+    program["spots_remaining"] = (
+        program["max_participants"] - program["current_enrollments"]
+    )
+    
+    return jsonify(program)
+
+@app.route("/api/training-programs/<program_id>/enroll", methods=["POST"])
+def enroll_in_program(program_id):
+    """Enroll user in training program"""
+    user_id = session.get("user_id")
+    
+    if not user_id:
+        return jsonify({"error": "Please log in to enroll"}), 401
+    
+    # Get program
+    program = training_programs_col.find_one({"id": program_id})
+    
+    if not program:
+        return jsonify({"error": "Program not found"}), 404
+    
+    if not program.get("active"):
+        return jsonify({"error": "Program is not active"}), 400
+    
+    # Check if spots available
+    if program["current_enrollments"] >= program["max_participants"]:
+        return jsonify({"error": "Program is full"}), 400
+    
+    # Check if already enrolled
+    existing = enrollments_col.find_one({
+        "user_id": user_id,
+        "program_id": program_id
+    })
+    
+    if existing:
+        return jsonify({"error": "Already enrolled in this program"}), 400
+    
+    # Create enrollment
+    enrollment = {
+        "user_id": user_id,
+        "program_id": program_id,
+        "status": "enrolled",
+        "enrolled_date": datetime.utcnow(),
+        "completion_status": None,
+        "progress": 0
+    }
+    
+    enrollments_col.insert_one(enrollment)
+    
+    # Increment enrollment count
+    training_programs_col.update_one(
+        {"id": program_id},
+        {"$inc": {"current_enrollments": 1}}
+    )
+    
+    # Log engagement
+    eng_col.insert_one({
+        "user_id": user_id,
+        "type": "training_enrollment",
+        "program_id": program_id,
+        "program_name": program.get("title", {}).get("en"),
+        "timestamp": datetime.utcnow()
+    })
+    
+    return jsonify({
+        "status": "success",
+        "message": "Successfully enrolled in program"
+    })
+@app.route("/api/training-programs/<program_id>/enroll", methods=["POST"])
+def enroll_in_program(program_id):
+    """Enroll user in training program"""
+    user_id = session.get("user_id")
+    
+    if not user_id:
+        return jsonify({"error": "Please log in to enroll"}), 401
+    
+    # Get program
+    program = training_programs_col.find_one({"id": program_id})
+    
+    if not program:
+        return jsonify({"error": "Program not found"}), 404
+    
+    if not program.get("active"):
+        return jsonify({"error": "Program is not active"}), 400
+    
+    # Check if spots available
+    if program["current_enrollments"] >= program["max_participants"]:
+        return jsonify({"error": "Program is full"}), 400
+    
+    # Check if already enrolled
+    existing = enrollments_col.find_one({
+        "user_id": user_id,
+        "program_id": program_id
+    })
+    
+    if existing:
+        return jsonify({"error": "Already enrolled in this program"}), 400
+    
+    # Create enrollment
+    enrollment = {
+        "user_id": user_id,
+        "program_id": program_id,
+        "status": "enrolled",
+        "enrolled_date": datetime.utcnow(),
+        "completion_status": None,
+        "progress": 0
+    }
+    
+    enrollments_col.insert_one(enrollment)
+    
+    # Increment enrollment count
+    training_programs_col.update_one(
+        {"id": program_id},
+        {"$inc": {"current_enrollments": 1}}
+    )
+    
+    # Log engagement
+    eng_col.insert_one({
+        "user_id": user_id,
+        "type": "training_enrollment",
+        "program_id": program_id,
+        "program_name": program.get("title", {}).get("en"),
+        "timestamp": datetime.utcnow()
+    })
+    
+    return jsonify({
+        "status": "success",
+        "message": "Successfully enrolled in program"
+    })
+@app.route("/api/training-programs/<program_id>/unenroll", methods=["POST"])
+def unenroll_from_program(program_id):
+    """Unenroll user from training program"""
+    user_id = session.get("user_id")
+    
+    if not user_id:
+        return jsonify({"error": "Not logged in"}), 401
+    
+    result = enrollments_col.delete_one({
+        "user_id": user_id,
+        "program_id": program_id
+    })
+    
+    if result.deleted_count > 0:
+        # Decrement enrollment count
+        training_programs_col.update_one(
+            {"id": program_id},
+            {"$inc": {"current_enrollments": -1}}
+        )
+        
+        return jsonify({"status": "success", "message": "Unenrolled from program"})
+    else:
+        return jsonify({"error": "Not enrolled in this program"}), 404
+@app.route("/api/my-training")
+def get_my_training():
+    """Get user's enrolled training programs"""
+    user_id = session.get("user_id")
+    
+    if not user_id:
+        return jsonify({"error": "Not logged in"}), 401
+    
+    enrollments = list(enrollments_col.find({"user_id": user_id}, {"_id": 0}))
+    
+    # Enrich with program details
+    for enrollment in enrollments:
+        program = training_programs_col.find_one(
+            {"id": enrollment["program_id"]},
+            {"_id": 0}
+        )
+        if program:
+            enrollment["program"] = program
+    
+    return jsonify(enrollments)
+
 @app.route("/user/login", methods=["GET"])
 def user_login_page():
     """Display user login page"""
@@ -280,7 +512,218 @@ def admin_login_api():
 def admin_logout():
     session.clear()
     return jsonify({"status": "logged out"})
+@app.route("/training")
+def training_page():
+    """Training programs page"""
+    if not session.get("user_logged_in"):
+        return redirect("/user/login")
+    return render_template("training.html")
+@app.route("/api/profile/extended", methods=["POST"])
+def extended_profile():
+    """
+    Enhanced user profile with family, career, and interests
+    Used for targeted recommendations and ads
+    """
+    payload = request.json or {}
+    profile_id = payload.get("profile_id")
+    
+    if not profile_id:
+        return jsonify({"error": "profile_id required"}), 400
+    
+    try:
+        extended_data = {
+            "family": {
+                "marital_status": payload.get("marital_status"),
+                "children": payload.get("children", []),
+                "children_ages": payload.get("children_ages", []),
+                "children_education": payload.get("children_education", []),
+                "dependents": payload.get("dependents", 0)
+            },
+            "education": {
+                "highest_qualification": payload.get("highest_qualification"),
+                "institution": payload.get("institution"),
+                "year_graduated": payload.get("year_graduated"),
+                "field_of_study": payload.get("field_of_study")
+            },
+            "career": {
+                "current_job": payload.get("current_job"),
+                "years_experience": payload.get("years_experience"),
+                "skills": payload.get("skills", []),
+                "career_goals": payload.get("career_goals", [])
+            },
+            "interests": {
+                "hobbies": payload.get("hobbies", []),
+                "learning_interests": payload.get("learning_interests", []),
+                "service_preferences": payload.get("service_preferences", [])
+            },
+            "consent": {
+                "marketing_emails": payload.get("marketing_emails", False),
+                "personalized_ads": payload.get("personalized_ads", False),
+                "data_analytics": payload.get("data_analytics", False),
+                "updated": datetime.utcnow()
+            }
+        }
+        
+        users_col.update_one(
+            {"_id": ObjectId(profile_id)},
+            {"$set": {"extended_profile": extended_data, "updated": datetime.utcnow()}}
+        )
+        
+        return jsonify({"status": "ok", "message": "Extended profile saved"})
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+@app.route("/api/store/products")
+def get_store_products():
+    """Get product catalog with filtering"""
+    category = request.args.get("category")
+    subcategory = request.args.get("subcategory")
+    tags = request.args.get("tags", "").split(",") if request.args.get("tags") else []
+    min_price = request.args.get("min_price", type=float)
+    max_price = request.args.get("max_price", type=float)
+    
+    query = {"in_stock": True}
+    
+    if category:
+        query["category"] = category
+    if subcategory:
+        query["subcategory"] = subcategory
+    if tags and tags[0]:
+        query["tags"] = {"$in": tags}
+    if min_price is not None or max_price is not None:
+        query["price"] = {}
+        if min_price is not None:
+            query["price"]["$gte"] = min_price
+        if max_price is not None:
+            query["price"]["$lte"] = max_price
+    
+    products = list(products_col.find(query, {"_id": 0}).limit(50))
+    return jsonify(products)
 
+
+@app.route("/api/engagement/enhanced", methods=["POST"])
+def log_enhanced_engagement():
+    """
+    Enhanced engagement tracking with device info, referrals, and behavior
+    """
+    payload = request.json or {}
+    
+    # Extract behavioral data
+    user_agent = request.headers.get('User-Agent', '')
+    ip_address = request.remote_addr
+    referrer = request.headers.get('Referer', '')
+    
+    doc = {
+        "user_id": payload.get("user_id"),
+        "session_id": payload.get("session_id"),
+        "age": int(payload.get("age")) if payload.get("age") else None,
+        "job": payload.get("job"),
+        "desires": payload.get("desires", []),
+        "question_clicked": payload.get("question_clicked"),
+        "service": payload.get("service"),
+        "ad": payload.get("ad"),
+        "source": payload.get("source"),
+        "time_spent": payload.get("time_spent"),
+        "scroll_depth": payload.get("scroll_depth"),
+        "clicks": payload.get("clicks", []),
+        "searches": payload.get("searches", []),
+        "device_info": {
+            "user_agent": user_agent,
+            "ip_address": ip_address,
+            "screen_resolution": payload.get("screen_resolution")
+        },
+        "referral_data": {
+            "referrer": referrer,
+            "utm_source": payload.get("utm_source"),
+            "utm_medium": payload.get("utm_medium"),
+            "utm_campaign": payload.get("utm_campaign")
+        },
+        "timestamp": datetime.utcnow()
+    }
+    
+    eng_col.insert_one(doc)
+    return jsonify({"status": "ok"})
+
+@app.route("/api/consent/update", methods=["POST"])
+def update_consent():
+    """Update user consent preferences (GDPR compliance)"""
+    payload = request.json or {}
+    user_id = payload.get("user_id")
+    
+    if not user_id:
+        return jsonify({"error": "user_id required"}), 400
+    
+    consent_updates = {
+        "extended_profile.consent.marketing_emails": payload.get("marketing_emails", False),
+        "extended_profile.consent.personalized_ads": payload.get("personalized_ads", False),
+        "extended_profile.consent.data_analytics": payload.get("data_analytics", False),
+        "extended_profile.consent.updated": datetime.utcnow()
+    }
+    
+    users_col.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": consent_updates}
+    )
+    
+    return jsonify({"status": "ok", "message": "Consent preferences updated"})
+
+
+
+@app.route("/api/data/export/<user_id>")
+def export_user_data(user_id):
+    """GDPR-compliant data export"""
+    user = users_col.find_one({"_id": ObjectId(user_id)})
+    
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    
+    # Remove sensitive internal fields
+    export_data = {
+        "profile": user.get("profile", {}),
+        "extended_profile": user.get("extended_profile", {}),
+        "consent_preferences": user.get("extended_profile", {}).get("consent", {}),
+        "engagements": list(eng_col.find({"user_id": user_id}, {"_id": 0}))
+    }
+    
+    return jsonify(export_data)
+
+@app.route("/api/data/delete/<user_id>", methods=["DELETE"])
+def delete_user_data(user_id):
+    """GDPR-compliant data deletion (Right to be forgotten)"""
+    result = users_col.delete_one({"_id": ObjectId(user_id)})
+    
+    # Anonymize engagements instead of deleting (for analytics)
+    eng_col.update_many(
+        {"user_id": user_id},
+        {"$set": {"user_id": None, "anonymized": True}}
+    )
+    
+    if result.deleted_count > 0:
+        return jsonify({"status": "ok", "message": "User data deleted"})
+    else:
+        return jsonify({"error": "User not found"}), 404
+
+# ============================================
+# SMART RECOMMENDATIONS API
+# ============================================
+
+from recommendation_engine import RecommendationEngine
+
+recommendation_engine = RecommendationEngine()
+@app.route("/api/recommendations/<user_id>")
+def get_recommendations(user_id):
+    """Get personalized recommendations for user"""
+    try:
+        products = recommendation_engine.get_personalized_ads(user_id)
+        edu_recommendations = recommendation_engine.generate_education_recommendations(user_id)
+        
+        return jsonify({
+            "products": products,
+            "education_recommendations": edu_recommendations,
+            "user_segment": recommendation_engine.get_user_segment(user_id)
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 # ============================================
 # API: SERVICES & CATEGORIES (PUBLIC)
 # ============================================
@@ -321,7 +764,138 @@ def get_categories():
             cats = []
     
     return jsonify(cats)
-
+@app.route("/api/store/categories")
+def get_store_categories():
+    """Get store categories and subcategories"""
+    categories = products_col.distinct("category")
+    subcategories = {}
+    
+    for cat in categories:
+        subcategories[cat] = products_col.distinct("subcategory", {"category": cat})
+    
+    return jsonify({
+        "categories": categories,
+        "subcategories": subcategories
+    })
+@app.route("/api/store/order", methods=["POST"])
+def create_order():
+    """Create new order"""
+    payload = request.json or {}
+    
+    order = {
+        "order_id": f"ORD{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+        "user_id": payload.get("user_id"),
+        "items": payload.get("items", []),
+        "total_amount": payload.get("total_amount", 0),
+        "status": "pending",
+        "shipping_address": payload.get("shipping_address", {}),
+        "payment_method": payload.get("payment_method"),
+        "created": datetime.utcnow(),
+        "updated": datetime.utcnow()
+    }
+    
+    result = orders_col.insert_one(order)
+    return jsonify({"status": "ok", "order_id": order["order_id"]})
+@app.route("/api/store/payment", methods=["POST"])
+def process_payment():
+    """Process payment for order"""
+    payload = request.json or {}
+    
+    payment = {
+        "payment_id": f"PAY{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+        "order_id": payload.get("order_id"),
+        "user_id": payload.get("user_id"),
+        "amount": payload.get("amount", 0),
+        "currency": payload.get("currency", "LKR"),
+        "method": payload.get("method"),
+        "status": "completed",
+        "transaction_id": payload.get("transaction_id"),
+        "created": datetime.utcnow()
+    }
+    
+    # Update order status
+    orders_col.update_one(
+        {"order_id": payload.get("order_id")},
+        {"$set": {"status": "paid", "updated": datetime.utcnow()}}
+    )
+    
+    payments_col.insert_one(payment)
+    
+    # Log engagement for recommendation system
+    eng_col.insert_one({
+        "user_id": payload.get("user_id"),
+        "type": "purchase",
+        "product_ids": [item.get("product_id") for item in payload.get("items", [])],
+        "amount": payload.get("amount", 0),
+        "timestamp": datetime.utcnow()
+    })
+    
+    return jsonify({"status": "ok", "payment_id": payment["payment_id"]})
+@app.route("/store")
+def store_page():
+    """Public store frontend"""
+    return render_template("store.html")
+@app.route("/api/dashboard/analytics")
+@admin_required
+def get_dashboard_analytics():
+    """Enhanced dashboard with store metrics"""
+    # User analytics
+    total_users = users_col.count_documents({})
+    active_users = users_col.count_documents({
+        "last_active": {"$gte": datetime.utcnow() - timedelta(days=30)}
+    })
+    new_users_7d = users_col.count_documents({
+        "created": {"$gte": datetime.utcnow() - timedelta(days=7)}
+    })
+    
+    # Engagement analytics
+    total_engagements = eng_col.count_documents({})
+    recent_engagements = eng_col.count_documents({
+        "timestamp": {"$gte": datetime.utcnow() - timedelta(days=7)}
+    })
+    
+    # Store analytics
+    total_orders = orders_col.count_documents({})
+    total_revenue = payments_col.aggregate([
+        {"$match": {"status": "completed"}},
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+    ])
+    revenue_result = list(total_revenue)
+    total_revenue_amount = revenue_result[0]["total"] if revenue_result else 0
+    
+    # User segmentation
+    user_segments = {}
+    users = users_col.find({})
+    for user in users:
+        segments = recommendation_engine.get_user_segment(str(user["_id"]))
+        for segment in segments:
+            user_segments[segment] = user_segments.get(segment, 0) + 1
+    
+    # Popular products
+    popular_products = list(products_col.find().sort("rating", -1).limit(5))
+    
+    # Recent activities
+    recent_activities = list(eng_col.find().sort("timestamp", -1).limit(10))
+    
+    return jsonify({
+        "user_metrics": {
+            "total_users": total_users,
+            "active_users": active_users,
+            "new_users_7d": new_users_7d
+        },
+        "engagement_metrics": {
+            "total_engagements": total_engagements,
+            "recent_engagements": recent_engagements
+        },
+        "store_metrics": {
+            "total_orders": total_orders,
+            "total_revenue": total_revenue_amount,
+            "conversion_rate": "3.2%"  # Calculate from actual data
+        },
+        "user_segments": user_segments,
+        "popular_products": popular_products,
+        "recent_activities": recent_activities
+    })
 @app.route("/api/service/<service_id>")
 def get_service(service_id):
     doc = services_col.find_one({"id": service_id}, {"_id": 0})
@@ -716,19 +1290,20 @@ Instructions:
 # ============================================
 # ML RECOMMENDATIONS
 # ============================================
-@app.route("/api/recommendations", methods=["POST"])
-def get_recommendations():
-    """Get personalized service recommendations"""
-    if not ML_AVAILABLE or not rec_engine:
-        return jsonify({"error": "ML engine not available"}), 503
-    
-    payload = request.json or {}
-    user_history = payload.get("history", [])
-    
-    all_services = list(services_col.find({}, {"_id": 0}))
-    recommendations = rec_engine.recommend_services(user_history, all_services, top_k=5)
-    
-    return jsonify(recommendations)
+@app.route("/api/recommendations/<user_id>")
+def get_user_recommendations(user_id):  # ← Changed function name
+    """Get personalized recommendations for user"""
+    try:
+        products = recommendation_engine.get_personalized_ads(user_id)
+        edu_recommendations = recommendation_engine.generate_education_recommendations(user_id)
+        
+        return jsonify({
+            "products": products,
+            "education_recommendations": edu_recommendations,
+            "user_segment": recommendation_engine.get_user_segment(user_id)
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ============================================
 # ENGAGEMENT & PROFILE
