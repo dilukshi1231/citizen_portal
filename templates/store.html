@@ -126,6 +126,265 @@
         </div>
     </div>
 
-    <script src="/static/store.js"></script>
+    <script>
+// Store JavaScript - Inline for completeness
+let cart = [];
+let currentProducts = [];
+let currentFilters = {};
+
+async function initStore() {
+    await loadCategories();
+    await loadProducts();
+    updateCartCount();
+}
+
+async function loadCategories() {
+    try {
+        const res = await fetch('/api/store/categories');
+        const data = await res.json();
+        const container = document.getElementById('category-filters');
+        container.innerHTML = '';
+        
+        data.categories.forEach(category => {
+            const label = document.createElement('label');
+            label.className = 'flex items-center gap-2 mb-2 cursor-pointer';
+            label.innerHTML = `
+                <input type="checkbox" name="category" value="${category}" class="rounded">
+                <span class="text-sm">${category.charAt(0).toUpperCase() + category.slice(1)}</span>
+            `;
+            container.appendChild(label);
+        });
+    } catch (error) {
+        console.error('Error loading categories:', error);
+    }
+}
+
+async function loadProducts() {
+    const loading = document.getElementById('loading');
+    loading.classList.remove('hidden');
+    
+    const params = new URLSearchParams(currentFilters);
+    
+    try {
+        const res = await fetch(`/api/store/products?${params}`);
+        currentProducts = await res.json();
+        displayProducts(currentProducts);
+    } catch (error) {
+        console.error('Error loading products:', error);
+    } finally {
+        loading.classList.add('hidden');
+    }
+}
+
+function displayProducts(products) {
+    const container = document.getElementById('products-container');
+    
+    if (products.length === 0) {
+        container.innerHTML = '<div class="col-span-full text-center py-20 text-gray-600">No products found.</div>';
+        return;
+    }
+    
+    container.innerHTML = products.map(product => {
+        const discount = product.original_price 
+            ? Math.round((1 - product.price/product.original_price) * 100)
+            : 0;
+        
+        return `
+            <div class="product-card bg-white rounded-lg shadow-md overflow-hidden cursor-pointer" onclick="viewProduct('${product.id}')">
+                <div class="relative">
+                    <img 
+                        src="${product.images[0] || '/static/store/placeholder.jpg'}" 
+                        alt="${product.name}"
+                        class="w-full h-48 object-cover"
+                    />
+                    ${discount > 0 ? `<div class="discount-badge">-${discount}%</div>` : ''}
+                </div>
+                
+                <div class="p-4">
+                    <h3 class="font-semibold text-lg mb-2 line-clamp-2">${product.name}</h3>
+                    
+                    <div class="mb-2">
+                        ${product.original_price ? 
+                            `<span class="text-gray-500 line-through text-sm">LKR ${product.original_price.toLocaleString()}</span>` 
+                            : ''
+                        }
+                        <div class="text-blue-600 font-bold text-xl">LKR ${product.price.toLocaleString()}</div>
+                    </div>
+                    
+                    <div class="flex items-center gap-1 mb-3">
+                        <span class="text-yellow-500">${'★'.repeat(Math.floor(product.rating))}</span>
+                        <span class="text-gray-400">${'★'.repeat(5 - Math.floor(product.rating))}</span>
+                        <span class="text-sm text-gray-600">(${product.reviews_count})</span>
+                    </div>
+                    
+                    <button 
+                        onclick="event.stopPropagation(); addToCart('${product.id}')"
+                        class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+                    >
+                        Add to Cart
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function addToCart(productId) {
+    const product = currentProducts.find(p => p.id === productId);
+    if (!product) return;
+    
+    const existingItem = cart.find(item => item.id === productId);
+    
+    if (existingItem) {
+        existingItem.quantity += 1;
+    } else {
+        cart.push({
+            id: productId,
+            name: product.name,
+            price: product.price,
+            quantity: 1
+        });
+    }
+    
+    updateCart();
+    alert(`${product.name} added to cart!`);
+}
+
+function updateCart() {
+    updateCartCount();
+    updateCartModal();
+}
+
+function updateCartCount() {
+    const count = cart.reduce((total, item) => total + item.quantity, 0);
+    document.getElementById('cart-count').textContent = count;
+}
+
+function viewCart() {
+    document.getElementById('cart-modal').classList.remove('hidden');
+    updateCartModal();
+}
+
+function closeCart() {
+    document.getElementById('cart-modal').classList.add('hidden');
+}
+
+function updateCartModal() {
+    const container = document.getElementById('cart-items');
+    const total = document.getElementById('cart-total');
+    
+    if (cart.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-600 py-8">Your cart is empty</p>';
+        total.textContent = '0';
+        return;
+    }
+    
+    container.innerHTML = cart.map(item => `
+        <div class="flex items-center gap-4 mb-4 pb-4 border-b">
+            <div class="flex-1">
+                <h4 class="font-semibold">${item.name}</h4>
+                <div class="text-blue-600 font-bold">LKR ${item.price.toLocaleString()}</div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button 
+                    onclick="updateQuantity('${item.id}', -1)"
+                    class="bg-gray-200 px-3 py-1 rounded"
+                >-</button>
+                <span class="font-semibold">${item.quantity}</span>
+                <button 
+                    onclick="updateQuantity('${item.id}', 1)"
+                    class="bg-gray-200 px-3 py-1 rounded"
+                >+</button>
+            </div>
+        </div>
+    `).join('');
+    
+    const cartTotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    total.textContent = cartTotal.toLocaleString();
+}
+
+function updateQuantity(productId, change) {
+    const item = cart.find(item => item.id === productId);
+    if (item) {
+        item.quantity += change;
+        if (item.quantity <= 0) {
+            cart = cart.filter(i => i.id !== productId);
+        }
+        updateCart();
+    }
+}
+
+function applyFilters() {
+    const categoryCheckboxes = document.querySelectorAll('input[name="category"]:checked');
+    const priceRange = document.getElementById('price-range');
+    
+    currentFilters = {
+        category: Array.from(categoryCheckboxes).map(cb => cb.value).join(','),
+        max_price: parseInt(priceRange.value)
+    };
+    
+    loadProducts();
+}
+
+function clearFilters() {
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    document.getElementById('price-range').value = 500000;
+    currentFilters = {};
+    loadProducts();
+}
+
+async function checkout() {
+    if (cart.length === 0) {
+        alert('Your cart is empty');
+        return;
+    }
+    
+    try {
+        const orderData = {
+            items: cart,
+            total_amount: cart.reduce((total, item) => total + (item.price * item.quantity), 0),
+            payment_method: 'card'
+        };
+        
+        const orderRes = await fetch('/api/store/order', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(orderData)
+        });
+        
+        const orderResult = await orderRes.json();
+        
+        if (orderResult.status === 'ok') {
+            const paymentData = {
+                order_id: orderResult.order_id,
+                amount: orderData.total_amount,
+                method: 'card',
+                items: cart,
+                transaction_id: 'TXN' + Date.now()
+            };
+            
+            const paymentRes = await fetch('/api/store/payment', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(paymentData)
+            });
+            
+            const paymentResult = await paymentRes.json();
+            
+            if (paymentResult.status === 'ok') {
+                alert('Order placed successfully!');
+                cart = [];
+                updateCart();
+                closeCart();
+            }
+        }
+    } catch (error) {
+        console.error('Checkout error:', error);
+        alert('Checkout failed. Please try again.');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initStore);
+    </script>
 </body>
 </html>

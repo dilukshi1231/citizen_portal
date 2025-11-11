@@ -130,7 +130,7 @@ def get_training_programs():
     
     programs = list(training_programs_col.find(query, {"_id": 0}).sort("start_date", 1))
     
-    # Add enrollment percentage for each program
+    # Add enrollment percentage
     for program in programs:
         program["enrollment_percentage"] = (
             program["current_enrollments"] / program["max_participants"] * 100
@@ -142,6 +142,7 @@ def get_training_programs():
         )
     
     return jsonify(programs)
+
 @app.route("/api/training-programs/<program_id>")
 def get_training_program(program_id):
     """Get training program details"""
@@ -170,6 +171,7 @@ def get_training_program(program_id):
     )
     
     return jsonify(program)
+
 
 @app.route("/api/training-programs/<program_id>/enroll", methods=["POST"])
 def enroll_in_program(program_id):
@@ -240,7 +242,6 @@ def enroll_in_program(program_id):
     if not user_id:
         return jsonify({"error": "Please log in to enroll"}), 401
     
-    # Get program
     program = training_programs_col.find_one({"id": program_id})
     
     if not program:
@@ -249,7 +250,6 @@ def enroll_in_program(program_id):
     if not program.get("active"):
         return jsonify({"error": "Program is not active"}), 400
     
-    # Check if spots available
     if program["current_enrollments"] >= program["max_participants"]:
         return jsonify({"error": "Program is full"}), 400
     
@@ -293,6 +293,7 @@ def enroll_in_program(program_id):
         "status": "success",
         "message": "Successfully enrolled in program"
     })
+
 @app.route("/api/training-programs/<program_id>/unenroll", methods=["POST"])
 def unenroll_from_program(program_id):
     """Unenroll user from training program"""
@@ -518,14 +519,12 @@ def training_page():
     if not session.get("user_logged_in"):
         return redirect("/user/login")
     return render_template("training.html")
+
 @app.route("/api/profile/extended", methods=["POST"])
 def extended_profile():
-    """
-    Enhanced user profile with family, career, and interests
-    Used for targeted recommendations and ads
-    """
+    """Enhanced user profile with family, career, and interests"""
     payload = request.json or {}
-    profile_id = payload.get("profile_id")
+    profile_id = payload.get("profile_id") or session.get("user_id")
     
     if not profile_id:
         return jsonify({"error": "profile_id required"}), 400
@@ -564,6 +563,7 @@ def extended_profile():
             }
         }
         
+        from bson.objectid import ObjectId
         users_col.update_one(
             {"_id": ObjectId(profile_id)},
             {"$set": {"extended_profile": extended_data, "updated": datetime.utcnow()}}
@@ -601,32 +601,28 @@ def get_store_products():
     return jsonify(products)
 
 
+
+
 @app.route("/api/engagement/enhanced", methods=["POST"])
 def log_enhanced_engagement():
-    """
-    Enhanced engagement tracking with device info, referrals, and behavior
-    """
+    """Enhanced engagement tracking with device info and behavior"""
     payload = request.json or {}
     
-    # Extract behavioral data
     user_agent = request.headers.get('User-Agent', '')
     ip_address = request.remote_addr
     referrer = request.headers.get('Referer', '')
     
     doc = {
-        "user_id": payload.get("user_id"),
+        "user_id": payload.get("user_id") or session.get("user_id"),
         "session_id": payload.get("session_id"),
-        "age": int(payload.get("age")) if payload.get("age") else None,
-        "job": payload.get("job"),
+        "age": session.get("user_age"),
+        "job": session.get("user_job"),
         "desires": payload.get("desires", []),
         "question_clicked": payload.get("question_clicked"),
         "service": payload.get("service"),
-        "ad": payload.get("ad"),
-        "source": payload.get("source"),
         "time_spent": payload.get("time_spent"),
         "scroll_depth": payload.get("scroll_depth"),
         "clicks": payload.get("clicks", []),
-        "searches": payload.get("searches", []),
         "device_info": {
             "user_agent": user_agent,
             "ip_address": ip_address,
@@ -644,15 +640,17 @@ def log_enhanced_engagement():
     eng_col.insert_one(doc)
     return jsonify({"status": "ok"})
 
+
 @app.route("/api/consent/update", methods=["POST"])
 def update_consent():
-    """Update user consent preferences (GDPR compliance)"""
+    """Update user consent preferences (GDPR)"""
     payload = request.json or {}
-    user_id = payload.get("user_id")
+    user_id = payload.get("user_id") or session.get("user_id")
     
     if not user_id:
         return jsonify({"error": "user_id required"}), 400
     
+    from bson.objectid import ObjectId
     consent_updates = {
         "extended_profile.consent.marketing_emails": payload.get("marketing_emails", False),
         "extended_profile.consent.personalized_ads": payload.get("personalized_ads", False),
@@ -667,17 +665,15 @@ def update_consent():
     
     return jsonify({"status": "ok", "message": "Consent preferences updated"})
 
-
-
 @app.route("/api/data/export/<user_id>")
 def export_user_data(user_id):
     """GDPR-compliant data export"""
+    from bson.objectid import ObjectId
     user = users_col.find_one({"_id": ObjectId(user_id)})
     
     if not user:
         return jsonify({"error": "User not found"}), 404
     
-    # Remove sensitive internal fields
     export_data = {
         "profile": user.get("profile", {}),
         "extended_profile": user.get("extended_profile", {}),
@@ -690,9 +686,10 @@ def export_user_data(user_id):
 @app.route("/api/data/delete/<user_id>", methods=["DELETE"])
 def delete_user_data(user_id):
     """GDPR-compliant data deletion (Right to be forgotten)"""
+    from bson.objectid import ObjectId
     result = users_col.delete_one({"_id": ObjectId(user_id)})
     
-    # Anonymize engagements instead of deleting (for analytics)
+    # Anonymize engagements
     eng_col.update_many(
         {"user_id": user_id},
         {"$set": {"user_id": None, "anonymized": True}}
@@ -702,6 +699,7 @@ def delete_user_data(user_id):
         return jsonify({"status": "ok", "message": "User data deleted"})
     else:
         return jsonify({"error": "User not found"}), 404
+
 
 # ============================================
 # SMART RECOMMENDATIONS API
@@ -784,7 +782,7 @@ def create_order():
     
     order = {
         "order_id": f"ORD{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
-        "user_id": payload.get("user_id"),
+        "user_id": payload.get("user_id") or session.get("user_id"),
         "items": payload.get("items", []),
         "total_amount": payload.get("total_amount", 0),
         "status": "pending",
@@ -804,7 +802,7 @@ def process_payment():
     payment = {
         "payment_id": f"PAY{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
         "order_id": payload.get("order_id"),
-        "user_id": payload.get("user_id"),
+        "user_id": payload.get("user_id") or session.get("user_id"),
         "amount": payload.get("amount", 0),
         "currency": payload.get("currency", "LKR"),
         "method": payload.get("method"),
@@ -821,9 +819,9 @@ def process_payment():
     
     payments_col.insert_one(payment)
     
-    # Log engagement for recommendation system
+    # Log engagement
     eng_col.insert_one({
-        "user_id": payload.get("user_id"),
+        "user_id": payment["user_id"],
         "type": "purchase",
         "product_ids": [item.get("product_id") for item in payload.get("items", [])],
         "amount": payload.get("amount", 0),
@@ -839,6 +837,8 @@ def store_page():
 @admin_required
 def get_dashboard_analytics():
     """Enhanced dashboard with store metrics"""
+    from datetime import timedelta
+    
     # User analytics
     total_users = users_col.count_documents({})
     active_users = users_col.count_documents({
@@ -856,12 +856,11 @@ def get_dashboard_analytics():
     
     # Store analytics
     total_orders = orders_col.count_documents({})
-    total_revenue = payments_col.aggregate([
+    total_revenue = list(payments_col.aggregate([
         {"$match": {"status": "completed"}},
         {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
-    ])
-    revenue_result = list(total_revenue)
-    total_revenue_amount = revenue_result[0]["total"] if revenue_result else 0
+    ]))
+    total_revenue_amount = total_revenue[0]["total"] if total_revenue else 0
     
     # User segmentation
     user_segments = {}
@@ -873,9 +872,6 @@ def get_dashboard_analytics():
     
     # Popular products
     popular_products = list(products_col.find().sort("rating", -1).limit(5))
-    
-    # Recent activities
-    recent_activities = list(eng_col.find().sort("timestamp", -1).limit(10))
     
     return jsonify({
         "user_metrics": {
@@ -890,12 +886,12 @@ def get_dashboard_analytics():
         "store_metrics": {
             "total_orders": total_orders,
             "total_revenue": total_revenue_amount,
-            "conversion_rate": "3.2%"  # Calculate from actual data
+            "conversion_rate": "3.2%"
         },
         "user_segments": user_segments,
-        "popular_products": popular_products,
-        "recent_activities": recent_activities
+        "popular_products": popular_products
     })
+
 @app.route("/api/service/<service_id>")
 def get_service(service_id):
     doc = services_col.find_one({"id": service_id}, {"_id": 0})
