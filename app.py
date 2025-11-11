@@ -143,97 +143,6 @@ def get_training_programs():
     
     return jsonify(programs)
 
-@app.route("/api/training-programs/<program_id>")
-def get_training_program(program_id):
-    """Get training program details"""
-    program = training_programs_col.find_one({"id": program_id}, {"_id": 0})
-    
-    if not program:
-        return jsonify({"error": "Program not found"}), 404
-    
-    # Check if user is enrolled
-    user_id = session.get("user_id")
-    user_enrolled = False
-    
-    if user_id:
-        enrollment = enrollments_col.find_one({
-            "user_id": user_id,
-            "program_id": program_id
-        })
-        user_enrolled = enrollment is not None
-    
-    program["user_enrolled"] = user_enrolled
-    program["enrollment_percentage"] = (
-        program["current_enrollments"] / program["max_participants"] * 100
-    )
-    program["spots_remaining"] = (
-        program["max_participants"] - program["current_enrollments"]
-    )
-    
-    return jsonify(program)
-
-
-@app.route("/api/training-programs/<program_id>/enroll", methods=["POST"])
-def enroll_in_program(program_id):
-    """Enroll user in training program"""
-    user_id = session.get("user_id")
-    
-    if not user_id:
-        return jsonify({"error": "Please log in to enroll"}), 401
-    
-    # Get program
-    program = training_programs_col.find_one({"id": program_id})
-    
-    if not program:
-        return jsonify({"error": "Program not found"}), 404
-    
-    if not program.get("active"):
-        return jsonify({"error": "Program is not active"}), 400
-    
-    # Check if spots available
-    if program["current_enrollments"] >= program["max_participants"]:
-        return jsonify({"error": "Program is full"}), 400
-    
-    # Check if already enrolled
-    existing = enrollments_col.find_one({
-        "user_id": user_id,
-        "program_id": program_id
-    })
-    
-    if existing:
-        return jsonify({"error": "Already enrolled in this program"}), 400
-    
-    # Create enrollment
-    enrollment = {
-        "user_id": user_id,
-        "program_id": program_id,
-        "status": "enrolled",
-        "enrolled_date": datetime.utcnow(),
-        "completion_status": None,
-        "progress": 0
-    }
-    
-    enrollments_col.insert_one(enrollment)
-    
-    # Increment enrollment count
-    training_programs_col.update_one(
-        {"id": program_id},
-        {"$inc": {"current_enrollments": 1}}
-    )
-    
-    # Log engagement
-    eng_col.insert_one({
-        "user_id": user_id,
-        "type": "training_enrollment",
-        "program_id": program_id,
-        "program_name": program.get("title", {}).get("en"),
-        "timestamp": datetime.utcnow()
-    })
-    
-    return jsonify({
-        "status": "success",
-        "message": "Successfully enrolled in program"
-    })
 @app.route("/api/training-programs/<program_id>/enroll", methods=["POST"])
 def enroll_in_program(program_id):
     """Enroll user in training program"""
@@ -293,7 +202,6 @@ def enroll_in_program(program_id):
         "status": "success",
         "message": "Successfully enrolled in program"
     })
-
 @app.route("/api/training-programs/<program_id>/unenroll", methods=["POST"])
 def unenroll_from_program(program_id):
     """Unenroll user from training program"""
