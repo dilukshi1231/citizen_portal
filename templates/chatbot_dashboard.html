@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Citizen Services Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=Noto+Sans+Sinhala:wght@300;400;500;600;700&display=Noto+Sans+Tamil:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', 'Noto Sans Sinhala', 'Noto Sans Tamil', sans-serif; }
+        .dropdown:hover .dropdown-menu { display: block; }
+        .dropdown-menu { 
+            display: none; 
+            position: absolute; 
+            top: 100%; 
+            right: 0; 
+            background: white; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+            min-width: 200px; 
+            z-index: 1000; 
+        }
+        .card-hover { 
+            transition: all 0.3s ease; 
+        }
+        .card-hover:hover { 
+            transform: translateY(-8px); 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15); 
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center space-x-2">
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
+                        CS
+                    </div>
+                    <div>
+                        <h1 id="portal-title" class="text-lg font-bold text-gray-900">Citizen Services</h1>
+                        <p id="portal-subtitle" class="text-xs text-gray-500">AI-Powered Portal</p>
+                    </div>
+                </div>
+                
+                <!-- Right Actions -->
+                <div class="flex items-center space-x-4">
+                    <!-- Cart -->
+                    <button onclick="window.location.href='/store'" class="relative p-2 hover:bg-gray-100 rounded-lg">
+                        🛒
+                        <span id="cart-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">0</span>
+                    </button>
+                    
+                    <!-- Notifications -->
+                    <button class="relative p-2 hover:bg-gray-100 rounded-lg">
+                        🔔
+                        <span class="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full"></span>
+                    </button>
+                    
+                    <!-- Language -->
+                    <select id="language-selector" onchange="changeLanguage(this.value)" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option value="en">English</option>
+                        <option value="si">සිංහල</option>
+                        <option value="ta">தமிழ்</option>
+                    </select>
+                    
+                    <!-- User Menu -->
+                    <div class="relative dropdown">
+                        <button class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100">
+                            <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold">
+                                <span id="user-initial">U</span>
+                            </div>
+                            <span>▼</span>
+                        </button>
+                        
+                        <div class="dropdown-menu">
+                            <div class="p-4 border-b">
+                                <p class="font-semibold" id="user-name">User Name</p>
+                                <p class="text-sm text-gray-500" id="user-email">user@example.com</p>
+                            </div>
+                            <a href="#" onclick="showProfile(); return false;" class="block px-4 py-2 hover:bg-gray-100" id="menu-profile">👤 My Profile</a>
+                            <a href="#" onclick="showOrders(); return false;" class="block px-4 py-2 hover:bg-gray-100" id="menu-orders">📦 My Orders</a>
+                            <a href="/training" class="block px-4 py-2 hover:bg-gray-100" id="menu-training">🎓 My Training</a>
+                            <a href="#" onclick="showSettings(); return false;" class="block px-4 py-2 hover:bg-gray-100" id="menu-settings">⚙️ Settings</a>
+                            <div class="border-t">
+                                <a href="#" onclick="logout(); return false;" class="block px-4 py-2 text-red-600 hover:bg-red-50" id="menu-logout">🚪 Logout</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto p-6">
+        <!-- Welcome Banner -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-xl p-8 mb-6 text-white">
+            <h2 class="text-3xl font-bold mb-2">
+                <span id="welcome-text">Welcome back</span>, <span id="welcome-name">User</span>! 👋
+            </h2>
+            <p id="help-text" class="text-blue-100">How can we help you today?</p>
+        </div>
+        
+        <!-- Quick Actions Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+            <!-- AI Services -->
+            <button onclick="window.location.href='/chatbot'" class="card-hover bg-white p-6 rounded-xl shadow-md">
+                <div class="text-5xl mb-3">🤖</div>
+                <div id="btn-ai" class="font-bold text-lg">AI Services</div>
+                <div id="btn-ai-desc" class="text-xs text-gray-500 mt-1">Chat with AI Assistant</div>
+            </button>
+            
+            <!-- Store -->
+            <button onclick="window.location.href='/store'" class="card-hover bg-white p-6 rounded-xl shadow-md">
+                <div class="text-5xl mb-3">🛒</div>
+                <div id="btn-store" class="font-bold text-lg">Store</div>
+                <div id="btn-store-desc" class="text-xs text-gray-500 mt-1">Browse products</div>
+            </button>
+            
+            <!-- Training -->
+            <button onclick="window.location.href='/training'" class="card-hover bg-white p-6 rounded-xl shadow-md">
+                <div class="text-5xl mb-3">🎓</div>
+                <div id="btn-training" class="font-bold text-lg">Training</div>
+                <div id="btn-training-desc" class="text-xs text-gray-500 mt-1">Learn new skills</div>
+            </button>
+            
+            <!-- Recommendations -->
+            <button onclick="showRecommendations()" class="card-hover bg-white p-6 rounded-xl shadow-md relative">
+                <div class="text-5xl mb-3">✨</div>
+                <div id="btn-foryou" class="font-bold text-lg">For You</div>
+                <div id="btn-foryou-desc" class="text-xs text-gray-500 mt-1">Personalized</div>
+                <span id="badge-new" class="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">New</span>
+            </button>
+        </div>
+        
+        <!-- Government Services Section -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+            <h3 id="gov-services-title" class="text-2xl font-bold mb-4">Government Services</h3>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <button onclick="navigateToService('it')" class="bg-gradient-to-br from-blue-500 to-blue-600 p-4 rounded-xl text-white hover:shadow-lg transition-all">
+                    <div class="text-3xl mb-2">💻</div>
+                    <div id="gov-it" class="font-semibold text-sm">IT & Digital</div>
+                </button>
+                
+                <button onclick="navigateToService('education')" class="bg-gradient-to-br from-green-500 to-green-600 p-4 rounded-xl text-white hover:shadow-lg transition-all">
+                    <div class="text-3xl mb-2">📚</div>
+                    <div id="gov-edu" class="font-semibold text-sm">Education</div>
+                </button>
+                
+                <button onclick="navigateToService('health')" class="bg-gradient-to-br from-red-500 to-red-600 p-4 rounded-xl text-white hover:shadow-lg transition-all">
+                    <div class="text-3xl mb-2">🏥</div>
+                    <div id="gov-health" class="font-semibold text-sm">Health</div>
+                </button>
+                
+                <button onclick="navigateToService('transport')" class="bg-gradient-to-br from-yellow-500 to-yellow-600 p-4 rounded-xl text-white hover:shadow-lg transition-all">
+                    <div class="text-3xl mb-2">🚗</div>
+                    <div id="gov-transport" class="font-semibold text-sm">Transport</div>
+                </button>
+                
+                <button onclick="navigateToService('immigration')" class="bg-gradient-to-br from-purple-500 to-purple-600 p-4 rounded-xl text-white hover:shadow-lg transition-all">
+                    <div class="text-3xl mb-2">🛂</div>
+                    <div id="gov-immigration" class="font-semibold text-sm">Immigration</div>
+                </button>
+                
+                <button onclick="navigateToService('public')" class="bg-gradient-to-br from-indigo-500 to-indigo-600 p-4 rounded-xl text-white hover:shadow-lg transition-all">
+                    <div class="text-3xl mb-2">🏛️</div>
+                    <div id="gov-public" class="font-semibold text-sm">Public Admin</div>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- My Training Programs -->
+            <div class="bg-white rounded-2xl shadow-xl p-6">
+                <h3 id="my-training-title" class="text-xl font-bold mb-4">My Training Programs</h3>
+                <div id="training-list" class="space-y-3">
+                    <p id="no-enrollments" class="text-gray-500 text-center py-4">No enrollments yet</p>
+                </div>
+                <button onclick="window.location.href='/training'" id="browse-training-btn" class="w-full mt-4 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+                    Browse Training Programs
+                </button>
+            </div>
+            
+            <!-- Quick Stats -->
+            <div class="bg-white rounded-2xl shadow-xl p-6">
+                <h3 id="activity-title" class="text-xl font-bold mb-4">Your Activity</h3>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <span id="stat-services" class="font-semibold">Services Used</span>
+                        <span class="text-2xl font-bold text-blue-600" id="services-count">0</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                        <span id="stat-training" class="font-semibold">Training Enrolled</span>
+                        <span class="text-2xl font-bold text-green-600" id="training-count">0</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                        <span id="stat-orders" class="font-semibold">Store Orders</span>
+                        <span class="text-2xl font-bold text-purple-600" id="orders-count">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Comprehensive multilingual translations
+        const translations = {
+            en: {
+                portalTitle: 'Citizen Services',
+                portalSubtitle: 'AI-Powered Portal',
+                welcomeBack: 'Welcome back',
+                helpToday: 'How can we help you today?',
+                aiServices: 'AI Services',
+                aiServicesDesc: 'Chat with AI Assistant',
+                store: 'Store',
+                storeDesc: 'Browse products',
+                training: 'Training',
+                trainingDesc: 'Learn new skills',
+                forYou: 'For You',
+                forYouDesc: 'Personalized',
+                newBadge: 'New',
+                govServices: 'Government Services',
+                itDigital: 'IT & Digital',
+                education: 'Education',
+                health: 'Health',
+                transport: 'Transport',
+                immigration: 'Immigration',
+                publicAdmin: 'Public Admin',
+                myTraining: 'My Training Programs',
+                noEnrollments: 'No enrollments yet',
+                browseTraining: 'Browse Training Programs',
+                yourActivity: 'Your Activity',
+                servicesUsed: 'Services Used',
+                trainingEnrolled: 'Training Enrolled',
+                storeOrders: 'Store Orders',
+                myProfile: '👤 My Profile',
+                myOrders: '📦 My Orders',
+                myTrainingMenu: '🎓 My Training',
+                settings: '⚙️ Settings',
+                logout: '🚪 Logout',
+                comingSoon: 'Coming soon!',
+                logoutConfirm: 'Are you sure you want to logout?'
+            },
+            si: {
+                portalTitle: 'පුරවැසි සේවා',
+                portalSubtitle: 'AI බලගන්වන ද්වාරය',
+                welcomeBack: 'නැවත සාදරයෙන් පිළිගනිමු',
+                helpToday: 'අද අපි ඔබට කෙසේ උදව් කළ හැකිද?',
+                aiServices: 'AI සේවා',
+                aiServicesDesc: 'AI සහායක සමඟ කතා කරන්න',
+                store: 'වෙළඳසැල',
+                storeDesc: 'නිෂ්පාදන පිරික්සන්න',
+                training: 'පුහුණු වීම',
+                trainingDesc: 'නව කුසලතා ඉගෙන ගන්න',
+                forYou: 'ඔබ සඳහා',
+                forYouDesc: 'පුද්ගලීකරණය කළ',
+                newBadge: 'අලුත්',
+                govServices: 'රජයේ සේවා',
+                itDigital: 'තොරතුරු තාක්ෂණය',
+                education: 'අධ්‍යාපනය',
+                health: 'සෞඛ්‍යය',
+                transport: 'ප්‍රවාහනය',
+                immigration: 'ආගමන',
+                publicAdmin: 'රාජ්‍ය පරිපාලනය',
+                myTraining: 'මගේ පුහුණු වැඩසටහන්',
+                noEnrollments: 'තවමත් ලියාපදිංචි වී නැත',
+                browseTraining: 'පුහුණු වැඩසටහන් පිරික්සන්න',
+                yourActivity: 'ඔබේ ක්‍රියාකාරකම්',
+                servicesUsed: 'භාවිතා කළ සේවා',
+                trainingEnrolled: 'ලියාපදිංචි පුහුණු',
+                storeOrders: 'වෙළඳසැල් ඇණවුම්',
+                myProfile: '👤 මගේ පැතිකඩ',
+                myOrders: '📦 මගේ ඇණවුම්',
+                myTrainingMenu: '🎓 මගේ පුහුණු',
+                settings: '⚙️ සැකසුම්',
+                logout: '🚪 පිටවන්න',
+                comingSoon: 'ඉදිරියේදී පැමිණේ!',
+                logoutConfirm: 'ඔබට පිටවීමට අවශ්‍ය බව විශ්වාසද?'
+            },
+            ta: {
+                portalTitle: 'குடிமக்கள் சேவைகள்',
+                portalSubtitle: 'AI இயக்கப்பட்ட போர்ட்டல்',
+                welcomeBack: 'மீண்டும் வரவேற்கிறோம்',
+                helpToday: 'இன்று நாங்கள் உங்களுக்கு எவ்வாறு உதவ முடியும்?',
+                aiServices: 'AI சேவைகள்',
+                aiServicesDesc: 'AI உதவியாளருடன் அரட்டை',
+                store: 'கடை',
+                storeDesc: 'தயாரிப்புகளை உலாவவும்',
+                training: 'பயிற்சி',
+                trainingDesc: 'புதிய திறன்களை கற்றுக்கொள்ளுங்கள்',
+                forYou: 'உங்களுக்காக',
+                forYouDesc: 'தனிப்பயனாக்கப்பட்டது',
+                newBadge: 'புதிய',
+                govServices: 'அரசாங்க சேவைகள்',
+                itDigital: 'IT மற்றும் டிஜிட்டல்',
+                education: 'கல்வி',
+                health: 'சுகாதாரம்',
+                transport: 'போக்குவரத்து',
+                immigration: 'குடிவரவு',
+                publicAdmin: 'பொது நிர்வாகம்',
+                myTraining: 'எனது பயிற்சி திட்டங்கள்',
+                noEnrollments: 'இன்னும் பதிவு செய்யப்படவில்லை',
+                browseTraining: 'பயிற்சி திட்டங்களை உலாவவும்',
+                yourActivity: 'உங்கள் செயல்பாடு',
+                servicesUsed: 'பயன்படுத்திய சேவைகள்',
+                trainingEnrolled: 'பதிவு செய்யப்பட்ட பயிற்சி',
+                storeOrders: 'கடை ஆர்டர்கள்',
+                myProfile: '👤 எனது சுயவிவரம்',
+                myOrders: '📦 எனது ஆர்டர்கள்',
+                myTrainingMenu: '🎓 எனது பயிற்சி',
+                settings: '⚙️ அமைப்புகள்',
+                logout: '🚪 வெளியேறு',
+                comingSoon: 'விரைவில் வருகிறது!',
+                logoutConfirm: 'நீங்கள் வெளியேற விரும்புகிறீர்களா?'
+            }
+        };
+
+        // Current language
+        let currentLanguage = localStorage.getItem('language') || 'en';
+
+        // Update all UI text based on selected language
+        function updateLanguage(lang) {
+            currentLanguage = lang;
+            const t = translations[lang];
+            
+            // Navigation
+            document.getElementById('portal-title').textContent = t.portalTitle;
+            document.getElementById('portal-subtitle').textContent = t.portalSubtitle;
+            
+            // Welcome banner
+            document.getElementById('welcome-text').textContent = t.welcomeBack;
+            document.getElementById('help-text').textContent = t.helpToday;
+            
+            // Quick actions
+            document.getElementById('btn-ai').textContent = t.aiServices;
+            document.getElementById('btn-ai-desc').textContent = t.aiServicesDesc;
+            document.getElementById('btn-store').textContent = t.store;
+            document.getElementById('btn-store-desc').textContent = t.storeDesc;
+            document.getElementById('btn-training').textContent = t.training;
+            document.getElementById('btn-training-desc').textContent = t.trainingDesc;
+            document.getElementById('btn-foryou').textContent = t.forYou;
+            document.getElementById('btn-foryou-desc').textContent = t.forYouDesc;
+            document.getElementById('badge-new').textContent = t.newBadge;
+            
+            // Government services
+            document.getElementById('gov-services-title').textContent = t.govServices;
+            document.getElementById('gov-it').textContent = t.itDigital;
+            document.getElementById('gov-edu').textContent = t.education;
+            document.getElementById('gov-health').textContent = t.health;
+            document.getElementById('gov-transport').textContent = t.transport;
+            document.getElementById('gov-immigration').textContent = t.immigration;
+            document.getElementById('gov-public').textContent = t.publicAdmin;
+            
+            // Training section
+            document.getElementById('my-training-title').textContent = t.myTraining;
+            document.getElementById('no-enrollments').textContent = t.noEnrollments;
+            document.getElementById('browse-training-btn').textContent = t.browseTraining;
+            
+            // Activity section
+            document.getElementById('activity-title').textContent = t.yourActivity;
+            document.getElementById('stat-services').textContent = t.servicesUsed;
+            document.getElementById('stat-training').textContent = t.trainingEnrolled;
+            document.getElementById('stat-orders').textContent = t.storeOrders;
+            
+            // User menu
+            document.getElementById('menu-profile').textContent = t.myProfile;
+            document.getElementById('menu-orders').textContent = t.myOrders;
+            document.getElementById('menu-training').textContent = t.myTrainingMenu;
+            document.getElementById('menu-settings').textContent = t.settings;
+            document.getElementById('menu-logout').textContent = t.logout;
+        }
+
+        // Load user data and initialize
+        async function loadUserData() {
+            const userName = sessionStorage.getItem('user_name') || 'User';
+            const userEmail = sessionStorage.getItem('user_email') || 'user@example.com';
+            
+            document.getElementById('user-name').textContent = userName;
+            document.getElementById('user-email').textContent = userEmail;
+            document.getElementById('welcome-name').textContent = userName.split(' ')[0] || 'User';
+            document.getElementById('user-initial').textContent = userName[0].toUpperCase();
+            
+            // Set language selector and apply translations
+            document.getElementById('language-selector').value = currentLanguage;
+            updateLanguage(currentLanguage);
+        }
+
+        function changeLanguage(lang) {
+            localStorage.setItem('language', lang);
+            updateLanguage(lang);
+        }
+
+        function navigateToService(service) {
+            window.location.href = `/chatbot?lang=${currentLanguage}`;
+        }
+
+        function showRecommendations() {
+            const t = translations[currentLanguage];
+            alert(t.comingSoon);
+        }
+
+        function showProfile() {
+            const t = translations[currentLanguage];
+            alert(t.comingSoon);
+        }
+
+        function showOrders() {
+            const t = translations[currentLanguage];
+            alert(t.comingSoon);
+        }
+
+        function showSettings() {
+            const t = translations[currentLanguage];
+            alert(t.comingSoon);
+        }
+
+        async function logout() {
+            const t = translations[currentLanguage];
+            if (confirm(t.logoutConfirm)) {
+                try {
+                    await fetch('/api/user/logout', { method: 'POST' });
+                    window.location.href = '/user/login';
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    window.location.href = '/user/login';
+                }
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserData();
+        });
+    </script>
+</body>
+</html>

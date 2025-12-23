@@ -259,9 +259,10 @@ def user_register_page():
     if session.get("user_logged_in"):
         return redirect("/chatbot")
     return render_template("user_register.html")
+# Update the login API to redirect to dashboard
 @app.route("/api/user/login", methods=["POST"])
 def user_login_api():
-    """User login API endpoint - Load profile data into session"""
+    """User login API endpoint - Redirect to dashboard on success"""
     try:
         data = request.json
         email = data.get("email")
@@ -287,14 +288,13 @@ def user_login_api():
                 session["user_id"] = str(user["_id"])
                 session["user_email"] = email
                 session["user_name"] = user.get("full_name", "User")
-                # CRITICAL: Store age and job
                 session["user_age"] = user.get("age")
                 session["user_job"] = user.get("job")
                 session["user_language"] = user.get("language", "en")
                 
                 return jsonify({
                     "status": "success",
-                    "redirect": "/chatbot"
+                    "redirect": "/dashboard"  # Changed from /chatbot to /dashboard
                 })
         
         return jsonify({"error": "Invalid email or password"}), 401
@@ -302,9 +302,10 @@ def user_login_api():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# Update registration to redirect to dashboard
 @app.route("/api/user/register", methods=["POST"])
 def user_register_api():
-    """User registration API endpoint - Store profile data in session"""
+    """User registration API endpoint - Redirect to dashboard"""
     try:
         data = request.json
         email = data.get("email", "").strip()
@@ -348,21 +349,19 @@ def user_register_api():
         session["user_id"] = str(result.inserted_id)
         session["user_email"] = email
         session["user_name"] = user_doc.get("full_name") or email.split('@')[0]
-        # CRITICAL: Store age and job in session
         session["user_age"] = age
         session["user_job"] = job
         session["user_language"] = data.get("language", "en")
         
         return jsonify({
             "status": "success",
-            "redirect": "/chatbot",
+            "redirect": "/dashboard",  # Changed from /chatbot to /dashboard
             "message": "Account created successfully!"
         })
     
     except Exception as e:
         print(f"Registration error: {e}")
         return jsonify({"error": "Registration failed. Please try again."}), 500
-
 
 
 @app.route("/api/user/logout", methods=["POST"])
@@ -741,6 +740,13 @@ def process_payment():
 def store_page():
     """Public store frontend"""
     return render_template("store.html")
+@app.route("/dashboard")
+def dashboard_page():
+    """User Dashboard - Main page after login"""
+    if not session.get("user_logged_in"):
+        return redirect("/user/login")
+    return render_template("chatbot_dashboard.html")
+
 @app.route("/api/dashboard/analytics")
 @admin_required
 def get_dashboard_analytics():
