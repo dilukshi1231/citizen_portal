@@ -9,17 +9,26 @@
 <div class="container">
     <!-- Left Sidebar: Categories/Ministries -->
     <aside class="sidebar">
-        <h2>Service Categories</h2>
-        <div id="category-list"></div>
-        
-        <h3 style="margin-top: 30px;">All Ministries</h3>
-        <ul id="service-list"></ul>
-        
+        <h3 style="margin-top: 30px;">Select Language</h3>
+
         <div class="lang-switch">
             <button onclick="setLang('en')">English</button>
             <button onclick="setLang('si')">සිංහල</button>
             <button onclick="setLang('ta')">தமிழ்</button>
         </div>
+        <!--<h2>Service Categories</h2>
+        <div id="category-list"></div>-->
+        
+        <h3 style="margin-top: 30px;">All Ministries</h3>
+<div class="dropdown-container">
+    <button class="dropdown-btn" onclick="toggleDropdown()">
+        <span id="dropdown-text">Select a Ministry</span>
+        <span class="dropdown-arrow">▼</span>
+    </button>
+    <ul id="service-list" class="dropdown-list"></ul>
+</div>
+        
+        
         
         <!-- Ads Area -->
         <div class="ads" id="ads-area">
@@ -38,8 +47,8 @@
         <!-- AI Search Bar -->
         <div class="search-row">
             <input id="search-input" placeholder="Search services or ask AI..." />
-            <button onclick="handleSearch()">🔍 Search</button>
-            <button onclick="window.location.href='/chatbot'" style="background:#10b981;">🤖 AI Chat</button>
+            <button onclick="handleSearch()"> Search</button>
+            <button onclick="window.location.href='/chatbot'" style="background:#10b981;">Login/Sign Up</button>
         </div>
         
         <!-- AI Search Results -->

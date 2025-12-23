@@ -39,6 +39,7 @@ async function loadCategories() {
     }
 }
 
+/*
 async function loadServices() {
     try {
         const res = await fetch("/api/services");
@@ -63,6 +64,7 @@ async function loadServices() {
         console.error("Error loading services:", error);
     }
 }
+*/
 // Load officers on page load
 async function loadOfficers() {
     try {
@@ -415,7 +417,39 @@ function showAnswer(service, sub, q) {
         setTimeout(() => showProfileModal(), 2000);
     }
 }
-
+async function loadServices() {
+    try {
+        const response = await fetch('/api/services');
+        services = await response.json();
+        
+        const serviceList = document.getElementById('service-list');
+        serviceList.innerHTML = '';
+        
+        services.forEach(service => {
+            const li = document.createElement('li');
+            li.dataset.id = service.id;
+            // FIX: service.name is an object with language keys, not a string
+            const serviceName = service.name?.[lang] || service.name?.en || service.id;
+            li.textContent = serviceName;
+            li.onclick = (e) => {
+                e.stopPropagation();
+                selectService(service.id, serviceName);
+            };
+            serviceList.appendChild(li);
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const dropdownContainer = document.querySelector('.dropdown-container');
+            if (dropdownContainer && !dropdownContainer.contains(e.target)) {
+                closeDropdown();
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading services:', error);
+    }
+}
 // ============================================
 // AI SEARCH
 // ============================================
@@ -483,7 +517,97 @@ async function handleSearch() {
         answerDiv.innerHTML = `<div style="color:#dc3545;">❌ Search failed. Please try again.</div>`;
     }
 }
+let dropdownOpen = false;
+let selectedService = null;
 
+function toggleDropdown() {
+    const dropdownList = document.getElementById('service-list');
+    const arrow = document.querySelector('.dropdown-arrow');
+    
+    dropdownOpen = !dropdownOpen;
+    
+    if (dropdownOpen) {
+        dropdownList.classList.add('show');
+        arrow.classList.add('open');
+    } else {
+        dropdownList.classList.remove('show');
+        arrow.classList.remove('open');
+    }
+}
+
+function closeDropdown() {
+    const dropdownList = document.getElementById('service-list');
+    const arrow = document.querySelector('.dropdown-arrow');
+    
+    dropdownOpen = false;
+    dropdownList.classList.remove('show');
+    arrow.classList.remove('open');
+}
+
+function selectService(serviceId, serviceName) {
+    // Update dropdown button text
+    document.getElementById('dropdown-text').textContent = serviceName;
+    
+    // Mark as selected in the list
+    const items = document.querySelectorAll('#service-list li');
+    items.forEach(item => {
+        item.classList.remove('selected');
+        if (item.dataset.id === serviceId) {
+            item.classList.add('selected');
+        }
+    });
+    
+    // Set as selected
+    selectedService = serviceId;
+    
+    // Close dropdown
+    closeDropdown();
+    
+    // Load subservices for this ministry
+    // Find the service object from the services array
+    const service = services.find(s => s.id === serviceId);
+    if (service) {
+        loadSubservices(service);
+    } else {
+        console.error('Service not found:', serviceId);
+    }
+}
+
+// Update loadServices function to create dropdown items:
+/*async function loadServices() {
+    try {
+        const response = await fetch('/api/services');
+        const services = await response.json();
+        
+        const serviceList = document.getElementById('service-list');
+        serviceList.innerHTML = '';
+        
+        services.forEach(service => {
+            const li = document.createElement('li');
+            li.dataset.id = service.id;
+            li.textContent = service.name;
+            li.onclick = (e) => {
+                e.stopPropagation();
+                selectService(service.id, service.name);
+            };
+            serviceList.appendChild(li);
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const dropdownContainer = document.querySelector('.dropdown-container');
+            if (!dropdownContainer.contains(e.target)) {
+                closeDropdown();
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading services:', error);
+    }
+}*/
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', loadServices);
 // ============================================
 // PROGRESSIVE PROFILE
 // ============================================
