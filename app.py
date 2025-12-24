@@ -1667,6 +1667,7 @@ def delete_service(service_id):
 @app.route("/api/admin/insights")
 @admin_required
 def admin_insights():
+    # Age groups
     age_groups = {"<18": 0, "18-25": 0, "26-40": 0, "41-60": 0, "60+": 0}
     for e in eng_col.find({}, {"age": 1}):
         age = e.get("age")
@@ -1687,6 +1688,7 @@ def admin_insights():
         except:
             continue
     
+    # Jobs, services, questions
     jobs = {}
     services = {}
     questions = {}
@@ -1705,20 +1707,29 @@ def admin_insights():
         for d in e.get("desires") or []:
             desires[d] = desires.get(d, 0) + 1
     
+    # Sort all dictionaries
     jobs = dict(sorted(jobs.items(), key=lambda x: x[1], reverse=True))
     services = dict(sorted(services.items(), key=lambda x: x[1], reverse=True))
     questions = dict(sorted(questions.items(), key=lambda x: x[1], reverse=True))
     desires = dict(sorted(desires.items(), key=lambda x: x[1], reverse=True))
     
+    # Premium suggestions - FIXED VERSION
     pipeline = [
+        {"$match": {"question_clicked": {"$exists": True, "$ne": None}}},
         {"$group": {"_id": {"user": "$user_id", "question": "$question_clicked"}, "count": {"$sum": 1}}},
         {"$match": {"count": {"$gte": 2}}}
     ]
+    
     repeated = list(eng_col.aggregate(pipeline))
-    premium_suggestions = [
-        {"user": r["_id"]["user"], "question": r["_id"]["question"], "count": r["count"]}
-        for r in repeated if r["_id"]["user"]
-    ]
+    premium_suggestions = []
+    
+    for r in repeated:
+        if r["_id"].get("user") and r["_id"].get("question"):
+            premium_suggestions.append({
+                "user": r["_id"]["user"],
+                "question": r["_id"]["question"],
+                "count": r["count"]
+            })
     
     return jsonify({
         "age_groups": age_groups,
