@@ -258,6 +258,12 @@ def unenroll_from_program(program_id):
     else:
         return jsonify({"error": "Not enrolled in this program"}), 404
 
+@app.route("/my-training")
+def my_training_page():
+    """My Training page - shows user enrollments"""
+    if not session.get("user_logged_in"):
+        return redirect("/user/login")
+    return render_template("training.html")
 @app.route("/api/my-training")
 def get_my_training():
     """Get user's enrolled training programs - SINGLE DEFINITION"""
@@ -276,6 +282,8 @@ def get_my_training():
         )
         if program:
             enrollment["program"] = program
+            # Add enrollment status to program
+            enrollment["program"]["user_enrolled"] = True
     
     return jsonify(enrollments)
 

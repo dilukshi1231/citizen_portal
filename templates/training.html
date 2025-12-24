@@ -17,8 +17,8 @@
     <header class="bg-white shadow-md sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <div class="flex items-center gap-4">
-                <a href="/" class="text-blue-600 hover:text-blue-800">← Back to Portal</a>
-                <h1 class="text-2xl font-bold text-gray-900">🎓 Training Programs</h1>
+                <a href="/dashboard" class="text-blue-600 hover:text-blue-800">← Back to Dashboard</a>
+                <h1 id="page-title" class="text-2xl font-bold text-gray-900">🎓 Training Programs</h1>
             </div>
             <div class="flex gap-3">
                 <select id="lang-select" class="px-3 py-2 border rounded-lg">
@@ -26,7 +26,7 @@
                     <option value="si">සිංහල</option>
                     <option value="ta">தமிழ்</option>
                 </select>
-                <a href="/my-training" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <a href="/my-training" id="my-enrollments-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                     My Enrollments
                 </a>
             </div>
@@ -35,7 +35,7 @@
 
     <!-- Filters -->
     <div class="max-w-7xl mx-auto px-4 py-6">
-        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+        <div class="bg-white rounded-xl shadow-md p-6 mb-6" id="filters-section">
             <h2 class="text-lg font-semibold mb-4">Filter Programs</h2>
             <div class="grid md:grid-cols-4 gap-4">
                 <select id="category-filter" class="px-4 py-2 border rounded-lg">
@@ -83,12 +83,31 @@
     <script>
         let currentLang = 'en';
         let allPrograms = [];
+        const isMyTrainingPage = window.location.pathname === '/my-training';
 
-        // Load programs
+        // Load programs or enrollments based on page
         async function loadPrograms() {
             try {
-                const response = await fetch('/api/training-programs');
-                allPrograms = await response.json();
+                // Choose endpoint based on page
+                let endpoint = isMyTrainingPage ? '/api/my-training' : '/api/training-programs';
+                const response = await fetch(endpoint);
+                
+                if (isMyTrainingPage) {
+                    // For My Training page, extract programs from enrollments
+                    const enrollments = await response.json();
+                    allPrograms = enrollments.map(e => {
+                        const program = e.program;
+                        program.enrollment_status = e.status;
+                        program.enrolled_date = e.enrolled_date;
+                        program.progress = e.progress || 0;
+                        program.user_enrolled = true;
+                        return program;
+                    });
+                } else {
+                    // For browse page, use programs directly
+                    allPrograms = await response.json();
+                }
+                
                 renderPrograms(allPrograms);
             } catch (error) {
                 console.error('Error loading programs:', error);
@@ -106,7 +125,8 @@
             if (programs.length === 0) {
                 grid.innerHTML = `
                     <div class="col-span-full text-center py-20">
-                        <p class="text-gray-600">No programs found matching your filters</p>
+                        <p class="text-gray-600">${isMyTrainingPage ? 'No enrollments yet. Browse programs to get started!' : 'No programs found matching your filters'}</p>
+                        ${isMyTrainingPage ? '<a href="/training" class="mt-4 inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Browse All Programs</a>' : ''}
                     </div>
                 `;
                 return;
@@ -119,10 +139,27 @@
                 const percentFull = (program.current_enrollments / program.max_participants * 100).toFixed(0);
                 const isFull = spotsLeft <= 0;
                 
+                // Show enrollment badge if on My Training page
+                const enrollmentBadge = isMyTrainingPage ? 
+                    `<div class="bg-green-500 text-xs font-bold px-3 py-1 absolute top-4 left-4 rounded-full text-white">✓ ENROLLED</div>` : 
+                    (program.featured ? '<div class="bg-yellow-400 text-xs font-bold px-3 py-1 absolute top-4 right-4 rounded-full">⭐ FEATURED</div>' : '');
+                
+                // Show progress bar for enrolled programs
+                const progressBar = isMyTrainingPage && program.progress !== undefined ? 
+                    `<div class="mb-4">
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-600">Your Progress</span>
+                            <span class="font-semibold text-green-600">${program.progress}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="h-2 rounded-full bg-green-500" style="width: ${program.progress}%"></div>
+                        </div>
+                    </div>` : '';
+                
                 return `
                     <div class="card-hover bg-white rounded-xl shadow-md overflow-hidden cursor-pointer" onclick="showProgramDetails('${program.id}')">
-                        <!-- Featured Badge -->
-                        ${program.featured ? '<div class="bg-yellow-400 text-xs font-bold px-3 py-1 absolute top-4 right-4 rounded-full">⭐ FEATURED</div>' : ''}
+                        <!-- Enrollment/Featured Badge -->
+                        ${enrollmentBadge}
                         
                         <!-- Program Header -->
                         <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
@@ -138,7 +175,10 @@
                         <div class="p-6">
                             <p class="text-gray-600 mb-4 line-clamp-3">${description}</p>
                             
-                            <!-- Progress Bar -->
+                            <!-- Progress Bar (for enrolled programs) -->
+                            ${progressBar}
+                            
+                            <!-- Enrollment Progress Bar -->
                             <div class="mb-4">
                                 <div class="flex justify-between text-sm mb-1">
                                     <span class="text-gray-600">Enrollment</span>
@@ -170,9 +210,14 @@
                             </div>
 
                             <!-- CTA Button -->
-                            <button class="w-full py-3 ${isFull ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white font-semibold rounded-lg transition-colors">
-                                ${isFull ? '🚫 Program Full' : program.enrollment_open ? '📝 View Details & Enroll' : '⏰ Enrollment Closed'}
-                            </button>
+                            ${isMyTrainingPage ? 
+                                `<button onclick="event.stopPropagation(); unenrollFromProgram('${program.id}')" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors">
+                                    🚫 Unenroll from Program
+                                </button>` :
+                                `<button class="w-full py-3 ${isFull ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white font-semibold rounded-lg transition-colors">
+                                    ${isFull ? '🚫 Program Full' : program.enrollment_open ? '📝 View Details & Enroll' : '⏰ Enrollment Closed'}
+                                </button>`
+                            }
                         </div>
                     </div>
                 `;
@@ -252,22 +297,6 @@
                             <p class="text-sm text-gray-600 mt-2">${program.spots_remaining} spots remaining</p>
                         </div>
 
-                        <!-- Reviews (if any) -->
-                        ${program.total_reviews > 0 ? `
-                            <div>
-                                <h3 class="font-semibold text-lg mb-2">Reviews (${program.total_reviews})</h3>
-                                <div class="flex items-center gap-2 mb-4">
-                                    <span class="text-3xl font-bold text-yellow-500">${program.avg_rating.toFixed(1)}</span>
-                                    <div>
-                                        <div class="flex">
-                                            ${'★'.repeat(Math.round(program.avg_rating))}${'☆'.repeat(5 - Math.round(program.avg_rating))}
-                                        </div>
-                                        <p class="text-sm text-gray-600">Based on ${program.total_reviews} reviews</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ` : ''}
-
                         <!-- Enroll Button -->
                         <div class="flex gap-4">
                             ${program.enrollment_open && !program.user_enrolled ? 
@@ -317,6 +346,28 @@
             }
         }
 
+        async function unenrollFromProgram(programId) {
+            if (!confirm('Are you sure you want to unenroll from this program? Your progress will be saved.')) return;
+            
+            try {
+                const response = await fetch(`/api/training-programs/${programId}/unenroll`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('✅ Successfully unenrolled from program');
+                    loadPrograms(); // Refresh the list
+                } else {
+                    alert('❌ ' + data.error);
+                }
+            } catch (error) {
+                console.error('Unenroll error:', error);
+                alert('Unenroll failed. Please try again.');
+            }
+        }
+
         function closeModal() {
             document.getElementById('program-modal').classList.add('hidden');
         }
@@ -349,7 +400,16 @@
             renderPrograms(allPrograms);
         });
 
-        // Load on page load
+        // Update page UI based on context
+        if (isMyTrainingPage) {
+            document.getElementById('page-title').textContent = '📚 My Enrollments';
+            document.getElementById('my-enrollments-btn').textContent = 'Browse All Programs';
+            document.getElementById('my-enrollments-btn').href = '/training';
+            // Hide filters on My Training page
+            document.getElementById('filters-section').style.display = 'none';
+        }
+
+        // Load programs on page load
         loadPrograms();
     </script>
 </body>
