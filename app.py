@@ -13,6 +13,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 from groq import Groq
 from bson.objectid import ObjectId
+
 # Try FAISS import
 try:
     import faiss
@@ -51,8 +52,6 @@ orders_col = db["orders"]
 payments_col = db["payments"]
 training_programs_col = db["training_programs"]
 enrollments_col = db["enrollments"]
-
-
 
 # Embedding model (lazy-init)
 EMBED_MODEL = None
@@ -109,8 +108,27 @@ def admin_page():
         return redirect("/admin/login")
     return render_template("admin.html")
 
+@app.route("/dashboard")
+def dashboard_page():
+    """User Dashboard - Main page after login"""
+    if not session.get("user_logged_in"):
+        return redirect("/user/login")
+    return render_template("chatbot_dashboard.html")
+
+@app.route("/training")
+def training_page():
+    """Training programs page"""
+    if not session.get("user_logged_in"):
+        return redirect("/user/login")
+    return render_template("training.html")
+
+@app.route("/store")
+def store_page():
+    """Public store frontend"""
+    return render_template("store.html")
+
 # ============================================
-# USER AUTHENTICATION ROUTES
+# TRAINING PROGRAMS API (FIXED - NO DUPLICATES)
 # ============================================
 @app.route("/api/training-programs")
 def get_training_programs():
@@ -142,6 +160,19 @@ def get_training_programs():
         )
     
     return jsonify(programs)
+
+@app.route("/api/training-programs/<program_id>")
+def get_training_program(program_id):
+    """Get single training program details"""
+    try:
+        program = training_programs_col.find_one({"id": program_id}, {"_id": 0})
+        
+        if not program:
+            return jsonify({"error": "Program not found"}), 404
+        
+        return jsonify(program), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/training-programs/<program_id>/enroll", methods=["POST"])
 def enroll_in_program(program_id):
@@ -202,6 +233,7 @@ def enroll_in_program(program_id):
         "status": "success",
         "message": "Successfully enrolled in program"
     })
+
 @app.route("/api/training-programs/<program_id>/unenroll", methods=["POST"])
 def unenroll_from_program(program_id):
     """Unenroll user from training program"""
@@ -225,9 +257,10 @@ def unenroll_from_program(program_id):
         return jsonify({"status": "success", "message": "Unenrolled from program"})
     else:
         return jsonify({"error": "Not enrolled in this program"}), 404
+
 @app.route("/api/my-training")
 def get_my_training():
-    """Get user's enrolled training programs"""
+    """Get user's enrolled training programs - SINGLE DEFINITION"""
     user_id = session.get("user_id")
     
     if not user_id:
@@ -246,20 +279,23 @@ def get_my_training():
     
     return jsonify(enrollments)
 
+# ============================================
+# USER AUTHENTICATION ROUTES
+# ============================================
 @app.route("/user/login", methods=["GET"])
 def user_login_page():
     """Display user login page"""
     if session.get("user_logged_in"):
-        return redirect("/chatbot")
+        return redirect("/dashboard")
     return render_template("user_login.html")
 
 @app.route("/user/register", methods=["GET"])
 def user_register_page():
     """Display user registration page"""
     if session.get("user_logged_in"):
-        return redirect("/chatbot")
+        return redirect("/dashboard")
     return render_template("user_register.html")
-# Update the login API to redirect to dashboard
+
 @app.route("/api/user/login", methods=["POST"])
 def user_login_api():
     """User login API endpoint - Redirect to dashboard on success"""
@@ -294,7 +330,7 @@ def user_login_api():
                 
                 return jsonify({
                     "status": "success",
-                    "redirect": "/dashboard"  # Changed from /chatbot to /dashboard
+                    "redirect": "/dashboard"
                 })
         
         return jsonify({"error": "Invalid email or password"}), 401
@@ -302,7 +338,6 @@ def user_login_api():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Update registration to redirect to dashboard
 @app.route("/api/user/register", methods=["POST"])
 def user_register_api():
     """User registration API endpoint - Redirect to dashboard"""
@@ -355,7 +390,7 @@ def user_register_api():
         
         return jsonify({
             "status": "success",
-            "redirect": "/dashboard",  # Changed from /chatbot to /dashboard
+            "redirect": "/dashboard",
             "message": "Account created successfully!"
         })
     
@@ -363,12 +398,45 @@ def user_register_api():
         print(f"Registration error: {e}")
         return jsonify({"error": "Registration failed. Please try again."}), 500
 
-
 @app.route("/api/user/logout", methods=["POST"])
 def user_logout():
     """User logout"""
     session.clear()
     return jsonify({"status": "logged out"})
+
+@app.route("/api/user/stats")
+def get_user_stats():
+    """Get user activity statistics"""
+    if not session.get("user_logged_in"):
+        return jsonify({"error": "Not authenticated"}), 401
+    
+    try:
+        user_id = session.get("user_id")
+        
+        # Count training enrollments
+        training_count = enrollments_col.count_documents({
+            "user_id": user_id,
+            "status": "enrolled"
+        })
+        
+        # Count store orders
+        orders_count = orders_col.count_documents({
+            "user_id": user_id
+        })
+        
+        # Count AI service uses
+        services_count = eng_col.count_documents({
+            "user_id": user_id
+        })
+        
+        return jsonify({
+            "training_enrolled": training_count,
+            "orders": orders_count,
+            "services_used": services_count
+        }), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ============================================
 # ADMIN AUTHENTICATION ROUTES
@@ -420,13 +488,10 @@ def admin_login_api():
 def admin_logout():
     session.clear()
     return jsonify({"status": "logged out"})
-@app.route("/training")
-def training_page():
-    """Training programs page"""
-    if not session.get("user_logged_in"):
-        return redirect("/user/login")
-    return render_template("training.html")
 
+# ============================================
+# PROFILE & ENGAGEMENT
+# ============================================
 @app.route("/api/profile/extended", methods=["POST"])
 def extended_profile():
     """Enhanced user profile with family, career, and interests"""
@@ -470,7 +535,6 @@ def extended_profile():
             }
         }
         
-        from bson.objectid import ObjectId
         users_col.update_one(
             {"_id": ObjectId(profile_id)},
             {"$set": {"extended_profile": extended_data, "updated": datetime.utcnow()}}
@@ -480,6 +544,82 @@ def extended_profile():
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/api/engagement", methods=["POST"])
+def log_engagement():
+    """Log engagement with proper user profile data"""
+    payload = request.json or {}
+    
+    # Get user profile data from session if not provided
+    user_id = payload.get("user_id") or session.get("user_id")
+    age = payload.get("age")
+    if age is None:
+        age = session.get("user_age")
+    job = payload.get("job") or session.get("user_job")
+    
+    # Convert age to integer if it's a string
+    if age is not None:
+        try:
+            age = int(age)
+        except (ValueError, TypeError):
+            age = None
+    
+    doc = {
+        "user_id": user_id,
+        "age": age,
+        "job": job,
+        "desires": payload.get("desires") or [],
+        "question_clicked": payload.get("question_clicked"),
+        "service": payload.get("service"),
+        "language": payload.get("language") or session.get("user_language", "en"),
+        "timestamp": datetime.utcnow(),
+        "chat_type": payload.get("chat_type", "standard")
+    }
+    
+    eng_col.insert_one(doc)
+    return jsonify({"status": "ok"})
+
+@app.route("/api/profile/step", methods=["POST"])
+def profile_step():
+    """Save progressive profile data"""
+    payload = request.json or {}
+    profile_id = payload.get("profile_id")
+    email = payload.get("email")
+    step = payload.get("step", "unknown")
+    data = payload.get("data", {})
+    
+    try:
+        if profile_id:
+            users_col.update_one(
+                {"_id": profile_id},
+                {"$set": {f"profile.{step}": data, "updated": datetime.utcnow()}},
+                upsert=True
+            )
+            return jsonify({"status": "ok", "profile_id": profile_id})
+        
+        elif email:
+            result = users_col.find_one_and_update(
+                {"email": email},
+                {"$set": {f"profile.{step}": data, "updated": datetime.utcnow()}},
+                upsert=True,
+                return_document=True
+            )
+            return jsonify({"status": "ok", "profile_id": str(result["_id"])})
+        
+        else:
+            result = users_col.insert_one({
+                "profile": {step: data},
+                "created": datetime.utcnow(),
+                "anonymous": True
+            })
+            return jsonify({"status": "ok", "profile_id": str(result.inserted_id)})
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ============================================
+# STORE API
+# ============================================
 @app.route("/api/store/products")
 def get_store_products():
     """Get product catalog with filtering"""
@@ -507,168 +647,6 @@ def get_store_products():
     products = list(products_col.find(query, {"_id": 0}).limit(50))
     return jsonify(products)
 
-
-
-
-@app.route("/api/engagement/enhanced", methods=["POST"])
-def log_enhanced_engagement():
-    """Enhanced engagement tracking with device info and behavior"""
-    payload = request.json or {}
-    
-    user_agent = request.headers.get('User-Agent', '')
-    ip_address = request.remote_addr
-    referrer = request.headers.get('Referer', '')
-    
-    doc = {
-        "user_id": payload.get("user_id") or session.get("user_id"),
-        "session_id": payload.get("session_id"),
-        "age": session.get("user_age"),
-        "job": session.get("user_job"),
-        "desires": payload.get("desires", []),
-        "question_clicked": payload.get("question_clicked"),
-        "service": payload.get("service"),
-        "time_spent": payload.get("time_spent"),
-        "scroll_depth": payload.get("scroll_depth"),
-        "clicks": payload.get("clicks", []),
-        "device_info": {
-            "user_agent": user_agent,
-            "ip_address": ip_address,
-            "screen_resolution": payload.get("screen_resolution")
-        },
-        "referral_data": {
-            "referrer": referrer,
-            "utm_source": payload.get("utm_source"),
-            "utm_medium": payload.get("utm_medium"),
-            "utm_campaign": payload.get("utm_campaign")
-        },
-        "timestamp": datetime.utcnow()
-    }
-    
-    eng_col.insert_one(doc)
-    return jsonify({"status": "ok"})
-
-
-@app.route("/api/consent/update", methods=["POST"])
-def update_consent():
-    """Update user consent preferences (GDPR)"""
-    payload = request.json or {}
-    user_id = payload.get("user_id") or session.get("user_id")
-    
-    if not user_id:
-        return jsonify({"error": "user_id required"}), 400
-    
-    from bson.objectid import ObjectId
-    consent_updates = {
-        "extended_profile.consent.marketing_emails": payload.get("marketing_emails", False),
-        "extended_profile.consent.personalized_ads": payload.get("personalized_ads", False),
-        "extended_profile.consent.data_analytics": payload.get("data_analytics", False),
-        "extended_profile.consent.updated": datetime.utcnow()
-    }
-    
-    users_col.update_one(
-        {"_id": ObjectId(user_id)},
-        {"$set": consent_updates}
-    )
-    
-    return jsonify({"status": "ok", "message": "Consent preferences updated"})
-
-@app.route("/api/data/export/<user_id>")
-def export_user_data(user_id):
-    """GDPR-compliant data export"""
-    from bson.objectid import ObjectId
-    user = users_col.find_one({"_id": ObjectId(user_id)})
-    
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-    
-    export_data = {
-        "profile": user.get("profile", {}),
-        "extended_profile": user.get("extended_profile", {}),
-        "consent_preferences": user.get("extended_profile", {}).get("consent", {}),
-        "engagements": list(eng_col.find({"user_id": user_id}, {"_id": 0}))
-    }
-    
-    return jsonify(export_data)
-
-@app.route("/api/data/delete/<user_id>", methods=["DELETE"])
-def delete_user_data(user_id):
-    """GDPR-compliant data deletion (Right to be forgotten)"""
-    from bson.objectid import ObjectId
-    result = users_col.delete_one({"_id": ObjectId(user_id)})
-    
-    # Anonymize engagements
-    eng_col.update_many(
-        {"user_id": user_id},
-        {"$set": {"user_id": None, "anonymized": True}}
-    )
-    
-    if result.deleted_count > 0:
-        return jsonify({"status": "ok", "message": "User data deleted"})
-    else:
-        return jsonify({"error": "User not found"}), 404
-
-
-# ============================================
-# SMART RECOMMENDATIONS API
-# ============================================
-
-from recommendation_engine import RecommendationEngine
-
-recommendation_engine = RecommendationEngine()
-@app.route("/api/recommendations/<user_id>")
-def get_recommendations(user_id):
-    """Get personalized recommendations for user"""
-    try:
-        products = recommendation_engine.get_personalized_ads(user_id)
-        edu_recommendations = recommendation_engine.generate_education_recommendations(user_id)
-        
-        return jsonify({
-            "products": products,
-            "education_recommendations": edu_recommendations,
-            "user_segment": recommendation_engine.get_user_segment(user_id)
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-# ============================================
-# API: SERVICES & CATEGORIES (PUBLIC)
-# ============================================
-@app.route("/api/services")
-def get_services():
-    try:
-        docs = list(services_col.find({}))
-        for doc in docs:
-            if '_id' in doc:
-                doc['_id'] = str(doc['_id'])
-        return jsonify(docs)
-    except Exception as e:
-        print(f"Error fetching services: {e}")
-        return jsonify([]), 500
-
-@app.route("/api/categories")
-def get_categories():
-    """Get all service categories"""
-    cats = list(categories_col.find({}, {"_id": 0}))
-    
-    # If not seeded, create dynamic categories
-    if not cats:
-        pipeline = [
-            {"$project": {"id": 1, "name": 1, "category": 1, "subservices": 1}},
-            {"$group": {
-                "_id": "$category",
-                "ministries": {"$push": {"id": "$id", "name": "$name"}}
-            }}
-        ]
-        try:
-            groups = list(services_col.aggregate(pipeline))
-            cats = [{
-                "id": g["_id"] or "uncategorized",
-                "name": {"en": g["_id"] or "Uncategorized"},
-                "ministries": g["ministries"]
-            } for g in groups]
-        except Exception:
-            cats = []
-    
-    return jsonify(cats)
 @app.route("/api/store/categories")
 def get_store_categories():
     """Get store categories and subcategories"""
@@ -682,6 +660,7 @@ def get_store_categories():
         "categories": categories,
         "subcategories": subcategories
     })
+
 @app.route("/api/store/order", methods=["POST"])
 def create_order():
     """Create new order"""
@@ -701,6 +680,7 @@ def create_order():
     
     result = orders_col.insert_one(order)
     return jsonify({"status": "ok", "order_id": order["order_id"]})
+
 @app.route("/api/store/payment", methods=["POST"])
 def process_payment():
     """Process payment for order"""
@@ -736,17 +716,10 @@ def process_payment():
     })
     
     return jsonify({"status": "ok", "payment_id": payment["payment_id"]})
-@app.route("/store")
-def store_page():
-    """Public store frontend"""
-    return render_template("store.html")
-@app.route("/dashboard")
-def dashboard_page():
-    """User Dashboard - Main page after login"""
-    if not session.get("user_logged_in"):
-        return redirect("/user/login")
-    return render_template("chatbot_dashboard.html")
 
+# ============================================
+# DASHBOARD ANALYTICS
+# ============================================
 @app.route("/api/dashboard/analytics")
 @admin_required
 def get_dashboard_analytics():
@@ -776,14 +749,6 @@ def get_dashboard_analytics():
     ]))
     total_revenue_amount = total_revenue[0]["total"] if total_revenue else 0
     
-    # User segmentation
-    user_segments = {}
-    users = users_col.find({})
-    for user in users:
-        segments = recommendation_engine.get_user_segment(str(user["_id"]))
-        for segment in segments:
-            user_segments[segment] = user_segments.get(segment, 0) + 1
-    
     # Popular products
     popular_products = list(products_col.find().sort("rating", -1).limit(5))
     
@@ -802,14 +767,54 @@ def get_dashboard_analytics():
             "total_revenue": total_revenue_amount,
             "conversion_rate": "3.2%"
         },
-        "user_segments": user_segments,
         "popular_products": popular_products
     })
+
+# ============================================
+# SERVICES & CATEGORIES API
+# ============================================
+@app.route("/api/services")
+def get_services():
+    try:
+        docs = list(services_col.find({}))
+        for doc in docs:
+            if '_id' in doc:
+                doc['_id'] = str(doc['_id'])
+        return jsonify(docs)
+    except Exception as e:
+        print(f"Error fetching services: {e}")
+        return jsonify([]), 500
 
 @app.route("/api/service/<service_id>")
 def get_service(service_id):
     doc = services_col.find_one({"id": service_id}, {"_id": 0})
     return jsonify(doc or {})
+
+@app.route("/api/categories")
+def get_categories():
+    """Get all service categories"""
+    cats = list(categories_col.find({}, {"_id": 0}))
+    
+    # If not seeded, create dynamic categories
+    if not cats:
+        pipeline = [
+            {"$project": {"id": 1, "name": 1, "category": 1, "subservices": 1}},
+            {"$group": {
+                "_id": "$category",
+                "ministries": {"$push": {"id": "$id", "name": "$name"}}
+            }}
+        ]
+        try:
+            groups = list(services_col.aggregate(pipeline))
+            cats = [{
+                "id": g["_id"] or "uncategorized",
+                "name": {"en": g["_id"] or "Uncategorized"},
+                "ministries": g["ministries"]
+            } for g in groups]
+        except Exception:
+            cats = []
+    
+    return jsonify(cats)
 
 @app.route("/api/officers")
 def get_officers():
@@ -826,45 +831,11 @@ def get_ads():
     return jsonify(ads)
 
 # ============================================
-# AUTOSUGGEST ENDPOINT
+# AI SEARCH & CHAT
 # ============================================
-@app.route("/api/search/autosuggest")
-def autosuggest():
-    """Quick text-based search for typeahead"""
-    q = request.args.get("q", "").strip()
-    if not q or len(q) < 2:
-        return jsonify([])
-    
-    regex = {"$regex": q, "$options": "i"}
-    results = []
-    
-    for s in services_col.find(
-        {"$or": [
-            {"name.en": regex},
-            {"name.si": regex},
-            {"name.ta": regex},
-            {"subservices.name.en": regex}
-        ]},
-        {"_id": 0, "id": 1, "name": 1, "subservices": 1}
-    ).limit(10):
-        results.append(s)
-    
-    return jsonify(results)
-
-# ============================================
-# VECTOR SEARCH ENDPOINT
-# ============================================
-# ============================================
-# IMPROVED AI VECTOR SEARCH ENDPOINT
-# Replace the /api/ai/search endpoint in app.py
-# ============================================
-
 @app.route("/api/ai/search", methods=["POST"])
 def ai_vector_search():
-    """
-    IMPROVED: Vector-based semantic search with better relevance
-    Body: {query: "how to apply for examinations?", top_k: 5, language: "en"}
-    """
+    """Vector-based semantic search with better relevance"""
     payload = request.json or {}
     query = payload.get("query", "").strip()
     top_k = int(payload.get("top_k", 5))
@@ -901,7 +872,7 @@ def ai_vector_search():
         # Load metadata
         if not META_PATH.exists():
             return jsonify({
-                "error": "Search index not built. Please run: python rebuild_search_index.py",
+                "error": "Search index not built. Please run: python build_ai_index.py",
                 "query": query,
                 "results": []
             }), 500
@@ -927,7 +898,6 @@ def ai_vector_search():
                     doc = metadata[idx]
                     
                     # Calculate relevance score (0-1)
-                    # Higher is better for Inner Product
                     score = float(dist)
                     
                     # Skip very low relevance results
@@ -940,7 +910,7 @@ def ai_vector_search():
                     answer_text = doc.get('answer', {}).get(language,
                                           doc.get('answer', {}).get('en', ''))
                     
-                    # Fallback to question_text/answer_text fields if question/answer objects don't exist
+                    # Fallback to question_text/answer_text fields
                     if not question_text:
                         question_text = doc.get('question_text', 'N/A')
                     if not answer_text:
@@ -1008,7 +978,7 @@ def ai_vector_search():
         
         else:
             return jsonify({
-                "error": "Neither FAISS nor embeddings found. Run: python rebuild_search_index.py",
+                "error": "Neither FAISS nor embeddings found. Run: python build_ai_index.py",
                 "query": query,
                 "results": []
             }), 500
@@ -1023,7 +993,7 @@ def ai_vector_search():
                 "search_type": "vector"
             })
         except:
-            pass  # Don't fail search if logging fails
+            pass
         
         return jsonify({
             "query": query,
@@ -1046,9 +1016,6 @@ def ai_vector_search():
             "status": "error"
         }), 500
 
-# ============================================
-# GROQ AI CHATBOT
-# ============================================
 @app.route("/api/ai/chat", methods=["POST"])
 def ai_chat():
     """AI chatbot - Log engagement with user profile data"""
@@ -1140,16 +1107,16 @@ Instructions:
         
         answer = response.choices[0].message.content
         
-        # CRITICAL: Log engagement with user profile data from session
+        # Log engagement with user profile data from session
         engagement_doc = {
             "user_id": session.get("user_id"),
-            "age": session.get("user_age"),  # Get from session
-            "job": session.get("user_job"),  # Get from session
+            "age": session.get("user_age"),
+            "job": session.get("user_job"),
             "desires": ["ai_chat"],
             "question_clicked": question,
             "service": ministry['name'].get(language, ministry['name']['en']),
             "timestamp": datetime.utcnow(),
-            "chat_type": "ai_enhanced",  # Changed from "ai" to "ai_enhanced"
+            "chat_type": "ai_enhanced",
             "ministry_id": ministry_id,
             "language": language,
             "model_used": "llama-3.3-70b-groq",
@@ -1196,100 +1163,6 @@ Instructions:
             "status": "error"
         }), 500
 
-
-# ============================================
-# ML RECOMMENDATIONS
-# ============================================
-@app.route("/api/recommendations/<user_id>")
-def get_user_recommendations(user_id):  # ← Changed function name
-    """Get personalized recommendations for user"""
-    try:
-        products = recommendation_engine.get_personalized_ads(user_id)
-        edu_recommendations = recommendation_engine.generate_education_recommendations(user_id)
-        
-        return jsonify({
-            "products": products,
-            "education_recommendations": edu_recommendations,
-            "user_segment": recommendation_engine.get_user_segment(user_id)
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# ============================================
-# ENGAGEMENT & PROFILE
-# ============================================
-@app.route("/api/engagement", methods=["POST"])
-def log_engagement():
-    """Log engagement with proper user profile data"""
-    payload = request.json or {}
-    
-    # Get user profile data from session if not provided
-    user_id = payload.get("user_id") or session.get("user_id")
-    age = payload.get("age")
-    if age is None:
-        age = session.get("user_age")
-    job = payload.get("job") or session.get("user_job")
-    
-    # Convert age to integer if it's a string
-    if age is not None:
-        try:
-            age = int(age)
-        except (ValueError, TypeError):
-            age = None
-    
-    doc = {
-        "user_id": user_id,
-        "age": age,
-        "job": job,
-        "desires": payload.get("desires") or [],
-        "question_clicked": payload.get("question_clicked"),
-        "service": payload.get("service"),
-        "language": payload.get("language") or session.get("user_language", "en"),
-        "timestamp": datetime.utcnow(),
-        "chat_type": payload.get("chat_type", "standard")
-    }
-    
-    eng_col.insert_one(doc)
-    return jsonify({"status": "ok"})
-
-@app.route("/api/profile/step", methods=["POST"])
-def profile_step():
-    """Save progressive profile data"""
-    payload = request.json or {}
-    profile_id = payload.get("profile_id")
-    email = payload.get("email")
-    step = payload.get("step", "unknown")
-    data = payload.get("data", {})
-    
-    try:
-        if profile_id:
-            users_col.update_one(
-                {"_id": profile_id},
-                {"$set": {f"profile.{step}": data, "updated": datetime.utcnow()}},
-                upsert=True
-            )
-            return jsonify({"status": "ok", "profile_id": profile_id})
-        
-        elif email:
-            result = users_col.find_one_and_update(
-                {"email": email},
-                {"$set": {f"profile.{step}": data, "updated": datetime.utcnow()}},
-                upsert=True,
-                return_document=True
-            )
-            return jsonify({"status": "ok", "profile_id": str(result["_id"])})
-        
-        else:
-            result = users_col.insert_one({
-                "profile": {step: data},
-                "created": datetime.utcnow(),
-                "anonymous": True
-            })
-            return jsonify({"status": "ok", "profile_id": str(result.inserted_id)})
-    
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 # ============================================
 # ADMIN CRUD & INSIGHTS
 # ============================================
@@ -1316,63 +1189,6 @@ def delete_service(service_id):
     services_col.delete_one({"id": service_id})
     return jsonify({"status": "deleted"})
 
-@app.route("/api/admin/categories", methods=["GET", "POST", "DELETE"])
-@admin_required
-def manage_categories():
-    if request.method == "GET":
-        return jsonify(list(categories_col.find({}, {"_id": 0})))
-    
-    elif request.method == "POST":
-        payload = request.json
-        cat_id = payload.get("id")
-        if not cat_id:
-            return jsonify({"error": "ID required"}), 400
-        categories_col.update_one({"id": cat_id}, {"$set": payload}, upsert=True)
-        return jsonify({"status": "ok"})
-    
-    elif request.method == "DELETE":
-        cat_id = request.args.get("id")
-        categories_col.delete_one({"id": cat_id})
-        return jsonify({"status": "deleted"})
-
-@app.route("/api/admin/officers", methods=["GET", "POST", "DELETE"])
-@admin_required
-def manage_officers():
-    if request.method == "GET":
-        return jsonify(list(officers_col.find({}, {"_id": 0})))
-    
-    elif request.method == "POST":
-        payload = request.json
-        oid = payload.get("id")
-        if not oid:
-            return jsonify({"error": "ID required"}), 400
-        officers_col.update_one({"id": oid}, {"$set": payload}, upsert=True)
-        return jsonify({"status": "ok"})
-    
-    elif request.method == "DELETE":
-        oid = request.args.get("id")
-        officers_col.delete_one({"id": oid})
-        return jsonify({"status": "deleted"})
-
-@app.route("/api/admin/ads", methods=["GET", "POST", "DELETE"])
-@admin_required
-def manage_ads():
-    if request.method == "GET":
-        return jsonify(list(ads_col.find({}, {"_id": 0})))
-    
-    elif request.method == "POST":
-        payload = request.json
-        aid = payload.get("id")
-        if not aid:
-            return jsonify({"error": "ID required"}), 400
-        ads_col.update_one({"id": aid}, {"$set": payload}, upsert=True)
-        return jsonify({"status": "ok"})
-    
-    elif request.method == "DELETE":
-        aid = request.args.get("id")
-        ads_col.delete_one({"id": aid})
-        return jsonify({"status": "deleted"})
-
 @app.route("/api/admin/insights")
 @admin_required
 def admin_insights():
@@ -1398,14 +1214,11 @@ def admin_insights():
             continue
     
     # Jobs, services, questions
-    # Jobs, services, questions
     jobs = {}
     services = {}
     questions = {}
     desires = {}
     
-
-
     for e in eng_col.find({}, {"job": 1, "service": 1, "question_clicked": 1, "desires": 1}):
         j = (e.get("job") or "Unknown").strip()
         jobs[j] = jobs.get(j, 0) + 1
@@ -1419,7 +1232,7 @@ def admin_insights():
         for d in e.get("desires") or []:
             desires[d] = desires.get(d, 0) + 1
     
-    # Sort all dictionaries by count (descending) to get actual top items
+    # Sort all dictionaries by count (descending)
     jobs = dict(sorted(jobs.items(), key=lambda x: x[1], reverse=True))
     services = dict(sorted(services.items(), key=lambda x: x[1], reverse=True))
     questions = dict(sorted(questions.items(), key=lambda x: x[1], reverse=True))
@@ -1490,18 +1303,17 @@ def admin_rebuild_index():
             ["python", "build_ai_index.py"],
             capture_output=True,
             text=True,
-            timeout=300  # 5 minute timeout
+            timeout=300
         )
         
         if result.returncode == 0:
-            # Extract document count from output
             output_lines = result.stdout.strip().split('\n')
             count_line = [l for l in output_lines if 'documents' in l.lower()]
             
             return jsonify({
                 "status": "success",
                 "message": "Index rebuilt successfully",
-                "output": result.stdout[-1000:],  # Last 1000 chars
+                "output": result.stdout[-1000:],
                 "details": count_line[0] if count_line else "Check logs"
             })
         else:
@@ -1514,13 +1326,13 @@ def admin_rebuild_index():
     except subprocess.TimeoutExpired:
         return jsonify({
             "status": "error",
-            "error": "Index build timeout (>5 minutes). Check if build_ai_index.py is working."
+            "error": "Index build timeout (>5 minutes)."
         }), 500
     
     except FileNotFoundError:
         return jsonify({
             "status": "error",
-            "error": "build_ai_index.py not found. Make sure it's in the same directory."
+            "error": "build_ai_index.py not found."
         }), 500
     
     except Exception as e:
@@ -1529,14 +1341,10 @@ def admin_rebuild_index():
             "error": str(e)
         }), 500
 
-# Add these ML endpoints to your app.py
-
 @app.route("/api/admin/ml-insights", methods=["GET"])
 @admin_required
 def ml_insights():
-    """
-    ML-powered insights: clustering, premium help detection, recommendations
-    """
+    """ML-powered insights"""
     if not ML_AVAILABLE or not rec_engine:
         return jsonify({
             "error": "ML engine not available",
@@ -1545,7 +1353,6 @@ def ml_insights():
         }), 503
     
     try:
-        # Fetch all engagements
         engagements = list(eng_col.find({}, {"_id": 0}))
         
         if len(engagements) < 5:
@@ -1555,13 +1362,9 @@ def ml_insights():
                 "engagements_count": len(engagements)
             })
         
-        # 1. Analyze patterns
         patterns = rec_engine.analyze_engagement_patterns(engagements)
-        
-        # 2. Identify premium help candidates
         premium_users = rec_engine.identify_premium_help_candidates(engagements, threshold=2)
         
-        # 3. User clustering
         try:
             clusters, labels = rec_engine.cluster_users(engagements, n_clusters=min(5, len(engagements) // 2))
         except Exception as e:
@@ -1569,22 +1372,18 @@ def ml_insights():
             clusters = {"message": "Not enough data for clustering"}
             labels = []
         
-        # 4. Service recommendations (sample)
         all_services = list(services_col.find({}, {"_id": 0}))
         sample_history = [patterns.get('popular_services', {}).get(list(patterns.get('popular_services', {}).keys())[0])] if patterns.get('popular_services') else []
         recommended = rec_engine.recommend_services(sample_history, all_services, top_k=5)
         
-        # 5. AI search analytics
         ai_searches = eng_col.count_documents({"chat_type": "ai_enhanced"})
         vector_searches = eng_col.count_documents({"chat_type": {"$exists": False}, "question_clicked": {"$exists": True}})
         
-        # 6. Language distribution
         language_stats = {}
         for lang in ['en', 'si', 'ta']:
             count = eng_col.count_documents({"language": lang})
             language_stats[lang] = count
         
-        # 7. Success rate
         total_ai_queries = eng_col.count_documents({"chat_type": "ai_enhanced"})
         successful_ai_queries = eng_col.count_documents({"chat_type": "ai_enhanced", "success": True})
         success_rate = (successful_ai_queries / total_ai_queries * 100) if total_ai_queries > 0 else 0
@@ -1621,51 +1420,10 @@ def ml_insights():
             "status": "error"
         }), 500
 
-
-@app.route("/api/admin/train-recommendations", methods=["POST"])
-@admin_required
-def train_recommendations():
-    """
-    Train/retrain the recommendation engine
-    """
-    if not ML_AVAILABLE or not rec_engine:
-        return jsonify({"error": "ML engine not available"}), 503
-    
-    try:
-        # Fetch training data
-        engagements = list(eng_col.find({}, {"_id": 0}))
-        all_services = list(services_col.find({}, {"_id": 0}))
-        
-        if len(engagements) < 10:
-            return jsonify({
-                "error": "Not enough data for training",
-                "required": 10,
-                "available": len(engagements)
-            }), 400
-        
-        # Train clustering model
-        clusters, labels = rec_engine.cluster_users(engagements, n_clusters=5)
-        
-        # Save models
-        rec_engine.save_models()
-        
-        return jsonify({
-            "status": "success",
-            "message": "Recommendation engine trained successfully",
-            "training_data": {
-                "engagements": len(engagements),
-                "services": len(all_services),
-                "clusters_created": len(set(labels)) if len(labels) > 0 else 0
-            }
-        })
-    
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 @app.route("/api/admin/questions-by-age", methods=["POST"])
 @admin_required
 def questions_by_age():
-    """Get top questions by age group across all languages"""
+    """Get top questions by age group"""
     try:
         payload = request.json or {}
         age_group = payload.get("age_group")
@@ -1673,7 +1431,6 @@ def questions_by_age():
         if not age_group:
             return jsonify({"error": "age_group required"}), 400
         
-        # Define age ranges
         age_ranges = {
             "<18": (0, 17),
             "18-25": (18, 25),
@@ -1687,7 +1444,6 @@ def questions_by_age():
         
         min_age, max_age = age_ranges[age_group]
         
-        # Aggregate questions by age group
         pipeline = [
             {
                 "$match": {
@@ -1714,7 +1470,6 @@ def questions_by_age():
         
         results = list(eng_col.aggregate(pipeline))
         
-        # Format results
         questions = []
         for r in results:
             questions.append({
@@ -1725,7 +1480,6 @@ def questions_by_age():
                 "avg_age": round(r.get("avg_age", 0), 1)
             })
         
-        # Get language breakdown
         lang_pipeline = [
             {
                 "$match": {
@@ -1744,7 +1498,6 @@ def questions_by_age():
         lang_results = list(eng_col.aggregate(lang_pipeline))
         language_breakdown = {r["_id"]: r["count"] for r in lang_results if r["_id"]}
         
-        # Total engagements for this age group
         total = eng_col.count_documents({
             "age": {"$gte": min_age, "$lte": max_age}
         })
@@ -1763,90 +1516,7 @@ def questions_by_age():
     except Exception as e:
         print(f"Error in questions_by_age: {e}")
         return jsonify({"error": str(e)}), 500
-    
-@app.route("/api/admin/export-ml-report", methods=["GET"])
-@admin_required
-def export_ml_report():
-    """
-    Export detailed ML analysis report
-    """
-    if not ML_AVAILABLE or not rec_engine:
-        return jsonify({"error": "ML engine not available"}), 503
-    
-    try:
-        engagements = list(eng_col.find({}, {"_id": 0}))
-        
-        # Generate comprehensive report
-        patterns = rec_engine.analyze_engagement_patterns(engagements)
-        premium_users = rec_engine.identify_premium_help_candidates(engagements, threshold=2)
-        clusters, _ = rec_engine.cluster_users(engagements, n_clusters=5)
-        
-        report = {
-            "generated_at": datetime.utcnow().isoformat(),
-            "total_engagements": len(engagements),
-            "patterns": patterns,
-            "premium_help_candidates": len(premium_users),
-            "premium_users_detail": premium_users,
-            "user_segments": clusters,
-            "recommendations": {
-                "immediate_actions": [],
-                "suggested_improvements": []
-            }
-        }
-        
-        # Add recommendations based on analysis
-        if premium_users:
-            report["recommendations"]["immediate_actions"].append({
-                "action": "Contact High-Priority Users",
-                "users": len([u for u in premium_users if u.get('priority') == 'high']),
-                "reason": "Multiple repeat interactions indicate need for personalized help"
-            })
-        
-        if patterns.get('popular_questions'):
-            top_questions = list(patterns['popular_questions'].items())[:5]
-            report["recommendations"]["suggested_improvements"].append({
-                "action": "Improve FAQ Content",
-                "questions": [q[0] for q in top_questions],
-                "reason": "These questions are asked most frequently"
-            })
-        
-        # Create CSV export
-        si = StringIO()
-        cw = csv.writer(si)
-        
-        # Write header
-        cw.writerow(["ML Insights Report"])
-        cw.writerow(["Generated:", report["generated_at"]])
-        cw.writerow([])
-        
-        # Write patterns
-        cw.writerow(["Engagement Patterns"])
-        cw.writerow(["Total Engagements:", patterns.get('total_engagements', 0)])
-        cw.writerow(["Unique Users:", patterns.get('unique_users', 0)])
-        cw.writerow(["Average Age:", patterns.get('average_age', 0)])
-        cw.writerow([])
-        
-        # Write premium candidates
-        cw.writerow(["Premium Help Candidates"])
-        cw.writerow(["User", "Question", "Repeat Count", "Priority"])
-        for user in premium_users[:20]:
-            cw.writerow([
-                user.get('user_id', 'Anonymous'),
-                user.get('question', '')[:50],
-                user.get('repeat_count', 0),
-                user.get('priority', 'unknown')
-            ])
-        
-        si.seek(0)
-        return send_file(
-            StringIO(si.read()),
-            mimetype="text/csv",
-            as_attachment=True,
-            download_name=f"ml_insights_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
-        )
-    
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+
 # ============================================
 # INITIALIZATION
 # ============================================
@@ -1863,10 +1533,13 @@ if __name__ == "__main__":
     print("=" * 70)
     print(f"📍 Public Portal: http://127.0.0.1:5000/")
     print(f"🤖 AI Chatbot: http://127.0.0.1:5000/chatbot")
+    print(f"📊 Dashboard: http://127.0.0.1:5000/dashboard")
     print(f"👨‍💼 Admin Panel: http://127.0.0.1:5000/admin")
     print(f"🔐 Admin Login: http://127.0.0.1:5000/admin/login")
     print(f"👤 User Login: http://127.0.0.1:5000/user/login")
     print(f"📝 User Register: http://127.0.0.1:5000/user/register")
+    print(f"🎓 Training: http://127.0.0.1:5000/training")
+    print(f"🛒 Store: http://127.0.0.1:5000/store")
     print(f"🔍 Vector Search: {'✅ Enabled' if INDEX_PATH.exists() else '⚠️ Run build_ai_index.py'}")
     print(f"🧠 FAISS Available: {'✅ Yes' if FAISS_AVAILABLE else '⚠️ Using fallback'}")
     print(f"🤖 Groq AI: {'✅ Configured' if GROQ_API_KEY else '❌ Missing API key'}")
