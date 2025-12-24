@@ -378,7 +378,7 @@ def complete_user_profile():
             "marketing_emails": data.get("marketing_emails", False),
             "personalized_ads": data.get("personalized_ads", False),
             "data_analytics": data.get("data_analytics", False),
-            "updated": get_utc_now()
+            "updated": datetime.utcnow()
         }
     }
     
@@ -388,7 +388,7 @@ def complete_user_profile():
             "$set": {
                 "extended_profile": extended_profile,
                 "profile_completed": True,
-                "updated": get_utc_now()
+                "updated": datetime.utcnow()
             }
         }
     )
@@ -401,7 +401,7 @@ def complete_user_profile():
         {
             "$set": {
                 **segment_info,
-                "updated": get_utc_now()
+                "updated": datetime.utcnow()
             }
         },
         upsert=True
@@ -430,7 +430,7 @@ def get_user_recommendations():
         
         segments_col.update_one(
             {"user_id": user_id},
-            {"$set": {**segment_info, "updated": get_utc_now()}},
+            {"$set": {**segment_info, "updated": datetime.utcnow()}},
             upsert=True
         )
     
@@ -440,7 +440,7 @@ def get_user_recommendations():
         "user_id": user_id,
         "type": "recommendation_view",
         "recommendations": [r.get('id', r.get('_id')) for r in recommendations],
-        "timestamp": get_utc_now()
+        "timestamp": datetime.utcnow()
     })
     
     return jsonify({
@@ -744,7 +744,7 @@ def enroll_in_program(program_id):
         "user_id": user_id,
         "program_id": program_id,
         "status": "enrolled",
-        "enrolled_date": get_utc_now(),
+        "enrolled_date": datetime.utcnow(),
         "completion_status": None,
         "progress": 0
     }
@@ -761,7 +761,7 @@ def enroll_in_program(program_id):
         "type": "training_enrollment",
         "program_id": program_id,
         "program_name": program.get("title", {}).get("en"),
-        "timestamp": get_utc_now()
+        "timestamp": datetime.utcnow()
     })
     
     return jsonify({
@@ -914,13 +914,13 @@ def extended_profile():
                 "marketing_emails": payload.get("marketing_emails", False),
                 "personalized_ads": payload.get("personalized_ads", False),
                 "data_analytics": payload.get("data_analytics", False),
-                "updated": get_utc_now()
+                "updated": datetime.utcnow()
             }
         }
         
         users_col.update_one(
             {"_id": ObjectId(profile_id)},
-            {"$set": {"extended_profile": extended_data, "updated": get_utc_now()}}
+            {"$set": {"extended_profile": extended_data, "updated": datetime.utcnow()}}
         )
         
         return jsonify({"status": "ok", "message": "Extended profile saved"})
@@ -953,7 +953,7 @@ def log_engagement():
         "question_clicked": payload.get("question_clicked"),
         "service": payload.get("service"),
         "language": payload.get("language") or session.get("user_language", "en"),
-        "timestamp": get_utc_now(),
+        "timestamp": datetime.utcnow(),
         "chat_type": payload.get("chat_type", "standard")
     }
     
@@ -973,7 +973,7 @@ def profile_step():
         if profile_id:
             users_col.update_one(
                 {"_id": profile_id},
-                {"$set": {f"profile.{step}": data, "updated": get_utc_now()}},
+                {"$set": {f"profile.{step}": data, "updated": datetime.utcnow()}},
                 upsert=True
             )
             return jsonify({"status": "ok", "profile_id": profile_id})
@@ -981,7 +981,7 @@ def profile_step():
         elif email:
             result = users_col.find_one_and_update(
                 {"email": email},
-                {"$set": {f"profile.{step}": data, "updated": get_utc_now()}},
+                {"$set": {f"profile.{step}": data, "updated": datetime.utcnow()}},
                 upsert=True,
                 return_document=True
             )
@@ -990,7 +990,7 @@ def profile_step():
         else:
             result = users_col.insert_one({
                 "profile": {step: data},
-                "created": get_utc_now(),
+                "created": datetime.utcnow(),
                 "anonymous": True
             })
             return jsonify({"status": "ok", "profile_id": str(result.inserted_id)})
@@ -1293,7 +1293,7 @@ def ai_vector_search():
                 "user_id": session.get("user_id"),
                 "query": query,
                 "results_count": len(results),
-                "timestamp": get_utc_now(),
+                "timestamp": datetime.utcnow(),
                 "search_type": "vector"
             })
         except:
@@ -1414,7 +1414,7 @@ Instructions:
             "desires": ["ai_chat"],
             "question_clicked": question,
             "service": ministry['name'].get(language, ministry['name']['en']),
-            "timestamp": get_utc_now(),
+            "timestamp": datetime.utcnow(),
             "chat_type": "ai_enhanced",
             "ministry_id": ministry_id,
             "language": language,
@@ -1441,7 +1441,7 @@ Instructions:
             "desires": ["ai_chat"],
             "question_clicked": question,
             "service": ministry['name'].get(language, ministry['name']['en']),
-            "timestamp": get_utc_now(),
+            "timestamp": datetime.utcnow(),
             "chat_type": "ai_enhanced",
             "ministry_id": ministry_id,
             "language": language,
@@ -1563,7 +1563,7 @@ def export_user_data():
     return jsonify({
         "status": "success",
         "data": user_data,
-        "exported_at": get_utc_now().isoformat()
+        "exported_at": datetime.utcnow().isoformat()
     })
 
 @app.route("/api/user/data/delete", methods=["POST"])
@@ -1600,15 +1600,15 @@ def get_dashboard_analytics():
     """Enhanced dashboard with store metrics"""
     total_users = users_col.count_documents({})
     active_users = users_col.count_documents({
-        "last_active": {"$gte": get_utc_now() - timedelta(days=30)}
+        "last_active": {"$gte": datetime.utcnow() - timedelta(days=30)}
     })
     new_users_7d = users_col.count_documents({
-        "created": {"$gte": get_utc_now() - timedelta(days=7)}
+        "created": {"$gte": datetime.utcnow() - timedelta(days=7)}
     })
     
     total_engagements = eng_col.count_documents({})
     recent_engagements = eng_col.count_documents({
-        "timestamp": {"$gte": get_utc_now() - timedelta(days=7)}
+        "timestamp": {"$gte": datetime.utcnow() - timedelta(days=7)}
     })
     
     total_orders = orders_col.count_documents({})
@@ -1878,7 +1878,7 @@ def ml_insights():
                 "success_rate": round(success_rate, 2),
                 "language_distribution": language_stats
             },
-            "timestamp": get_utc_now().isoformat()
+            "timestamp": datetime.utcnow().isoformat()
         })
     
     except Exception as e:

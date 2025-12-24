@@ -6,7 +6,20 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .product-card {
-            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .product-image {
+            object-fit: cover;
+        }
+        .product-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .product-details {
+            flex: 1;
         }
         .product-card:hover {
             transform: translateY(-4px);
@@ -127,7 +140,7 @@
     </div>
 
     <script>
-// Store JavaScript - Inline for completeness
+// Store JavaScript
 let cart = [];
 let currentProducts = [];
 let currentFilters = {};
@@ -190,7 +203,7 @@ function displayProducts(products) {
             : 0;
         
         return `
-            <div class="product-card bg-white rounded-lg shadow-md overflow-hidden cursor-pointer" onclick="viewProduct('${product.id}')">
+            <div class="product-card bg-white rounded-lg shadow-md overflow-hidden transition-all duration-200 cursor-pointer" onclick="viewProduct('${product.id}')">
                 <div class="relative">
                     <img 
                         src="${product.images[0] || '/static/store/placeholder.jpg'}" 
@@ -200,26 +213,28 @@ function displayProducts(products) {
                     ${discount > 0 ? `<div class="discount-badge">-${discount}%</div>` : ''}
                 </div>
                 
-                <div class="p-4">
-                    <h3 class="font-semibold text-lg mb-2 line-clamp-2">${product.name}</h3>
-                    
-                    <div class="mb-2">
-                        ${product.original_price ? 
-                            `<span class="text-gray-500 line-through text-sm">LKR ${product.original_price.toLocaleString()}</span>` 
-                            : ''
-                        }
-                        <div class="text-blue-600 font-bold text-xl">LKR ${product.price.toLocaleString()}</div>
-                    </div>
-                    
-                    <div class="flex items-center gap-1 mb-3">
-                        <span class="text-yellow-500">${'★'.repeat(Math.floor(product.rating))}</span>
-                        <span class="text-gray-400">${'★'.repeat(5 - Math.floor(product.rating))}</span>
-                        <span class="text-sm text-gray-600">(${product.reviews_count})</span>
+                <div class="product-info p-4">
+                    <div class="product-details">
+                        <h3 class="font-semibold text-lg mb-2 h-14 line-clamp-2">${product.name}</h3>
+                        
+                        <div class="mb-3">
+                            ${product.original_price ? 
+                                `<div class="text-gray-500 line-through text-sm">LKR ${product.original_price.toLocaleString()}</div>` 
+                                : '<div class="h-5"></div>'
+                            }
+                            <div class="text-blue-600 font-bold text-xl">LKR ${product.price.toLocaleString()}</div>
+                        </div>
+                        
+                        <div class="flex items-center gap-1 mb-4">
+                            <span class="text-yellow-500">${'★'.repeat(Math.floor(product.rating))}</span>
+                            <span class="text-gray-400">${'★'.repeat(5 - Math.floor(product.rating))}</span>
+                            <span class="text-sm text-gray-600">(${product.reviews_count})</span>
+                        </div>
                     </div>
                     
                     <button 
                         onclick="event.stopPropagation(); addToCart('${product.id}')"
-                        class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+                        class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
                     >
                         Add to Cart
                     </button>
@@ -247,7 +262,18 @@ function addToCart(productId) {
     }
     
     updateCart();
-    alert(`${product.name} added to cart!`);
+    showNotification(`${product.name} added to cart!`);
+}
+
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 2000);
 }
 
 function updateCart() {
@@ -288,12 +314,12 @@ function updateCartModal() {
             <div class="flex items-center gap-2">
                 <button 
                     onclick="updateQuantity('${item.id}', -1)"
-                    class="bg-gray-200 px-3 py-1 rounded"
+                    class="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
                 >-</button>
-                <span class="font-semibold">${item.quantity}</span>
+                <span class="font-semibold w-8 text-center">${item.quantity}</span>
                 <button 
                     onclick="updateQuantity('${item.id}', 1)"
-                    class="bg-gray-200 px-3 py-1 rounded"
+                    class="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
                 >+</button>
             </div>
         </div>
@@ -372,7 +398,7 @@ async function checkout() {
             const paymentResult = await paymentRes.json();
             
             if (paymentResult.status === 'ok') {
-                alert('Order placed successfully!');
+                showNotification('Order placed successfully!');
                 cart = [];
                 updateCart();
                 closeCart();
@@ -382,6 +408,10 @@ async function checkout() {
         console.error('Checkout error:', error);
         alert('Checkout failed. Please try again.');
     }
+}
+
+function viewProduct(productId) {
+    console.log('View product:', productId);
 }
 
 document.addEventListener('DOMContentLoaded', initStore);

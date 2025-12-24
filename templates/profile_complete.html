@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Your Profile - Get Personalized Services</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen py-12 px-4">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Complete Your Profile</h1>
+            <p class="text-lg text-gray-600">Help us provide personalized recommendations just for you</p>
+            <div class="mt-4 bg-blue-100 border border-blue-300 rounded-lg p-4 inline-block">
+                <p class="text-sm text-blue-800">
+                    🎯 <strong>Why complete your profile?</strong><br>
+                    Get recommendations for degrees, tuition, IELTS courses, and more based on your needs!
+                </p>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium text-gray-700">Profile Completeness</span>
+                <span id="progress-text" class="text-sm font-bold text-blue-600">0%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+                <div id="progress-bar" class="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Form -->
+        <form id="profile-form" class="space-y-6">
+            
+            <!-- Family Information -->
+            <div class="bg-white rounded-xl shadow-md p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">👨‍👩‍👧‍👦 Family Information</h2>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Marital Status
+                        </label>
+                        <select name="marital_status" onchange="updateProgress()" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select status</option>
+                            <option value="single">Single</option>
+                            <option value="married">Married</option>
+                            <option value="divorced">Divorced</option>
+                            <option value="widowed">Widowed</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Number of Children
+                        </label>
+                        <input type="number" name="children_count" min="0" max="10" onchange="updateChildren(); updateProgress()" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="0">
+                    </div>
+                </div>
+                
+                <div id="children-details" class="mt-6 hidden">
+                    <h3 class="font-semibold mb-4 text-gray-800">Children Details (for personalized education recommendations)</h3>
+                    <div id="children-inputs" class="space-y-4"></div>
+                </div>
+            </div>
+
+            <!-- Education Background -->
+            <div class="bg-white rounded-xl shadow-md p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">🎓 Education Background</h2>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Highest Qualification <span class="text-red-500">*</span>
+                        </label>
+                        <select name="highest_qualification" onchange="updateProgress()" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select qualification</option>
+                            <option value="O/L">O/L</option>
+                            <option value="A/L">A/L</option>
+                            <option value="Diploma">Diploma</option>
+                            <option value="Bachelor's Degree">Bachelor's Degree</option>
+                            <option value="Master's Degree">Master's Degree</option>
+                            <option value="PhD">PhD</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Field of Study
+                        </label>
+                        <input type="text" name="field_of_study" onchange="updateProgress()" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., Engineering, Business">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Institution Name
+                        </label>
+                        <input type="text" name="institution" onchange="updateProgress()" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="School/University name">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Year Graduated
+                        </label>
+                        <input type="number" name="year_graduated" min="1950" max="2025" onchange="updateProgress()" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="YYYY">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Career Information -->
+            <div class="bg-white rounded-xl shadow-md p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">💼 Career Information</h2>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Current Job/Position
+                        </label>
+                        <input type="text" name="current_job" onchange="updateProgress()" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Your current role">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Years of Experience
+                        </label>
+                        <input type="number" name="years_experience" min="0" max="50" onchange="updateProgress()" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Years">
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Career Goals (Select all that apply)
+                    </label>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <label class="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg hover:bg-blue-50">
+                            <input type="checkbox" name="career_goals" value="degree" onchange="updateProgress()" class="rounded">
+                            <span class="text-sm">Get a Degree</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg hover:bg-blue-50">
+                            <input type="checkbox" name="career_goals" value="overseas" onchange="updateProgress()" class="rounded">
+                            <span class="text-sm">Work Overseas</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg hover:bg-blue-50">
+                            <input type="checkbox" name="career_goals" value="promotion" onchange="updateProgress()" class="rounded">
+                            <span class="text-sm">Career Promotion</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg hover:bg-blue-50">
+                            <input type="checkbox" name="career_goals" value="business" onchange="updateProgress()" class="rounded">
+                            <span class="text-sm">Start Business</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg hover:bg-blue-50">
+                            <input type="checkbox" name="career_goals" value="skills" onchange="updateProgress()" class="rounded">
+                            <span class="text-sm">Learn New Skills</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg hover:bg-blue-50">
+                            <input type="checkbox" name="career_goals" value="certification" onchange="updateProgress()" class="rounded">
+                            <span class="text-sm">Get Certified</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interests & Preferences -->
+            <div class="bg-white rounded-xl shadow-md p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">⭐ Interests & Learning Goals</h2>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        What services interest you? (Select all that apply)
+                    </label>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <label class="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg hover:bg-blue-50">
+                            <input type="checkbox" name="learning_interests" value="tuition" onchange="updateProgress()" class="rounded">
+                            <span class="text-sm">Tuition Classes</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg hover:bg-blue-50">
+                            <input type="checkbox" name="learning_interests" value="ielts" onchange="updateProgress()" class="rounded">
+                            <span class="text-sm">IELTS/English</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg hover:bg-blue-50">
+                            <input type="checkbox" name="learning_interests" value="it_training" onchange="updateProgress()" class="rounded">
+                            <span class="text-sm">IT Training</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg hover:bg-blue-50">
+                            <input type="checkbox" name="learning_interests" value="visa_services" onchange="updateProgress()" class="rounded">
+                            <span class="text-sm">Visa Services</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg hover:bg-blue-50">
+                            <input type="checkbox" name="learning_interests" value="electronics" onchange="updateProgress()" class="rounded">
+                            <span class="text-sm">Electronics</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer p-3 border rounded-lg hover:bg-blue-50">
+                            <input type="checkbox" name="learning_interests" value="business" onchange="updateProgress()" class="rounded">
+                            <span class="text-sm">Business Services</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Privacy & Consent -->
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-md p-8 border-2 border-blue-200">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">🔒 Privacy & Personalization</h2>
+                <p class="text-sm text-gray-600 mb-6">Control how we use your data to improve your experience</p>
+                
+                <div class="space-y-4">
+                    <label class="flex items-start space-x-3 cursor-pointer p-4 bg-white rounded-lg">
+                        <input type="checkbox" name="marketing_emails" checked class="mt-1 rounded">
+                        <div>
+                            <span class="font-medium">Marketing Emails</span>
+                            <p class="text-sm text-gray-600">Receive personalized course and service recommendations</p>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-start space-x-3 cursor-pointer p-4 bg-white rounded-lg">
+                        <input type="checkbox" name="personalized_ads" checked class="mt-1 rounded">
+                        <div>
+                            <span class="font-medium">Personalized Recommendations</span>
+                            <p class="text-sm text-gray-600">Show relevant products based on your profile</p>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-start space-x-3 cursor-pointer p-4 bg-white rounded-lg">
+                        <input type="checkbox" name="data_analytics" checked class="mt-1 rounded">
+                        <div>
+                            <span class="font-medium">Analytics & Improvement</span>
+                            <p class="text-sm text-gray-600">Help us improve services through anonymized usage data</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="bg-white rounded-xl shadow-md p-8 text-center">
+                <button type="submit" id="submit-btn" class="w-full md:w-auto px-12 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-lg font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg">
+                    🎯 Get My Personalized Recommendations
+                </button>
+                <p class="mt-4 text-sm text-gray-500">You can update this information anytime in Settings</p>
+            </div>
+
+        </form>
+    </div>
+
+    <script>
+        // Progress tracking
+        function updateProgress() {
+            const form = document.getElementById('profile-form');
+            const formData = new FormData(form);
+            
+            let filled = 0;
+            let total = 0;
+            
+            // Count filled fields
+            for (let [key, value] of formData.entries()) {
+                total++;
+                if (value && value.trim()) filled++;
+            }
+            
+            const percentage = Math.round((filled / Math.max(total, 1)) * 100);
+            
+            document.getElementById('progress-bar').style.width = percentage + '%';
+            document.getElementById('progress-text').textContent = percentage + '%';
+        }
+
+        // Dynamic children inputs
+        function updateChildren() {
+            const count = parseInt(document.querySelector('[name="children_count"]').value) || 0;
+            const container = document.getElementById('children-inputs');
+            const details = document.getElementById('children-details');
+            
+            if (count > 0) {
+                details.classList.remove('hidden');
+                container.innerHTML = '';
+                
+                for (let i = 0; i < count; i++) {
+                    container.innerHTML += `
+                        <div class="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Child ${i + 1} Age
+                                </label>
+                                <input type="number" name="children_ages[]" min="0" max="25" onchange="updateProgress()" class="w-full px-4 py-2 border rounded-lg" placeholder="Age">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Education Level
+                                </label>
+                                <select name="children_education[]" onchange="updateProgress()" class="w-full px-4 py-2 border rounded-lg">
+                                    <option value="">Select</option>
+                                    <option value="preschool">Preschool</option>
+                                    <option value="primary">Primary (1-5)</option>
+                                    <option value="secondary">Secondary (6-11)</option>
+                                    <option value="ol">O/L</option>
+                                    <option value="al">A/L</option>
+                                    <option value="university">University</option>
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                }
+            } else {
+                details.classList.add('hidden');
+            }
+        }
+
+        // Form submission
+        document.getElementById('profile-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Processing...';
+            
+            const formData = new FormData(e.target);
+            
+            // Collect data
+            const data = {
+                marital_status: formData.get('marital_status'),
+                children_ages: formData.getAll('children_ages[]').map(a => parseInt(a)).filter(a => a),
+                children_education: formData.getAll('children_education[]').filter(e => e),
+                dependents: parseInt(formData.get('children_count')) || 0,
+                highest_qualification: formData.get('highest_qualification'),
+                field_of_study: formData.get('field_of_study'),
+                institution: formData.get('institution'),
+                year_graduated: parseInt(formData.get('year_graduated')) || null,
+                current_job: formData.get('current_job'),
+                years_experience: parseInt(formData.get('years_experience')) || null,
+                career_goals: formData.getAll('career_goals'),
+                learning_interests: formData.getAll('learning_interests'),
+                marketing_emails: formData.get('marketing_emails') === 'on',
+                personalized_ads: formData.get('personalized_ads') === 'on',
+                data_analytics: formData.get('data_analytics') === 'on'
+            };
+            
+            try {
+                const response = await fetch('/api/user/profile/complete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Show success
+                    alert('✅ Profile completed! Redirecting to your personalized dashboard...');
+                    window.location.href = '/dashboard';
+                } else {
+                    throw new Error(result.error || 'Failed to save profile');
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+                btn.disabled = false;
+                btn.innerHTML = '🎯 Get My Personalized Recommendations';
+            }
+        });
+
+        // Initialize
+        updateProgress();
+    </script>
+</body>
+</html>

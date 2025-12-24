@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Segment Analytics - Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-gray-900">📊 Segment Analytics</h1>
+            <div class="flex items-center space-x-4">
+                <a href="/admin" class="text-gray-600 hover:text-gray-900">← Back to Admin</a>
+                <button onclick="refreshData()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">🔄 Refresh</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-6">
+        
+        <!-- Key Metrics -->
+        <div class="grid md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="text-4xl mb-2">👥</div>
+                <div class="text-3xl font-bold text-blue-600" id="total-users">-</div>
+                <div class="text-sm text-gray-600">Total Segmented Users</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="text-4xl mb-2">💰</div>
+                <div class="text-3xl font-bold text-green-600" id="total-revenue">-</div>
+                <div class="text-sm text-gray-600">Total Revenue</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="text-4xl mb-2">📦</div>
+                <div class="text-3xl font-bold text-purple-600" id="total-orders">-</div>
+                <div class="text-sm text-gray-600">Total Orders</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="text-4xl mb-2">🎯</div>
+                <div class="text-3xl font-bold text-orange-600" id="conversion-rate">-</div>
+                <div class="text-sm text-gray-600">Conversion Rate</div>
+            </div>
+        </div>
+
+        <!-- Segment Distribution -->
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">User Segments Distribution</h2>
+                <canvas id="segmentChart"></canvas>
+                <div id="segment-details" class="mt-4 space-y-2"></div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Revenue by Segment</h2>
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Priority Distribution -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">High Priority Recommendations Distribution</h2>
+            <div id="priority-grid" class="grid md:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- Top Products by Segment -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Top Products by Segment</h2>
+            <canvas id="productsChart"></canvas>
+        </div>
+
+        <!-- Detailed Segment Breakdown -->
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Government Employees -->
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-md p-6 border-2 border-blue-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900">👔 Government Employees</h3>
+                    <span class="text-3xl">👔</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Users:</span>
+                        <span class="font-bold" id="seg-gov-users">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Revenue:</span>
+                        <span class="font-bold text-green-600" id="seg-gov-revenue">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Avg Order:</span>
+                        <span class="font-bold" id="seg-gov-avg">-</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-blue-200">
+                    <p class="text-xs text-gray-700"><strong>Top Interest:</strong> Degree Programs</p>
+                </div>
+            </div>
+
+            <!-- Parents -->
+            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-md p-6 border-2 border-green-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900">👨‍👩‍👧 Parents</h3>
+                    <span class="text-3xl">👨‍👩‍👧</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Users:</span>
+                        <span class="font-bold" id="seg-parent-users">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Revenue:</span>
+                        <span class="font-bold text-green-600" id="seg-parent-revenue">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Avg Order:</span>
+                        <span class="font-bold" id="seg-parent-avg">-</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-green-200">
+                    <p class="text-xs text-gray-700"><strong>Top Interest:</strong> Tuition Classes</p>
+                </div>
+            </div>
+
+            <!-- Young Professionals -->
+            <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl shadow-md p-6 border-2 border-purple-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900">💼 Young Professionals</h3>
+                    <span class="text-3xl">💼</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Users:</span>
+                        <span class="font-bold" id="seg-young-users">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Revenue:</span>
+                        <span class="font-bold text-green-600" id="seg-young-revenue">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Avg Order:</span>
+                        <span class="font-bold" id="seg-young-avg">-</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-purple-200">
+                    <p class="text-xs text-gray-700"><strong>Top Interest:</strong> IELTS & Overseas Jobs</p>
+                </div>
+            </div>
+
+            <!-- Students -->
+            <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl shadow-md p-6 border-2 border-yellow-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900">🎓 Students</h3>
+                    <span class="text-3xl">🎓</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Users:</span>
+                        <span class="font-bold" id="seg-student-users">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Revenue:</span>
+                        <span class="font-bold text-green-600" id="seg-student-revenue">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Avg Order:</span>
+                        <span class="font-bold" id="seg-student-avg">-</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-yellow-200">
+                    <p class="text-xs text-gray-700"><strong>Top Interest:</strong> Exam Prep & Study Materials</p>
+                </div>
+            </div>
+
+            <!-- Entrepreneurs -->
+            <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-xl shadow-md p-6 border-2 border-red-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900">🚀 Entrepreneurs</h3>
+                    <span class="text-3xl">🚀</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Users:</span>
+                        <span class="font-bold" id="seg-entrepreneur-users">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Revenue:</span>
+                        <span class="font-bold text-green-600" id="seg-entrepreneur-revenue">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Avg Order:</span>
+                        <span class="font-bold" id="seg-entrepreneur-avg">-</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-red-200">
+                    <p class="text-xs text-gray-700"><strong>Top Interest:</strong> Business Services</p>
+                </div>
+            </div>
+
+            <!-- Senior Citizens -->
+            <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl shadow-md p-6 border-2 border-indigo-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-900">👴 Senior Citizens</h3>
+                    <span class="text-3xl">👴</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Users:</span>
+                        <span class="font-bold" id="seg-senior-users">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Revenue:</span>
+                        <span class="font-bold text-green-600" id="seg-senior-revenue">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-700">Avg Order:</span>
+                        <span class="font-bold" id="seg-senior-avg">-</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-indigo-200">
+                    <p class="text-xs text-gray-700"><strong>Top Interest:</strong> Health Insurance</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let segmentChart, revenueChart, productsChart;
+
+        async function loadAnalytics() {
+            try {
+                // Load segment analytics
+                const segmentRes = await fetch('/api/admin/analytics/segments');
+                const segmentData = await segmentRes.json();
+                
+                // Load revenue analytics
+                const revenueRes = await fetch('/api/admin/analytics/revenue');
+                const revenueData = await revenueRes.json();
+                
+                displayMetrics(segmentData, revenueData);
+                displayCharts(segmentData, revenueData);
+                displayPriorities(segmentData);
+                displaySegmentDetails(revenueData);
+                
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+                alert('Failed to load analytics data');
+            }
+        }
+
+        function displayMetrics(segmentData, revenueData) {
+            document.getElementById('total-users').textContent = segmentData.total_segmented_users;
+            document.getElementById('total-revenue').textContent = 'LKR ' + (revenueData.total_revenue || 0).toLocaleString();
+            
+            const totalOrders = revenueData.revenue_by_segment.reduce((sum, s) => sum + s.order_count, 0);
+            document.getElementById('total-orders').textContent = totalOrders;
+            
+            const conversionRate = segmentData.total_segmented_users > 0 
+                ? ((totalOrders / segmentData.total_segmented_users) * 100).toFixed(1)
+                : 0;
+            document.getElementById('conversion-rate').textContent = conversionRate + '%';
+        }
+
+        function displayCharts(segmentData, revenueData) {
+            // Segment Distribution Chart
+            const segmentLabels = segmentData.segment_distribution.map(s => formatSegmentName(s._id));
+            const segmentCounts = segmentData.segment_distribution.map(s => s.count);
+            
+            if (segmentChart) segmentChart.destroy();
+            segmentChart = new Chart(document.getElementById('segmentChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: segmentLabels,
+                    datasets: [{
+                        data: segmentCounts,
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(139, 92, 246, 0.8)',
+                            'rgba(251, 191, 36, 0.8)',
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(99, 102, 241, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Revenue by Segment Chart
+            const revenueLabels = revenueData.revenue_by_segment.map(s => formatSegmentName(s._id));
+            const revenueValues = revenueData.revenue_by_segment.map(s => s.total_revenue);
+            
+            if (revenueChart) revenueChart.destroy();
+            revenueChart = new Chart(document.getElementById('revenueChart'), {
+                type: 'bar',
+                data: {
+                    labels: revenueLabels,
+                    datasets: [{
+                        label: 'Revenue (LKR)',
+                        data: revenueValues,
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayPriorities(data) {
+            const priorities = data.priority_distribution || [];
+            const container = document.getElementById('priority-grid');
+            
+            container.innerHTML = priorities.map(p => `
+                <div class="bg-gradient-to-br from-orange-50 to-yellow-50 border-2 border-orange-200 rounded-lg p-4">
+                    <div class="text-2xl font-bold text-orange-600 mb-2">${p.count}</div>
+                    <div class="text-sm text-gray-700">${formatPriorityType(p._id)}</div>
+                </div>
+            `).join('');
+        }
+
+        function displaySegmentDetails(revenueData) {
+            const segments = revenueData.revenue_by_segment;
+            
+            segments.forEach(seg => {
+                const key = seg._id || 'general_citizen';
+                const prefix = getSegmentPrefix(key);
+                
+                if (document.getElementById(`seg-${prefix}-users`)) {
+                    document.getElementById(`seg-${prefix}-users`).textContent = seg.order_count || 0;
+                    document.getElementById(`seg-${prefix}-revenue`).textContent = 'LKR ' + (seg.total_revenue || 0).toLocaleString();
+                    document.getElementById(`seg-${prefix}-avg`).textContent = 'LKR ' + Math.round(seg.avg_order_value || 0).toLocaleString();
+                }
+            });
+        }
+
+        function formatSegmentName(segment) {
+            const names = {
+                'government_employee': 'Government Employees',
+                'parent': 'Parents',
+                'young_professional': 'Young Professionals',
+                'student': 'Students',
+                'entrepreneur': 'Entrepreneurs',
+                'senior_citizen': 'Senior Citizens',
+                'general_citizen': 'General Citizens'
+            };
+            return names[segment] || segment;
+        }
+
+        function formatPriorityType(type) {
+            const types = {
+                'degree_program': 'Degree Program Candidates',
+                'child_education': 'Child Education Needs',
+                'career_growth': 'Career Growth Seekers',
+                'senior_services': 'Senior Services',
+                'student_services': 'Student Services',
+                'business_services': 'Business Services'
+            };
+            return types[type] || type;
+        }
+
+        function getSegmentPrefix(segment) {
+            const prefixes = {
+                'government_employee': 'gov',
+                'parent': 'parent',
+                'young_professional': 'young',
+                'student': 'student',
+                'entrepreneur': 'entrepreneur',
+                'senior_citizen': 'senior'
+            };
+            return prefixes[segment] || 'general';
+        }
+
+        function refreshData() {
+            loadAnalytics();
+        }
+
+        // Load on page load
+        loadAnalytics();
+    </script>
+</body>
+</html>

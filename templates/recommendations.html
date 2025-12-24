@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personalized Recommendations - For You</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-gray-900">✨ For You</h1>
+            <div class="flex items-center space-x-4">
+                <a href="/dashboard" class="text-gray-600 hover:text-gray-900">← Back to Dashboard</a>
+                <a href="/store" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Browse All Products</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-6">
+        
+        <!-- User Segment Info -->
+        <div id="segment-banner" class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl shadow-xl p-8 mb-8 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-3xl font-bold mb-2">
+                        <span id="greeting">Hello</span>! 👋
+                    </h2>
+                    <p class="text-purple-100 text-lg mb-4">
+                        Based on your profile, we've curated these recommendations specially for you
+                    </p>
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-white/20 px-4 py-2 rounded-lg">
+                            <span class="text-sm">Your Segment:</span>
+                            <div id="segment-label" class="font-bold text-lg">Loading...</div>
+                        </div>
+                        <div class="bg-white/20 px-4 py-2 rounded-lg">
+                            <span class="text-sm">Profile Completeness:</span>
+                            <div id="profile-completeness" class="font-bold text-lg">0%</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="hidden md:block text-6xl">
+                    🎯
+                </div>
+            </div>
+        </div>
+
+        <!-- Priority Recommendations -->
+        <div id="priority-section" class="mb-12"></div>
+
+        <!-- Segment-Based Recommendations -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">📌 Recommended For You</h2>
+            
+            <div id="loading" class="text-center py-20">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p class="mt-4 text-gray-600">Loading your personalized recommendations...</p>
+            </div>
+            
+            <div id="recommendations-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 hidden"></div>
+            
+            <div id="no-recommendations" class="hidden bg-white rounded-xl shadow-md p-12 text-center">
+                <div class="text-6xl mb-4">📝</div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Complete Your Profile</h3>
+                <p class="text-gray-600 mb-6">Help us understand you better to provide personalized recommendations</p>
+                <a href="/profile/complete" class="inline-block px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">
+                    Complete Profile Now
+                </a>
+            </div>
+        </div>
+
+        <!-- Why These Recommendations -->
+        <div class="bg-white rounded-xl shadow-md p-8">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">💡 Why am I seeing these?</h3>
+            <div id="recommendation-reasons" class="space-y-3">
+                <p class="text-gray-600">Loading...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        async function loadRecommendations() {
+            try {
+                const response = await fetch('/api/user/recommendations');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displaySegmentInfo(data.segment_info);
+                    displayRecommendations(data.recommendations);
+                    displayReasons(data.segment_info);
+                } else {
+                    throw new Error(data.error || 'Failed to load');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('no-recommendations').classList.remove('hidden');
+            }
+        }
+
+        function displaySegmentInfo(info) {
+            const segments = info.segments || [];
+            const primary = info.primary_segment || 'general_citizen';
+            const completeness = info.profile_completeness || 0;
+            
+            // Segment labels
+            const labels = {
+                'government_employee': '👔 Government Employee',
+                'parent': '👨‍👩‍👧 Parent',
+                'young_professional': '💼 Young Professional',
+                'senior_citizen': '👴 Senior Citizen',
+                'student': '🎓 Student',
+                'entrepreneur': '🚀 Entrepreneur',
+                'general_citizen': '👤 Citizen'
+            };
+            
+            document.getElementById('segment-label').textContent = labels[primary] || primary;
+            document.getElementById('profile-completeness').textContent = completeness + '%';
+        }
+
+        function displayRecommendations(recommendations) {
+            document.getElementById('loading').classList.add('hidden');
+            
+            if (!recommendations || recommendations.length === 0) {
+                document.getElementById('no-recommendations').classList.remove('hidden');
+                return;
+            }
+            
+            const grid = document.getElementById('recommendations-grid');
+            grid.classList.remove('hidden');
+            
+            // Separate priority recommendations
+            const highPriority = recommendations.filter(r => r.priority === 'high');
+            const regular = recommendations.filter(r => r.priority !== 'high');
+            
+            // Display high priority first
+            if (highPriority.length > 0) {
+                const prioritySection = document.getElementById('priority-section');
+                prioritySection.innerHTML = `
+                    <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-xl p-6 mb-6">
+                        <h3 class="text-2xl font-bold text-gray-900 mb-4">
+                            ⭐ High Priority Recommendations
+                        </h3>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            ${highPriority.map(product => createProductCard(product, true)).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Display regular recommendations
+            grid.innerHTML = regular.map(product => createProductCard(product, false)).join('');
+        }
+
+        function createProductCard(product, isHighPriority) {
+            const discount = product.original_price 
+                ? Math.round((1 - product.price/product.original_price) * 100)
+                : 0;
+            
+            return `
+                <div class="bg-white rounded-xl shadow-md overflow-hidden transition-all hover:shadow-xl hover:-translate-y-2 ${isHighPriority ? 'border-2 border-yellow-400' : ''}">
+                    ${isHighPriority ? '<div class="bg-yellow-400 text-black text-center py-1 text-sm font-bold">⭐ HIGH PRIORITY</div>' : ''}
+                    
+                    <div class="relative">
+                        <img src="${product.images[0]}" alt="${product.name}" class="w-full h-48 object-cover" onerror="this.src='/static/img/placeholder.jpg'">
+                        ${discount > 0 ? `<div class="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">-${discount}%</div>` : ''}
+                    </div>
+                    
+                    <div class="p-6">
+                        ${product.recommendation_reason ? `
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                                <p class="text-xs text-blue-800">
+                                    <strong>💡 Why this?</strong> ${product.recommendation_reason}
+                                </p>
+                            </div>
+                        ` : ''}
+                        
+                        <h3 class="font-bold text-lg mb-2 line-clamp-2">${product.name}</h3>
+                        <p class="text-sm text-gray-600 mb-3 line-clamp-2">${product.description}</p>
+                        
+                        <div class="mb-3">
+                            ${product.original_price ? 
+                                `<span class="text-gray-500 line-through text-sm">LKR ${product.original_price.toLocaleString()}</span><br>` 
+                                : ''
+                            }
+                            <span class="text-2xl font-bold text-blue-600">LKR ${product.price.toLocaleString()}</span>
+                        </div>
+                        
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <span class="text-yellow-500">${'★'.repeat(Math.floor(product.rating))}</span>
+                                <span class="text-gray-300">${'★'.repeat(5 - Math.floor(product.rating))}</span>
+                                <span class="text-sm text-gray-600 ml-2">(${product.reviews_count})</span>
+                            </div>
+                        </div>
+                        
+                        <button onclick="addToCart('${product.id}')" class="w-full py-3 ${isHighPriority ? 'bg-gradient-to-r from-yellow-500 to-orange-500' : 'bg-blue-600'} text-white font-semibold rounded-lg hover:opacity-90 transition-opacity">
+                            Add to Cart
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayReasons(info) {
+            const segments = info.segments || [];
+            const completeness = info.profile_completeness || 0;
+            
+            const reasons = document.getElementById('recommendation-reasons');
+            
+            let html = '<ul class="space-y-2">';
+            
+            if (segments.includes('government_employee')) {
+                html += '<li class="flex items-start space-x-2"><span>✅</span><span>You work in government service - we recommend professional development programs</span></li>';
+            }
+            if (segments.includes('parent')) {
+                html += '<li class="flex items-start space-x-2"><span>✅</span><span>You have children - we recommend tuition and education services</span></li>';
+            }
+            if (segments.includes('young_professional')) {
+                html += '<li class="flex items-start space-x-2"><span>✅</span><span>You\'re a young professional - we recommend career growth and overseas opportunities</span></li>';
+            }
+            if (segments.includes('student')) {
+                html += '<li class="flex items-start space-x-2"><span>✅</span><span>You\'re a student - we recommend exam prep and study materials</span></li>';
+            }
+            
+            if (completeness < 80) {
+                html += `<li class="flex items-start space-x-2"><span>💡</span><span><a href="/profile/complete" class="text-blue-600 font-semibold">Complete your profile (${completeness}%)</a> for even better recommendations</span></li>`;
+            }
+            
+            html += '</ul>';
+            
+            reasons.innerHTML = html;
+        }
+
+        function addToCart(productId) {
+            // Add to cart logic
+            alert('Added to cart! (Implement cart functionality)');
+        }
+
+        // Load on page load
+        loadRecommendations();
+    </script>
+</body>
+</html>
