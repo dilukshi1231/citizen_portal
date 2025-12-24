@@ -938,20 +938,34 @@ def log_engagement():
     if age is None:
         age = session.get("user_age")
     job = payload.get("job") or session.get("user_job")
+    question = payload.get("question_clicked")
+    service = payload.get("service")
     
+    # Validate age
     if age is not None:
         try:
             age = int(age)
         except (ValueError, TypeError):
             age = None
     
+    # Only log if at least one meaningful field has data
+    if not any([
+        user_id,
+        age is not None,
+        job and job != "Unknown",
+        question and question != "Unknown",
+        service and service != "Unknown"
+    ]):
+        # Skip logging empty engagements
+        return jsonify({"status": "skipped", "reason": "no meaningful data"})
+    
     doc = {
         "user_id": user_id,
         "age": age,
         "job": job,
         "desires": payload.get("desires") or [],
-        "question_clicked": payload.get("question_clicked"),
-        "service": payload.get("service"),
+        "question_clicked": question,
+        "service": service,
         "language": payload.get("language") or session.get("user_language", "en"),
         "timestamp": get_utc_now(),
         "chat_type": payload.get("chat_type", "standard")
@@ -959,6 +973,33 @@ def log_engagement():
     
     eng_col.insert_one(doc)
     return jsonify({"status": "ok"})
+# CLEANUP SCRIPT: Remove existing N/A entries
+@app.route("/api/admin/cleanup-engagements", methods=["POST"])
+@admin_required
+def cleanup_engagements():
+    """Remove engagement entries with N/A values"""
+    try:
+        # Delete entries where ALL key fields are N/A or missing
+        result = eng_col.delete_many({
+            "$or": [
+                {"question_clicked": {"$in": [None, "N/A", ""]}},
+                {"service": {"$in": [None, "N/A", ""]}},
+                {
+                    "$and": [
+                        {"question_clicked": {"$exists": False}},
+                        {"service": {"$exists": False}}
+                    ]
+                }
+            ]
+        })
+        
+        return jsonify({
+            "status": "success",
+            "deleted_count": result.deleted_count,
+            "message": f"Removed {result.deleted_count} incomplete engagement entries"
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/profile/step", methods=["POST"])
 def profile_step():
@@ -1747,7 +1788,22 @@ def admin_engagements():
     for e in eng_col.find().sort("timestamp", -1).limit(500):
         e["_id"] = str(e["_id"])
         e["timestamp"] = e.get("timestamp").isoformat() if e.get("timestamp") else ""
-        items.append(e)
+        
+        # Skip rows where all key fields are None/empty
+        age = e.get("age")
+        job = e.get("job")
+        question = e.get("question_clicked")
+        service = e.get("service")
+        
+        # Only include if at least one meaningful field has data
+        if any([
+            age is not None and age != "",
+            job is not None and job != "" and job != "Unknown",
+            question is not None and question != "" and question != "Unknown",
+            service is not None and service != "" and service != "Unknown"
+        ]):
+            items.append(e)
+    
     return jsonify(items)
 
 @app.route("/api/admin/export_csv")

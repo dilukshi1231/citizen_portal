@@ -1,4 +1,4 @@
-// COMPLETE Admin Dashboard JavaScript with ML Insights
+
 
 document.getElementById("login-form")?.addEventListener("submit", async (e) => {
   e.preventDefault();
