@@ -339,10 +339,10 @@ def get_user_profile():
     
     return jsonify({"error": "User not found"}), 404
 
-
+"""
 @app.route("/api/user/profile/complete", methods=["POST"])
 def complete_user_profile():
-    """Complete user profile with extended information"""
+    
     if not session.get("user_logged_in"):
         return jsonify({"error": "Not authenticated"}), 401
     
@@ -413,6 +413,7 @@ def complete_user_profile():
         "segment_info": segment_info
     })
 
+"""
 
 @app.route("/api/user/recommendations", methods=["GET"])
 def get_user_recommendations():
@@ -525,59 +526,265 @@ def user_login_api():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# FIXED REGISTRATION ENDPOINT ONLY
+# Replace your existing @app.route("/api/user/register", methods=["POST"]) function with this
+
 @app.route("/api/user/register", methods=["POST"])
 def user_register_api():
-    """User registration API endpoint"""
+    """Enhanced user registration with complete profile - handles optional fields"""
     try:
         data = request.json
-        email = data.get("email", "").strip()
+        
+        # Helper function to safely get and strip string values
+        def safe_strip(value, default=""):
+            """Safely strip a value, returning default if None or empty"""
+            if value is None:
+                return default
+            return str(value).strip() if str(value).strip() else default
+        
+        # Helper function to safely get integer values
+        def safe_int(value, default=0):
+            """Safely convert to int, returning default if invalid"""
+            try:
+                return int(value) if value else default
+            except (ValueError, TypeError):
+                return default
+        
+        # MANDATORY FIELDS - validate first
+        email = safe_strip(data.get("email"), "")
         password = data.get("password", "")
+        terms = data.get("terms", False)
         
-        if not email or not password or not data.get("terms"):
-            return jsonify({"error": "Email, password and terms are required"}), 400
+        if not email or not password:
+            return jsonify({"error": "Email and password are required"}), 400
         
+        if not terms:
+            return jsonify({"error": "You must accept the Terms and Conditions"}), 400
+        
+        # Check if email already registered
         if users_col.find_one({"email": email}):
             return jsonify({"error": "Email already registered"}), 400
         
+        # Hash password
         hashed_pwd = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         
-        age = int(data.get("age")) if data.get("age") else None
-        job = data.get("job", "").strip() or None
+        # Parse children ages - handle both array and comma-separated string
+        children_ages = data.get("children_ages", [])
+        if isinstance(children_ages, str):
+            children_ages = [
+                int(age.strip()) 
+                for age in children_ages.split(',') 
+                if age.strip().isdigit()
+            ]
+        elif not isinstance(children_ages, list):
+            children_ages = []
         
+        # Parse skills - handle both array and comma-separated string
+        skills = data.get("skills", [])
+        if isinstance(skills, str):
+            skills = [
+                skill.strip() 
+                for skill in skills.split(',') 
+                if skill.strip()
+            ]
+        elif not isinstance(skills, list):
+            skills = []
+        
+        # Create user document with complete profile
         user_doc = {
+            # MANDATORY Basic Information
             "email": email,
             "password": hashed_pwd,
-            "full_name": data.get("full_name", "").strip() or None,
-            "phone": data.get("phone", "").strip() or None,
-            "age": age,
-            "job": job,
-            "location": data.get("location", "").strip() or None,
+            
+            # OPTIONAL Basic Information
+            "full_name": safe_strip(data.get("full_name"), None),
+            "phone": safe_strip(data.get("phone"), None),
+            
+            # OPTIONAL Demographics
+            "age": safe_int(data.get("age"), None),
+            "gender": data.get("gender") if data.get("gender") else None,
+            "occupation": safe_strip(data.get("occupation"), None),
+            "district": data.get("district") if data.get("district") else None,
+            "marital_status": data.get("marital_status") if data.get("marital_status") else None,
+            "children_count": safe_int(data.get("children_count"), 0),
+            "children_ages": children_ages,
+            "dependents": safe_int(data.get("dependents"), 0),
+            
+            # Legacy fields for backward compatibility
+            "location": safe_strip(data.get("location"), None),
             "language": data.get("language", "en"),
-            "interests": data.get("interests", []),
+            "job": safe_strip(data.get("job") or data.get("occupation"), None),
+            
+            # OPTIONAL Education & Career
+            "years_experience": safe_int(data.get("years_experience"), None),
+            "highest_qualification": data.get("highest_qualification") if data.get("highest_qualification") else None,
+            "field_of_study": safe_strip(data.get("field_of_study"), None),
+            "institution": safe_strip(data.get("institution"), None),
+            "year_graduated": safe_int(data.get("year_graduated"), None),
+            "skills": skills,
+            "career_goals": safe_strip(data.get("career_goals"), None),
+            
+            # OPTIONAL Interests
+            "hobbies": data.get("hobbies", []) if isinstance(data.get("hobbies"), list) else [],
+            "learning_interests": data.get("learning_interests", []) if isinstance(data.get("learning_interests"), list) else [],
+            "service_preferences": data.get("service_preferences", []) if isinstance(data.get("service_preferences"), list) else [],
+            
+            # Consent (terms is mandatory, others optional)
             "terms_accepted": True,
-            "created": datetime.now(),
-            "updated": datetime.now()
+            "marketing_emails": data.get("marketing_emails", False),
+            "personalized_ads": data.get("personalized_ads", False),
+            "data_analytics": data.get("data_analytics", True),
+            
+            # Metadata
+            "created": get_utc_now(),
+            "updated": get_utc_now(),
+            "profile_completed": False
         }
         
+        # Insert user
         result = users_col.insert_one(user_doc)
+        user_id = str(result.inserted_id)
         
-        session["user_logged_in"] = True
-        session["user_id"] = str(result.inserted_id)
-        session["user_email"] = email
-        session["user_name"] = user_doc.get("full_name") or email.split('@')[0]
-        session["user_age"] = age
-        session["user_job"] = job
-        session["user_language"] = data.get("language", "en")
+        # Immediately segment the user (even with minimal data)
+        try:
+            segment_info = UserSegmentationEngine.segment_user(user_doc)
+            
+            # Store segmentation
+            segments_col.update_one(
+                {"user_id": user_id},
+                {
+                    "$set": {
+                        **segment_info,
+                        "user_id": user_id,
+                        "created": get_utc_now(),
+                        "updated": get_utc_now()
+                    }
+                },
+                upsert=True
+            )
+            
+            # Store extended profile in users collection
+            extended_profile = {
+                "family": {
+                    "marital_status": user_doc.get("marital_status"),
+                    "children": children_ages,
+                    "children_ages": children_ages,
+                    "dependents": user_doc.get("dependents", 0)
+                },
+                "education": {
+                    "highest_qualification": user_doc.get("highest_qualification"),
+                    "institution": user_doc.get("institution"),
+                    "year_graduated": user_doc.get("year_graduated"),
+                    "field_of_study": user_doc.get("field_of_study")
+                },
+                "career": {
+                    "current_job": user_doc.get("job") or user_doc.get("occupation"),
+                    "years_experience": user_doc.get("years_experience"),
+                    "skills": skills,
+                    "goals": user_doc.get("career_goals")
+                },
+                "interests": {
+                    "hobbies": user_doc.get("hobbies", []),
+                    "learning": user_doc.get("learning_interests", []),
+                    "services": user_doc.get("service_preferences", [])
+                }
+            }
+            
+            users_col.update_one(
+                {"_id": result.inserted_id},
+                {"$set": {"extended_profile": extended_profile}}
+            )
+            
+        except Exception as segment_err:
+            print(f"Segmentation error (non-critical): {segment_err}")
+            # Don't fail registration if segmentation fails
         
         return jsonify({
-            "status": "success",
-            "redirect": "/dashboard",
-            "message": "Account created successfully!"
-        })
-    
+            "message": "Registration successful",
+            "user_id": user_id,
+            "profile_completed": user_doc["profile_completed"]
+        }), 201
+        
     except Exception as e:
-        print(f"Registration error: {e}")
+        print(f"Registration error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": "Registration failed. Please try again."}), 500
+
+@app.route("/api/user/complete-profile", methods=["POST"])
+def complete_user_profile():
+    """Allow users to complete their profile after initial registration"""
+    try:
+        # Check if user is logged in (implement your auth check here)
+        if 'user_id' not in session:
+            return jsonify({"error": "Not authenticated"}), 401
+        
+        user_id = session['user_id']
+        data = request.json
+        
+        # Helper functions (same as above)
+        def safe_strip(value, default=""):
+            if value is None:
+                return default
+            return str(value).strip() if str(value).strip() else default
+        
+        def safe_int(value, default=0):
+            try:
+                return int(value) if value else default
+            except (ValueError, TypeError):
+                return default
+        
+        # Parse arrays
+        children_ages = data.get("children_ages", [])
+        if isinstance(children_ages, str):
+            children_ages = [int(age.strip()) for age in children_ages.split(',') if age.strip().isdigit()]
+        
+        skills = data.get("skills", [])
+        if isinstance(skills, str):
+            skills = [skill.strip() for skill in skills.split(',') if skill.strip()]
+        
+        # Update fields
+        update_data = {
+            "full_name": safe_strip(data.get("full_name"), None),
+            "phone": safe_strip(data.get("phone"), None),
+            "age": safe_int(data.get("age"), None),
+            "gender": data.get("gender"),
+            "occupation": safe_strip(data.get("occupation"), None),
+            "district": data.get("district"),
+            "marital_status": data.get("marital_status"),
+            "children_count": safe_int(data.get("children_count"), 0),
+            "children_ages": children_ages,
+            "dependents": safe_int(data.get("dependents"), 0),
+            "years_experience": safe_int(data.get("years_experience"), None),
+            "highest_qualification": data.get("highest_qualification"),
+            "field_of_study": safe_strip(data.get("field_of_study"), None),
+            "institution": safe_strip(data.get("institution"), None),
+            "year_graduated": safe_int(data.get("year_graduated"), None),
+            "skills": skills,
+            "career_goals": safe_strip(data.get("career_goals"), None),
+            "hobbies": data.get("hobbies", []),
+            "learning_interests": data.get("learning_interests", []),
+            "service_preferences": data.get("service_preferences", []),
+            "profile_completed": True,
+            "updated": get_utc_now()
+        }
+        
+        # Remove None values
+        update_data = {k: v for k, v in update_data.items() if v is not None}
+        
+        # Update user
+        users_col.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": update_data}
+        )
+        
+        return jsonify({"message": "Profile updated successfully"}), 200
+        
+    except Exception as e:
+        print(f"Profile update error: {str(e)}")
+        return jsonify({"error": "Failed to update profile"}), 500
+
+
 
 @app.route("/api/user/logout", methods=["POST"])
 def user_logout():

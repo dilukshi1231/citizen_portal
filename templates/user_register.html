@@ -5,202 +5,569 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - Citizen Services</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .form-step { display: none; }
+        .form-step.active { display: block; }
+        .progress-step {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+        .progress-step.active {
+            background: #3b82f6;
+            color: white;
+        }
+        .progress-step.completed {
+            background: #10b981;
+            color: white;
+        }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen py-8 px-4">
-    <div class="w-full max-w-2xl mx-auto">
+    <div class="w-full max-w-4xl mx-auto">
+        <!-- Progress Indicator -->
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-8">
+                <div class="flex items-center gap-2">
+                    <div id="step1-indicator" class="progress-step active">1</div>
+                    <span class="text-sm font-medium">Basic Info</span>
+                </div>
+                <div class="w-12 h-1 bg-gray-300"></div>
+                <div class="flex items-center gap-2">
+                    <div id="step2-indicator" class="progress-step">2</div>
+                    <span class="text-sm font-medium">Demographics</span>
+                </div>
+                <div class="w-12 h-1 bg-gray-300"></div>
+                <div class="flex items-center gap-2">
+                    <div id="step3-indicator" class="progress-step">3</div>
+                    <span class="text-sm font-medium">Education & Career</span>
+                </div>
+                <div class="w-12 h-1 bg-gray-300"></div>
+                <div class="flex items-center gap-2">
+                    <div id="step4-indicator" class="progress-step">4</div>
+                    <span class="text-sm font-medium">Interests</span>
+                </div>
+            </div>
+        </div>
+
         <div class="bg-white rounded-2xl shadow-2xl p-8">
             <!-- Header -->
             <div class="text-center mb-8">
                 <h1 class="text-3xl font-bold text-gray-900">Create Your Account</h1>
-                <p class="text-gray-600 mt-2">Get personalized AI assistance for government services</p>
-                <p class="text-sm text-gray-500 mt-2">
-                    <span class="text-red-500">*</span> Required fields | All other information is optional
-                </p>
+                <p class="text-gray-600 mt-2">Complete your profile for personalized service recommendations</p>
             </div>
 
             <!-- Alert Box -->
             <div id="alert-box" class="hidden mb-4 p-4 rounded-lg"></div>
 
-            <!-- Registration Form -->
+            <!-- Multi-Step Registration Form -->
             <form id="register-form" class="space-y-6">
-                <!-- MANDATORY SECTION -->
-                <div class="border-2 border-red-100 bg-red-50 rounded-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                        Required Information <span class="text-red-500">*</span>
-                    </h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Email <span class="text-red-500">*</span>
-                            </label>
-                            <input 
-                                type="email" 
-                                name="email" 
-                                required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="your.email@example.com"
-                            />
-                        </div>
+                <!-- Step 1: Basic Information -->
+                <div id="step1" class="form-step active">
+                    <div class="border-2 border-blue-100 bg-blue-50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                            <span class="text-red-500">*</span> Required Information
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Email Address <span class="text-red-500">*</span>
+                                </label>
+                                <input 
+                                    type="email" 
+                                    name="email" 
+                                    required
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="your.email@example.com"
+                                />
+                            </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Password <span class="text-red-500">*</span>
-                            </label>
-                            <input 
-                                type="password" 
-                                name="password" 
-                                required
-                                minlength="6"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Minimum 6 characters"
-                            />
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Password <span class="text-red-500">*</span>
+                                </label>
+                                <input 
+                                    type="password" 
+                                    name="password" 
+                                    required
+                                    minlength="6"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Minimum 6 characters"
+                                />
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Full Name <span class="text-gray-400">(Optional)</span>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    name="full_name" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Nimal Perera"
+                                />
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Phone Number <span class="text-gray-400">(Optional)</span>
+                                </label>
+                                <input 
+                                    type="tel" 
+                                    name="phone" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="+94771234567"
+                                />
+                            </div>
                         </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-end">
+                        <button type="button" onclick="nextStep(2)" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Next: Demographics →
+                        </button>
                     </div>
                 </div>
 
-                <!-- OPTIONAL SECTION -->
-                <div class="border-b pb-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                        Optional Information
-                        <span class="text-sm font-normal text-gray-500">(Help us personalize your experience)</span>
-                    </h3>
-                    <div class="grid md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Full Name
-                            </label>
-                            <input 
-                                type="text" 
-                                name="full_name"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Nimal Perera (optional)"
-                            />
-                        </div>
+                <!-- Step 2: Demographics (ALL OPTIONAL) -->
+                <div id="step2" class="form-step">
+                    <div class="border-2 border-green-100 bg-green-50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                            Demographic Information <span class="text-gray-500 text-sm">(All Optional)</span>
+                        </h3>
+                        
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Age
+                                </label>
+                                <input 
+                                    type="number" 
+                                    name="age" 
+                                    min="1"
+                                    max="120"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    placeholder="25"
+                                />
+                            </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Phone Number
-                            </label>
-                            <input 
-                                type="tel" 
-                                name="phone"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="+94771234567 (optional)"
-                            />
-                        </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Gender
+                                </label>
+                                <select 
+                                    name="gender" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                >
+                                    <option value="">Select gender</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
+                                    <option value="prefer_not_to_say">Prefer not to say</option>
+                                </select>
+                            </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Age
-                            </label>
-                            <input 
-                                type="number" 
-                                name="age"
-                                min="1"
-                                max="120"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="25 (optional)"
-                            />
-                        </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Occupation
+                                </label>
+                                <input 
+                                    type="text" 
+                                    name="occupation" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    placeholder="Software Engineer"
+                                />
+                            </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Occupation
-                            </label>
-                            <input 
-                                type="text" 
-                                name="job"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Software Engineer (optional)"
-                            />
-                        </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    District
+                                </label>
+                                <select 
+                                    name="district" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                >
+                                    <option value="">Select district</option>
+                                    <option value="Colombo">Colombo</option>
+                                    <option value="Gampaha">Gampaha</option>
+                                    <option value="Kalutara">Kalutara</option>
+                                    <option value="Kandy">Kandy</option>
+                                    <option value="Matale">Matale</option>
+                                    <option value="Nuwara Eliya">Nuwara Eliya</option>
+                                    <option value="Galle">Galle</option>
+                                    <option value="Matara">Matara</option>
+                                    <option value="Hambantota">Hambantota</option>
+                                    <option value="Jaffna">Jaffna</option>
+                                    <option value="Kilinochchi">Kilinochchi</option>
+                                    <option value="Mannar">Mannar</option>
+                                    <option value="Vavuniya">Vavuniya</option>
+                                    <option value="Mullaitivu">Mullaitivu</option>
+                                    <option value="Batticaloa">Batticaloa</option>
+                                    <option value="Ampara">Ampara</option>
+                                    <option value="Trincomalee">Trincomalee</option>
+                                    <option value="Kurunegala">Kurunegala</option>
+                                    <option value="Puttalam">Puttalam</option>
+                                    <option value="Anuradhapura">Anuradhapura</option>
+                                    <option value="Polonnaruwa">Polonnaruwa</option>
+                                    <option value="Badulla">Badulla</option>
+                                    <option value="Moneragala">Moneragala</option>
+                                    <option value="Ratnapura">Ratnapura</option>
+                                    <option value="Kegalle">Kegalle</option>
+                                </select>
+                            </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Location
-                            </label>
-                            <select 
-                                name="location"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="">Select location (optional)</option>
-                                <option value="Colombo">Colombo</option>
-                                <option value="Kandy">Kandy</option>
-                                <option value="Galle">Galle</option>
-                                <option value="Jaffna">Jaffna</option>
-                                <option value="Anuradhapura">Anuradhapura</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Marital Status
+                                </label>
+                                <select 
+                                    name="marital_status" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                >
+                                    <option value="">Select status</option>
+                                    <option value="single">Single</option>
+                                    <option value="married">Married</option>
+                                    <option value="divorced">Divorced</option>
+                                    <option value="widowed">Widowed</option>
+                                </select>
+                            </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Preferred Language
-                            </label>
-                            <select 
-                                name="language"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="en">English</option>
-                                <option value="si">සිංහල (Sinhala)</option>
-                                <option value="ta">தமிழ் (Tamil)</option>
-                            </select>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Number of Children
+                                </label>
+                                <input 
+                                    type="number" 
+                                    name="children_count" 
+                                    min="0"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    placeholder="0"
+                                />
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Children Ages (comma-separated)
+                                </label>
+                                <input 
+                                    type="text" 
+                                    name="children_ages" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    placeholder="5, 8, 12"
+                                />
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Number of Dependents
+                                </label>
+                                <input 
+                                    type="number" 
+                                    name="dependents" 
+                                    min="0"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    placeholder="0"
+                                />
+                            </div>
                         </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-between">
+                        <button type="button" onclick="prevStep(1)" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                            ← Previous
+                        </button>
+                        <button type="button" onclick="nextStep(3)" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Next: Education & Career →
+                        </button>
                     </div>
                 </div>
 
-                <!-- Interests -->
-                <div class="pb-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                        Areas of Interest
-                        <span class="text-sm font-normal text-gray-500">(Optional)</span>
-                    </h3>
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" name="interests" value="education" class="rounded">
-                            <span class="text-sm">Education</span>
-                        </label>
-                        <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" name="interests" value="health" class="rounded">
-                            <span class="text-sm">Health</span>
-                        </label>
-                        <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" name="interests" value="immigration" class="rounded">
-                            <span class="text-sm">Immigration</span>
-                        </label>
-                        <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" name="interests" value="it" class="rounded">
-                            <span class="text-sm">IT Services</span>
-                        </label>
-                        <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" name="interests" value="employment" class="rounded">
-                            <span class="text-sm">Employment</span>
-                        </label>
-                        <label class="flex items-center space-x-2 cursor-pointer">
-                            <input type="checkbox" name="interests" value="finance" class="rounded">
-                            <span class="text-sm">Finance</span>
-                        </label>
+                <!-- Step 3: Education & Career (ALL OPTIONAL) -->
+                <div id="step3" class="form-step">
+                    <div class="border-2 border-purple-100 bg-purple-50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                            Education & Career <span class="text-gray-500 text-sm">(All Optional)</span>
+                        </h3>
+                        
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Years of Experience
+                                </label>
+                                <input 
+                                    type="number" 
+                                    name="years_experience" 
+                                    min="0"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    placeholder="5"
+                                />
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Highest Qualification
+                                </label>
+                                <select 
+                                    name="highest_qualification" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                >
+                                    <option value="">Select qualification</option>
+                                    <option value="primary">Primary Education</option>
+                                    <option value="o_level">O-Level</option>
+                                    <option value="a_level">A-Level</option>
+                                    <option value="diploma">Diploma</option>
+                                    <option value="undergraduate">Undergraduate Degree</option>
+                                    <option value="postgraduate">Postgraduate Degree</option>
+                                    <option value="doctorate">Doctorate</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Field of Study
+                                </label>
+                                <input 
+                                    type="text" 
+                                    name="field_of_study" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    placeholder="Computer Science"
+                                />
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Institution
+                                </label>
+                                <input 
+                                    type="text" 
+                                    name="institution" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    placeholder="University of Colombo"
+                                />
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Year Graduated
+                                </label>
+                                <input 
+                                    type="number" 
+                                    name="year_graduated" 
+                                    min="1950"
+                                    max="2030"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    placeholder="2020"
+                                />
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Skills (comma-separated)
+                                </label>
+                                <input 
+                                    type="text" 
+                                    name="skills" 
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    placeholder="Python, Project Management, Data Analysis"
+                                />
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Career Goals
+                                </label>
+                                <textarea 
+                                    name="career_goals" 
+                                    rows="3"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    placeholder="Describe your career aspirations..."
+                                ></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-between">
+                        <button type="button" onclick="prevStep(2)" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                            ← Previous
+                        </button>
+                        <button type="button" onclick="nextStep(4)" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Next: Interests →
+                        </button>
                     </div>
                 </div>
 
-                <!-- Terms & Privacy - MANDATORY -->
-                <div class="bg-red-50 border-2 border-red-100 p-4 rounded-lg">
-                    <label class="flex items-start space-x-3 cursor-pointer">
-                        <input type="checkbox" name="terms" required class="mt-1 rounded">
-                        <span class="text-sm text-gray-700">
-                            <span class="text-red-500">*</span> I agree to the Terms of Service and Privacy Policy. My information will be used to provide personalized government service assistance.
-                        </span>
-                    </label>
-                </div>
+                <!-- Step 4: Interests & Preferences (ALL OPTIONAL) -->
+                <div id="step4" class="form-step">
+                    <div class="border-2 border-orange-100 bg-orange-50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                            Interests & Preferences <span class="text-gray-500 text-sm">(All Optional)</span>
+                        </h3>
+                        
+                        <div class="space-y-6">
+                            <!-- Hobbies -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-3">
+                                    Hobbies & Interests
+                                </label>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="hobbies" value="sports" class="rounded">
+                                        <span class="text-sm">⚽ Sports</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="hobbies" value="reading" class="rounded">
+                                        <span class="text-sm">📚 Reading</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="hobbies" value="music" class="rounded">
+                                        <span class="text-sm">🎵 Music</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="hobbies" value="travel" class="rounded">
+                                        <span class="text-sm">✈️ Travel</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="hobbies" value="cooking" class="rounded">
+                                        <span class="text-sm">🍳 Cooking</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="hobbies" value="art" class="rounded">
+                                        <span class="text-sm">🎨 Art</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="hobbies" value="gardening" class="rounded">
+                                        <span class="text-sm">🌱 Gardening</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="hobbies" value="technology" class="rounded">
+                                        <span class="text-sm">💻 Technology</span>
+                                    </label>
+                                </div>
+                            </div>
 
-                <!-- Submit Button -->
-                <button 
-                    type="submit" 
-                    id="register-btn"
-                    class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg"
-                >
-                    Create Account
-                </button>
+                            <!-- Learning Interests -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-3">
+                                    What would you like to learn?
+                                </label>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="learning_interests" value="languages" class="rounded">
+                                        <span class="text-sm">🗣️ Languages</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="learning_interests" value="coding" class="rounded">
+                                        <span class="text-sm">💻 Coding</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="learning_interests" value="business" class="rounded">
+                                        <span class="text-sm">📈 Business</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="learning_interests" value="finance" class="rounded">
+                                        <span class="text-sm">💰 Finance</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="learning_interests" value="health" class="rounded">
+                                        <span class="text-sm">🏥 Health</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="learning_interests" value="legal" class="rounded">
+                                        <span class="text-sm">⚖️ Legal</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Service Preferences -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-3">
+                                    Which government services are you most interested in?
+                                </label>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="service_preferences" value="education" class="rounded">
+                                        <span class="text-sm">🎓 Education</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="service_preferences" value="healthcare" class="rounded">
+                                        <span class="text-sm">🏥 Healthcare</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="service_preferences" value="housing" class="rounded">
+                                        <span class="text-sm">🏠 Housing</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="service_preferences" value="transport" class="rounded">
+                                        <span class="text-sm">🚗 Transport</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="service_preferences" value="business" class="rounded">
+                                        <span class="text-sm">🏢 Business</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="service_preferences" value="employment" class="rounded">
+                                        <span class="text-sm">💼 Employment</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="checkbox" name="service_preferences" value="social_welfare" class="rounded">
+                                        <span class="text-sm">🤝 Social Welfare</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Consent & Terms - MANDATORY SECTION -->
+                            <div class="bg-red-50 border-2 border-red-100 p-4 rounded-lg">
+                                <label class="flex items-start space-x-3 cursor-pointer">
+                                    <input type="checkbox" name="terms" required class="mt-1 rounded">
+                                    <span class="text-sm text-gray-700">
+                                        <span class="text-red-500">*</span> I agree to the Terms of Service and Privacy Policy. 
+                                        I understand that my information will be used to provide personalized government service assistance 
+                                        and may be used for analytics to improve services.
+                                    </span>
+                                </label>
+                                
+                                <div class="mt-4 space-y-2">
+                                    <label class="flex items-center space-x-3 cursor-pointer">
+                                        <input type="checkbox" name="marketing_emails" class="rounded">
+                                        <span class="text-sm text-gray-700">
+                                            Send me updates about new government services and programs
+                                        </span>
+                                    </label>
+                                    <label class="flex items-center space-x-3 cursor-pointer">
+                                        <input type="checkbox" name="personalized_ads" class="rounded">
+                                        <span class="text-sm text-gray-700">
+                                            Show me personalized recommendations and advertisements
+                                        </span>
+                                    </label>
+                                    <label class="flex items-center space-x-3 cursor-pointer">
+                                        <input type="checkbox" name="data_analytics" checked class="rounded">
+                                        <span class="text-sm text-gray-700">
+                                            Allow my anonymized data to be used for service improvement
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-between">
+                        <button type="button" onclick="prevStep(3)" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                            ← Previous
+                        </button>
+                        <button type="submit" id="register-btn" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                            ✓ Create Account
+                        </button>
+                    </div>
+                </div>
             </form>
 
             <!-- Login Link -->
@@ -214,66 +581,166 @@
     </div>
 
     <script>
+        let currentStep = 1;
+
+        // Navigation functions
+        function nextStep(step) {
+            // Validate current step - only validate required fields
+            if (!validateStep(currentStep)) {
+                return;
+            }
+            
+            // Hide current step
+            document.getElementById(`step${currentStep}`).classList.remove('active');
+            document.getElementById(`step${currentStep}-indicator`).classList.remove('active');
+            document.getElementById(`step${currentStep}-indicator`).classList.add('completed');
+            
+            // Show next step
+            document.getElementById(`step${step}`).classList.add('active');
+            document.getElementById(`step${step}-indicator`).classList.add('active');
+            currentStep = step;
+        }
+
+        function prevStep(step) {
+            document.getElementById(`step${currentStep}`).classList.remove('active');
+            document.getElementById(`step${currentStep}-indicator`).classList.remove('active');
+            
+            document.getElementById(`step${step}`).classList.add('active');
+            document.getElementById(`step${step}-indicator`).classList.add('active');
+            currentStep = step;
+        }
+
+        function validateStep(step) {
+            const stepEl = document.getElementById(`step${step}`);
+            const requiredInputs = stepEl.querySelectorAll('input[required], select[required]');
+            
+            for (const input of requiredInputs) {
+                if (input.type === 'checkbox' && !input.checked) {
+                    alert('Please accept the Terms of Service and Privacy Policy to continue.');
+                    input.focus();
+                    return false;
+                }
+                
+                if (input.type !== 'checkbox' && !input.value.trim()) {
+                    input.focus();
+                    input.style.borderColor = '#ef4444';
+                    
+                    // Remove red border when user starts typing
+                    input.addEventListener('input', function() {
+                        this.style.borderColor = '';
+                    }, { once: true });
+                    
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // Form submission
         document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            if (!validateStep(currentStep)) {
+                return;
+            }
             
             const btn = document.getElementById('register-btn');
             const alertBox = document.getElementById('alert-box');
             const formData = new FormData(e.target);
             
-            // Collect interests
-            const interests = [];
-            document.querySelectorAll('input[name="interests"]:checked').forEach(cb => {
-                interests.push(cb.value);
+            // Collect checkbox values
+            const hobbies = [];
+            const learningInterests = [];
+            const servicePreferences = [];
+            
+            document.querySelectorAll('input[name="hobbies"]:checked').forEach(cb => {
+                hobbies.push(cb.value);
             });
             
+            document.querySelectorAll('input[name="learning_interests"]:checked').forEach(cb => {
+                learningInterests.push(cb.value);
+            });
+            
+            document.querySelectorAll('input[name="service_preferences"]:checked').forEach(cb => {
+                servicePreferences.push(cb.value);
+            });
+            
+            // Parse children ages
+            const childrenAgesText = formData.get('children_ages') || '';
+            const childrenAges = childrenAgesText.split(',')
+                .map(age => parseInt(age.trim()))
+                .filter(age => !isNaN(age));
+            
+            // Parse skills
+            const skillsText = formData.get('skills') || '';
+            const skills = skillsText.split(',')
+                .map(skill => skill.trim())
+                .filter(skill => skill !== '');
+            
+            const data = {
+                // MANDATORY FIELDS
+                email: formData.get('email'),
+                password: formData.get('password'),
+                terms: formData.get('terms') === 'on',
+                
+                // OPTIONAL FIELDS (will be null/empty if not provided)
+                full_name: formData.get('full_name') || null,
+                phone: formData.get('phone') || null,
+                age: parseInt(formData.get('age')) || null,
+                gender: formData.get('gender') || null,
+                occupation: formData.get('occupation') || null,
+                district: formData.get('district') || null,
+                marital_status: formData.get('marital_status') || null,
+                children_count: parseInt(formData.get('children_count')) || 0,
+                children_ages: childrenAges,
+                dependents: parseInt(formData.get('dependents')) || 0,
+                years_experience: parseInt(formData.get('years_experience')) || null,
+                highest_qualification: formData.get('highest_qualification') || null,
+                field_of_study: formData.get('field_of_study') || null,
+                institution: formData.get('institution') || null,
+                year_graduated: parseInt(formData.get('year_graduated')) || null,
+                skills: skills,
+                career_goals: formData.get('career_goals') || null,
+                hobbies: hobbies,
+                learning_interests: learningInterests,
+                service_preferences: servicePreferences,
+                marketing_emails: formData.get('marketing_emails') === 'on',
+                personalized_ads: formData.get('personalized_ads') === 'on',
+                data_analytics: formData.get('data_analytics') === 'on'
+            };
+            
             btn.disabled = true;
-            btn.textContent = 'Creating account...';
-            alertBox.classList.add('hidden');
+            btn.textContent = 'Creating Account...';
             
             try {
-                const payload = {
-                    email: formData.get('email'),
-                    password: formData.get('password'),
-                    terms: formData.get('terms') ? true : false,
-                    // Optional fields - only send if filled
-                    full_name: formData.get('full_name') || undefined,
-                    phone: formData.get('phone') || undefined,
-                    age: formData.get('age') || undefined,
-                    job: formData.get('job') || undefined,
-                    location: formData.get('location') || undefined,
-                    language: formData.get('language') || 'en',
-                    interests: interests
-                };
-                
                 const response = await fetch('/api/user/register', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(data)
                 });
                 
-                const data = await response.json();
+                const result = await response.json();
                 
                 if (response.ok) {
-                    alertBox.className = 'mb-4 p-4 rounded-lg bg-green-100 text-green-700';
-                    alertBox.textContent = '✓ Account created successfully! Redirecting...';
+                    alertBox.className = 'mb-4 p-4 rounded-lg bg-green-100 border border-green-400 text-green-700';
+                    alertBox.textContent = '✓ Account created successfully! Redirecting to login...';
                     alertBox.classList.remove('hidden');
                     
                     setTimeout(() => {
-                        window.location.href = data.redirect;
-                    }, 1500);
+                        window.location.href = '/user/login';
+                    }, 2000);
                 } else {
-                    throw new Error(data.error || 'Registration failed');
+                    throw new Error(result.error || 'Registration failed');
                 }
             } catch (error) {
-                alertBox.className = 'mb-4 p-4 rounded-lg bg-red-100 text-red-700';
+                alertBox.className = 'mb-4 p-4 rounded-lg bg-red-100 border border-red-400 text-red-700';
                 alertBox.textContent = '✗ ' + error.message;
                 alertBox.classList.remove('hidden');
                 
                 btn.disabled = false;
-                btn.textContent = 'Create Account';
+                btn.textContent = '✓ Create Account';
             }
         });
     </script>
