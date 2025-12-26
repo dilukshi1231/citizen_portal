@@ -10,6 +10,81 @@
         body { font-family: 'Inter', sans-serif; }
         .card-hover { transition: all 0.3s ease; }
         .card-hover:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
+        
+        /* Nice notification styles */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 320px;
+            max-width: 500px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+            backdrop-filter: blur(10px);
+        }
+        
+        .notification.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .notification.error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+        
+        .notification.info {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+        
+        .notification.hiding {
+            animation: slideOut 0.3s ease-in forwards;
+        }
+        
+        /* Confirmation modal styles */
+        .confirm-modal-content {
+            animation: modalFadeIn 0.2s ease-out;
+        }
+        
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
@@ -45,6 +120,13 @@
                     <option value="entrepreneurship">Entrepreneurship</option>
                     <option value="government_services">Government Services</option>
                     <option value="employment">Employment Skills</option>
+                    <option value="programming">Programming</option>
+                    <option value="data_analysis">Data Analysis</option>
+                    <option value="design">Design</option>
+                    <option value="marketing">Marketing</option>
+                    <option value="language">Language</option>
+                    <option value="finance">Finance</option>
+                    <option value="creative">Creative</option>
                 </select>
                 <select id="level-filter" class="px-4 py-2 border rounded-lg">
                     <option value="">All Levels</option>
@@ -75,130 +157,165 @@
 
     <!-- Program Details Modal -->
     <div id="program-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto confirm-modal-content">
             <div id="modal-content"></div>
+        </div>
+    </div>
+    
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 confirm-modal-content">
+            <div class="text-center">
+                <div class="text-5xl mb-4" id="confirm-icon">🎓</div>
+                <h3 class="text-xl font-bold mb-2" id="confirm-title">Confirm Enrollment</h3>
+                <p class="text-gray-600 mb-6" id="confirm-message">Are you sure you want to enroll in this program?</p>
+                <div class="flex gap-3">
+                    <button onclick="cancelConfirm()" class="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button id="confirm-action-btn" class="flex-1 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">
+                        Confirm
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
         let currentLang = 'en';
         let allPrograms = [];
-        const isMyTrainingPage = window.location.pathname === '/my-training';
+        const isMyTrainingPage = window.location.pathname.includes('/my-training');
 
-        // Load programs or enrollments based on page
+        // Nice notification system
+        function showNotification(message, type = 'info', duration = 4000) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            
+            const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
+            
+            notification.innerHTML = `
+                <div class="text-2xl font-bold">${icon}</div>
+                <div class="flex-1">
+                    <div class="font-semibold">${message}</div>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-white opacity-70 hover:opacity-100">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                    </svg>
+                </button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('hiding');
+                setTimeout(() => notification.remove(), 300);
+            }, duration);
+        }
+
+        // Confirmation modal
+        let confirmCallback = null;
+        
+        function showConfirmation(title, message, icon, onConfirm) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            document.getElementById('confirm-icon').textContent = icon;
+            confirmCallback = onConfirm;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        }
+        
+        function cancelConfirm() {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            confirmCallback = null;
+        }
+        
+        document.getElementById('confirm-action-btn').onclick = () => {
+            if (confirmCallback) {
+                confirmCallback();
+                cancelConfirm();
+            }
+        };
+
         async function loadPrograms() {
             try {
-                // Choose endpoint based on page
                 let endpoint = isMyTrainingPage ? '/api/my-training' : '/api/training-programs';
-                const response = await fetch(endpoint);
-                
-                if (isMyTrainingPage) {
-                    // For My Training page, extract programs from enrollments
-                    const enrollments = await response.json();
-                    allPrograms = enrollments.map(e => {
-                        const program = e.program;
-                        program.enrollment_status = e.status;
-                        program.enrolled_date = e.enrolled_date;
-                        program.progress = e.progress || 0;
-                        program.user_enrolled = true;
-                        return program;
-                    });
-                } else {
-                    // For browse page, use programs directly
-                    allPrograms = await response.json();
-                }
-                
-                renderPrograms(allPrograms);
-            } catch (error) {
-                console.error('Error loading programs:', error);
+                const res = await fetch(endpoint);
+                allPrograms = await res.json();
+                displayPrograms(allPrograms);
+            } catch (err) {
+                console.error('Error loading programs:', err);
                 document.getElementById('programs-grid').innerHTML = `
                     <div class="col-span-full text-center py-20">
-                        <p class="text-red-600">❌ Failed to load programs</p>
+                        <div class="text-5xl mb-4">😞</div>
+                        <p class="text-gray-600 text-lg">Failed to load programs</p>
+                        ${isMyTrainingPage ? '<a href="/training" class="mt-4 inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Browse All Programs</a>' : ''}
                     </div>
                 `;
             }
         }
 
-        function renderPrograms(programs) {
+        function displayPrograms(programs) {
             const grid = document.getElementById('programs-grid');
             
-            if (programs.length === 0) {
+            if (!programs || programs.length === 0) {
                 grid.innerHTML = `
                     <div class="col-span-full text-center py-20">
-                        <p class="text-gray-600">${isMyTrainingPage ? 'No enrollments yet. Browse programs to get started!' : 'No programs found matching your filters'}</p>
-                        ${isMyTrainingPage ? '<a href="/training" class="mt-4 inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Browse All Programs</a>' : ''}
+                        <div class="text-5xl mb-4">📚</div>
+                        <p class="text-gray-600 text-lg mb-2">No programs found</p>
+                        <p class="text-gray-500">Try adjusting your filters</p>
                     </div>
                 `;
                 return;
             }
-
+            
             grid.innerHTML = programs.map(program => {
                 const title = program.title[currentLang] || program.title.en;
                 const description = program.description[currentLang] || program.description.en;
-                const spotsLeft = program.max_participants - program.current_enrollments;
-                const percentFull = (program.current_enrollments / program.max_participants * 100).toFixed(0);
-                const isFull = spotsLeft <= 0;
-                
-                // Show enrollment badge if on My Training page
-                const enrollmentBadge = isMyTrainingPage ? 
-                    `<div class="bg-green-500 text-xs font-bold px-3 py-1 absolute top-4 left-4 rounded-full text-white">✓ ENROLLED</div>` : 
-                    (program.featured ? '<div class="bg-yellow-400 text-xs font-bold px-3 py-1 absolute top-4 right-4 rounded-full">⭐ FEATURED</div>' : '');
-                
-                // Show progress bar for enrolled programs
-                const progressBar = isMyTrainingPage && program.progress !== undefined ? 
-                    `<div class="mb-4">
-                        <div class="flex justify-between text-sm mb-1">
-                            <span class="text-gray-600">Your Progress</span>
-                            <span class="font-semibold text-green-600">${program.progress}%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="h-2 rounded-full bg-green-500" style="width: ${program.progress}%"></div>
-                        </div>
-                    </div>` : '';
+                const enrollmentPercentage = Math.round((program.current_enrollments / program.max_participants) * 100);
+                const isFull = program.current_enrollments >= program.max_participants;
+                const spotsRemaining = program.max_participants - program.current_enrollments;
                 
                 return `
-                    <div class="card-hover bg-white rounded-xl shadow-md overflow-hidden cursor-pointer" onclick="showProgramDetails('${program.id}')">
-                        <!-- Enrollment/Featured Badge -->
-                        ${enrollmentBadge}
-                        
-                        <!-- Program Header -->
+                    <div onclick="showProgramDetails('${program.id}')" class="card-hover bg-white rounded-xl shadow-md overflow-hidden cursor-pointer">
+                        <!-- Header -->
                         <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
                             <h3 class="text-xl font-bold mb-2">${title}</h3>
-                            <div class="flex items-center gap-4 text-sm">
+                            <div class="flex gap-3 text-sm">
                                 <span>📅 ${program.duration}</span>
                                 <span>📊 ${program.level}</span>
-                                ${program.free ? '<span class="bg-green-500 px-2 py-1 rounded text-xs font-semibold">FREE</span>' : `<span class="bg-yellow-500 px-2 py-1 rounded text-xs font-semibold">${program.fee}</span>`}
+                                ${program.free ? '<span class="bg-green-500 px-2 py-1 rounded">FREE</span>' : `<span class="bg-yellow-500 px-2 py-1 rounded">${program.fee}</span>`}
                             </div>
                         </div>
 
-                        <!-- Program Body -->
+                        <!-- Body -->
                         <div class="p-6">
-                            <p class="text-gray-600 mb-4 line-clamp-3">${description}</p>
+                            <p class="text-gray-700 mb-4 line-clamp-3">${description}</p>
                             
-                            <!-- Progress Bar (for enrolled programs) -->
-                            ${progressBar}
-                            
-                            <!-- Enrollment Progress Bar -->
-                            <div class="mb-4">
-                                <div class="flex justify-between text-sm mb-1">
-                                    <span class="text-gray-600">Enrollment</span>
-                                    <span class="font-semibold ${isFull ? 'text-red-600' : 'text-blue-600'}">${percentFull}% Full</span>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2">
-                                    <div class="h-2 rounded-full ${isFull ? 'bg-red-500' : 'bg-blue-600'}" style="width: ${percentFull}%"></div>
-                                </div>
-                                <p class="text-xs text-gray-500 mt-1">${spotsLeft} spots remaining</p>
-                            </div>
-
                             <!-- Topics Preview -->
                             <div class="mb-4">
-                                <p class="text-xs font-semibold text-gray-700 mb-2">Topics Covered:</p>
+                                <p class="text-sm font-semibold text-gray-900 mb-2">Topics Covered:</p>
                                 <div class="flex flex-wrap gap-2">
                                     ${program.topics.slice(0, 3).map(topic => 
-                                        `<span class="text-xs bg-gray-100 px-2 py-1 rounded">${topic}</span>`
+                                        `<span class="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">${topic}</span>`
                                     ).join('')}
-                                    ${program.topics.length > 3 ? `<span class="text-xs text-blue-600">+${program.topics.length - 3} more</span>` : ''}
+                                    ${program.topics.length > 3 ? `<span class="text-xs text-gray-500">+${program.topics.length - 3} more</span>` : ''}
                                 </div>
+                            </div>
+
+                            <!-- Enrollment Progress -->
+                            <div class="mb-4">
+                                <div class="flex justify-between items-center text-sm mb-2">
+                                    <span class="font-semibold">Enrollment</span>
+                                    <span class="${isFull ? 'text-red-600' : enrollmentPercentage > 80 ? 'text-orange-600' : 'text-blue-600'} font-bold">
+                                        ${enrollmentPercentage}% Full
+                                    </span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div class="${isFull ? 'bg-red-600' : enrollmentPercentage > 80 ? 'bg-orange-500' : 'bg-blue-600'} h-2.5 rounded-full transition-all duration-500" 
+                                         style="width: ${enrollmentPercentage}%">
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-1">${spotsRemaining} spots remaining</p>
                             </div>
 
                             <!-- Instructor -->
@@ -211,7 +328,7 @@
 
                             <!-- CTA Button -->
                             ${isMyTrainingPage ? 
-                                `<button onclick="event.stopPropagation(); unenrollFromProgram('${program.id}')" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors">
+                                `<button onclick="event.stopPropagation(); confirmUnenroll('${program.id}')" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors">
                                     🚫 Unenroll from Program
                                 </button>` :
                                 `<button class="w-full py-3 ${isFull ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white font-semibold rounded-lg transition-colors">
@@ -231,6 +348,9 @@
                 
                 const title = program.title[currentLang] || program.title.en;
                 const description = program.description[currentLang] || program.description.en;
+                const enrollmentPercentage = Math.round((program.current_enrollments / program.max_participants) * 100);
+                const isFull = program.current_enrollments >= program.max_participants;
+                const spotsRemaining = program.max_participants - program.current_enrollments;
                 
                 document.getElementById('modal-content').innerHTML = `
                     <!-- Modal Header -->
@@ -289,23 +409,30 @@
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="font-semibold">Enrollment Status</span>
-                                <span class="text-blue-600 font-bold">${program.current_enrollments} / ${program.max_participants}</span>
+                                <span class="${isFull ? 'text-red-600' : enrollmentPercentage > 80 ? 'text-orange-600' : 'text-blue-600'} font-bold">
+                                    ${program.current_enrollments} / ${program.max_participants}
+                                </span>
                             </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2">
-                                <div class="bg-blue-600 h-2 rounded-full" style="width: ${program.enrollment_percentage}%"></div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div class="${isFull ? 'bg-red-600' : enrollmentPercentage > 80 ? 'bg-orange-500' : 'bg-blue-600'} h-2.5 rounded-full" 
+                                     style="width: ${enrollmentPercentage}%"></div>
                             </div>
-                            <p class="text-sm text-gray-600 mt-2">${program.spots_remaining} spots remaining</p>
+                            <p class="text-sm text-gray-600 mt-2">${spotsRemaining} spots remaining</p>
                         </div>
 
                         <!-- Enroll Button -->
                         <div class="flex gap-4">
-                            ${program.enrollment_open && !program.user_enrolled ? 
-                                `<button onclick="enrollInProgram('${program.id}')" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg">
+                            ${program.enrollment_open && !program.user_enrolled && !isFull ? 
+                                `<button onclick="confirmEnroll('${program.id}')" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg">
                                     📝 Enroll Now
                                 </button>` : 
                             program.user_enrolled ?
                                 `<button class="flex-1 py-3 bg-green-600 text-white font-semibold rounded-lg cursor-default">
                                     ✓ Already Enrolled
+                                </button>` :
+                            isFull ?
+                                `<button class="flex-1 py-3 bg-gray-400 text-white font-semibold rounded-lg cursor-not-allowed">
+                                    🚫 Program Full
                                 </button>` :
                                 `<button class="flex-1 py-3 bg-gray-400 text-white font-semibold rounded-lg cursor-not-allowed">
                                     🚫 Enrollment Closed
@@ -319,14 +446,23 @@
                 document.getElementById('program-modal').classList.remove('hidden');
             } catch (error) {
                 console.error('Error loading program details:', error);
-                alert('Failed to load program details');
+                showNotification('Failed to load program details', 'error');
             }
         }
 
+        function confirmEnroll(programId) {
+            showConfirmation(
+                'Confirm Enrollment',
+                'Are you sure you want to enroll in this program?',
+                '🎓',
+                () => enrollInProgram(programId)
+            );
+        }
+
         async function enrollInProgram(programId) {
-            if (!confirm('Confirm enrollment in this program?')) return;
-            
             try {
+                showNotification('Processing enrollment...', 'info');
+                
                 const response = await fetch(`/api/training-programs/${programId}/enroll`, {
                     method: 'POST'
                 });
@@ -334,22 +470,31 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    alert('✅ ' + data.message);
+                    showNotification(data.message || 'Successfully enrolled in program!', 'success');
                     closeModal();
-                    loadPrograms(); // Refresh
+                    loadPrograms(); // Refresh to show updated enrollment count
                 } else {
-                    alert('❌ ' + data.error);
+                    showNotification(data.error || 'Enrollment failed', 'error');
                 }
             } catch (error) {
                 console.error('Enrollment error:', error);
-                alert('Enrollment failed. Please try again.');
+                showNotification('Enrollment failed. Please try again.', 'error');
             }
         }
 
+        function confirmUnenroll(programId) {
+            showConfirmation(
+                'Confirm Unenrollment',
+                'Are you sure you want to unenroll from this program? Your progress will be saved.',
+                '⚠️',
+                () => unenrollFromProgram(programId)
+            );
+        }
+
         async function unenrollFromProgram(programId) {
-            if (!confirm('Are you sure you want to unenroll from this program? Your progress will be saved.')) return;
-            
             try {
+                showNotification('Processing unenrollment...', 'info');
+                
                 const response = await fetch(`/api/training-programs/${programId}/unenroll`, {
                     method: 'POST'
                 });
@@ -357,14 +502,14 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    alert('✅ Successfully unenrolled from program');
+                    showNotification('Successfully unenrolled from program', 'success');
                     loadPrograms(); // Refresh the list
                 } else {
-                    alert('❌ ' + data.error);
+                    showNotification(data.error || 'Unenroll failed', 'error');
                 }
             } catch (error) {
                 console.error('Unenroll error:', error);
-                alert('Unenroll failed. Please try again.');
+                showNotification('Unenroll failed. Please try again.', 'error');
             }
         }
 
@@ -391,23 +536,21 @@
                 filtered = filtered.filter(p => p.free === false);
             }
             
-            renderPrograms(filtered);
+            displayPrograms(filtered);
         }
 
-        // Language selector
-        document.getElementById('lang-select').addEventListener('change', (e) => {
-            currentLang = e.target.value;
-            renderPrograms(allPrograms);
+        // Close modal when clicking outside
+        document.getElementById('program-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'program-modal') {
+                closeModal();
+            }
         });
-
-        // Update page UI based on context
-        if (isMyTrainingPage) {
-            document.getElementById('page-title').textContent = '📚 My Enrollments';
-            document.getElementById('my-enrollments-btn').textContent = 'Browse All Programs';
-            document.getElementById('my-enrollments-btn').href = '/training';
-            // Hide filters on My Training page
-            document.getElementById('filters-section').style.display = 'none';
-        }
+        
+        document.getElementById('confirm-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'confirm-modal') {
+                cancelConfirm();
+            }
+        });
 
         // Load programs on page load
         loadPrograms();

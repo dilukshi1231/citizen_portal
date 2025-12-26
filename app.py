@@ -877,6 +877,7 @@ def admin_logout():
 # ============================================
 # TRAINING PROGRAMS API
 # ============================================
+
 @app.route("/api/training-programs")
 def get_training_programs():
     """Get all active training programs"""
@@ -895,26 +896,45 @@ def get_training_programs():
     
     programs = list(training_programs_col.find(query, {"_id": 0}).sort("start_date", 1))
     
+    # Calculate enrollment statistics for each program
     for program in programs:
+        current = program.get("current_enrollments", 0)
+        max_participants = program.get("max_participants", 0)
+        
         program["enrollment_percentage"] = (
-            program["current_enrollments"] / program["max_participants"] * 100
-            if program.get("max_participants") else 0
+            round((current / max_participants) * 100) if max_participants > 0 else 0
         )
-        program["spots_remaining"] = (
-            program["max_participants"] - program["current_enrollments"]
-            if program.get("max_participants") else 0
-        )
+        program["spots_remaining"] = max_participants - current
     
     return jsonify(programs)
-
 @app.route("/api/training-programs/<program_id>")
 def get_training_program(program_id):
-    """Get single training program details"""
+    """Get single training program details with enrollment stats"""
     try:
         program = training_programs_col.find_one({"id": program_id}, {"_id": 0})
         
         if not program:
             return jsonify({"error": "Program not found"}), 404
+        
+        # Calculate enrollment statistics
+        current = program.get("current_enrollments", 0)
+        max_participants = program.get("max_participants", 0)
+        
+        program["enrollment_percentage"] = (
+            round((current / max_participants) * 100) if max_participants > 0 else 0
+        )
+        program["spots_remaining"] = max_participants - current
+        
+        # Check if user is enrolled (if logged in)
+        user_id = session.get("user_id")
+        if user_id:
+            enrollment = enrollments_col.find_one({
+                "user_id": user_id,
+                "program_id": program_id
+            })
+            program["user_enrolled"] = enrollment is not None
+        else:
+            program["user_enrolled"] = False
         
         return jsonify(program), 200
     except Exception as e:
@@ -936,9 +956,18 @@ def enroll_in_program(program_id):
     if not program.get("active"):
         return jsonify({"error": "Program is not active"}), 400
     
-    if program["current_enrollments"] >= program["max_participants"]:
+    # Check if enrollment is open
+    if not program.get("enrollment_open", False):
+        return jsonify({"error": "Enrollment is currently closed for this program"}), 400
+    
+    # Check if program is full
+    current = program.get("current_enrollments", 0)
+    max_participants = program.get("max_participants", 0)
+    
+    if current >= max_participants:
         return jsonify({"error": "Program is full"}), 400
     
+    # Check if already enrolled
     existing = enrollments_col.find_one({
         "user_id": user_id,
         "program_id": program_id
@@ -947,35 +976,48 @@ def enroll_in_program(program_id):
     if existing:
         return jsonify({"error": "Already enrolled in this program"}), 400
     
+    # Create enrollment
     enrollment = {
         "user_id": user_id,
         "program_id": program_id,
         "status": "enrolled",
-        "enrolled_date": get_utc_now(),
+        "enrolled_date": datetime.utcnow(),
         "completion_status": None,
         "progress": 0
     }
     
     enrollments_col.insert_one(enrollment)
     
-    training_programs_col.update_one(
+    # Increment enrollment count
+    result = training_programs_col.update_one(
         {"id": program_id},
         {"$inc": {"current_enrollments": 1}}
     )
     
-    eng_col.insert_one({
-        "user_id": user_id,
-        "type": "training_enrollment",
-        "program_id": program_id,
-        "program_name": program.get("title", {}).get("en"),
-        "timestamp": get_utc_now()
-    })
+    # Log engagement (if you have this collection)
+    try:
+        eng_col.insert_one({
+            "user_id": user_id,
+            "type": "training_enrollment",
+            "program_id": program_id,
+            "program_name": program.get("title", {}).get("en"),
+            "timestamp": datetime.utcnow()
+        })
+    except:
+        pass  # Engagement logging is optional
+    
+    # Get updated program data
+    updated_program = training_programs_col.find_one({"id": program_id}, {"_id": 0})
+    current = updated_program.get("current_enrollments", 0)
+    max_participants = updated_program.get("max_participants", 0)
     
     return jsonify({
         "status": "success",
-        "message": "Successfully enrolled in program"
+        "message": "Successfully enrolled in program",
+        "current_enrollments": current,
+        "enrollment_percentage": round((current / max_participants) * 100) if max_participants > 0 else 0,
+        "spots_remaining": max_participants - current
     })
-
 @app.route("/api/training-programs/<program_id>/unenroll", methods=["POST"])
 def unenroll_from_program(program_id):
     """Unenroll user from training program"""
@@ -990,14 +1032,27 @@ def unenroll_from_program(program_id):
     })
     
     if result.deleted_count > 0:
+        # Decrement enrollment count
         training_programs_col.update_one(
             {"id": program_id},
             {"$inc": {"current_enrollments": -1}}
         )
         
-        return jsonify({"status": "success", "message": "Unenrolled from program"})
+        # Get updated program data
+        updated_program = training_programs_col.find_one({"id": program_id}, {"_id": 0})
+        current = updated_program.get("current_enrollments", 0)
+        max_participants = updated_program.get("max_participants", 0)
+        
+        return jsonify({
+            "status": "success", 
+            "message": "Unenrolled from program",
+            "current_enrollments": current,
+            "enrollment_percentage": round((current / max_participants) * 100) if max_participants > 0 else 0,
+            "spots_remaining": max_participants - current
+        })
     else:
         return jsonify({"error": "Not enrolled in this program"}), 404
+
 
 @app.route("/api/my-training")
 def get_my_training():
