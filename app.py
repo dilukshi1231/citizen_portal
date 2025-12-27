@@ -414,7 +414,51 @@ def complete_user_profile():
     })
 
 """
+# In your main Flask app file (likely app.py or routes.py)
 
+@app.route('/api/user/profile/complete', methods=['POST'])
+def complete_profile():
+    try:
+        data = request.get_json()
+        user_id = session.get('user_id')  # or however you track logged-in users
+        
+        if not user_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        # Update user profile in MongoDB
+        result = users_col.update_one(
+            {'_id': ObjectId(user_id)},
+            {
+                '$set': {
+                    'gender': data.get('gender'),
+                    'marital_status': data.get('marital_status'),
+                    'children_count': data.get('children_count', 0),
+                    'children_ages': data.get('children_ages', []),
+                    'dependents': data.get('dependents', 0),
+                    'years_experience': data.get('years_experience'),
+                    'highest_qualification': data.get('highest_qualification'),
+                    'field_of_study': data.get('field_of_study'),
+                    'institution': data.get('institution'),
+                    'year_graduated': data.get('year_graduated'),
+                    'skills': data.get('skills', []),
+                    'career_goals': data.get('career_goals'),
+                    'hobbies': data.get('hobbies', []),
+                    'learning_interests': data.get('learning_interests', []),
+                    'service_preferences': data.get('service_preferences', []),
+                    'marketing_emails': data.get('marketing_emails', False),
+                    'personalized_ads': data.get('personalized_ads', False),
+                    'data_analytics': data.get('data_analytics', True),
+                    'profile_completed': True,
+                    'updated': datetime.now()
+                }
+            }
+        )
+        
+        return jsonify({'success': True, 'message': 'Profile updated successfully'})
+        
+    except Exception as e:
+        print(f"Error updating profile: {e}")
+        return jsonify({'error': str(e)}), 500
 @app.route("/api/user/recommendations", methods=["GET"])
 def get_user_recommendations():
     """Get personalized recommendations for user"""
