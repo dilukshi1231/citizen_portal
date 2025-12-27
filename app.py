@@ -1437,7 +1437,11 @@ def process_payment():
     # Update order status
     orders_col.update_one(
         {"order_id": payload.get("order_id")},
-        {"$set": {"status": "paid", "updated": get_utc_now()}}
+        {"$set": {
+            "status": "pending",  # Changed from "paid"
+            "payment_status": "completed",  # Track payment separately
+            "updated": get_utc_now()
+        }}
     )
     
     payments_col.insert_one(payment)
@@ -2140,7 +2144,302 @@ def admin_rebuild_index():
             "status": "error",
             "error": str(e)
         }), 500
+# Add these new analytics endpoints to app.py
 
+@app.route("/api/admin/analytics/realtime", methods=["GET"])
+@admin_required
+def get_realtime_analytics():
+    """Get real-time dashboard analytics"""
+    try:
+        # === USER METRICS ===
+        total_users = users_col.count_documents({})
+        
+        # Active users (logged in last 30 days)
+        thirty_days_ago = get_utc_now() - timedelta(days=30)
+        active_users = users_col.count_documents({
+            "last_login": {"$gte": thirty_days_ago}
+        })
+        
+        # New users (last 7 days)
+        seven_days_ago = get_utc_now() - timedelta(days=7)
+        new_users_week = users_col.count_documents({
+            "created": {"$gte": seven_days_ago}
+        })
+        
+        # Users by segment
+        segment_pipeline = [
+            {"$group": {
+                "_id": "$primary_segment",
+                "count": {"$sum": 1}
+            }},
+            {"$sort": {"count": -1}}
+        ]
+        segments_data = list(segments_col.aggregate(segment_pipeline))
+        
+        # === ORDER METRICS ===
+        total_orders = orders_col.count_documents({})
+        
+        # Orders this month
+        start_of_month = get_utc_now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        orders_this_month = orders_col.count_documents({
+            "created": {"$gte": start_of_month}
+        })
+        
+        # Pending orders
+        pending_orders = orders_col.count_documents({"status": "pending"})
+        
+        # === REVENUE METRICS ===
+        revenue_pipeline = [
+            {"$match": {"status": "completed"}},
+            {"$group": {
+                "_id": None,
+                "total": {"$sum": "$amount"},
+                "count": {"$sum": 1}
+            }}
+        ]
+        revenue_data = list(payments_col.aggregate(revenue_pipeline))
+        total_revenue = revenue_data[0]["total"] if revenue_data else 0
+        completed_payments = revenue_data[0]["count"] if revenue_data else 0
+        
+        # Revenue this month
+        revenue_month_pipeline = [
+            {"$match": {
+                "status": "completed",
+                "created": {"$gte": start_of_month}
+            }},
+            {"$group": {
+                "_id": None,
+                "total": {"$sum": "$amount"}
+            }}
+        ]
+        revenue_month_data = list(payments_col.aggregate(revenue_month_pipeline))
+        revenue_this_month = revenue_month_data[0]["total"] if revenue_month_data else 0
+        
+        # === TOP 5 TRAINING COURSES ===
+        top_courses_pipeline = [
+            {"$match": {"active": True}},
+            {"$sort": {"current_enrollments": -1}},
+            {"$limit": 5},
+            {"$project": {
+                "_id": 0,
+                "id": 1,
+                "title": 1,
+                "category": 1,
+                "enrollments": "$current_enrollments",
+                "max_participants": 1,
+                "level": 1,
+                "free": 1
+            }}
+        ]
+        top_courses = list(training_programs_col.aggregate(top_courses_pipeline))
+        
+        # === TOP 5 PRODUCTS ===
+        # Get most ordered products
+        top_products_pipeline = [
+            {"$unwind": "$items"},
+            {"$group": {
+                "_id": "$items.id",
+                "product_name": {"$first": "$items.name"},
+                "total_quantity": {"$sum": "$items.quantity"},
+                "total_revenue": {"$sum": {"$multiply": ["$items.quantity", "$items.price"]}},
+                "order_count": {"$sum": 1}
+            }},
+            {"$sort": {"total_quantity": -1}},
+            {"$limit": 5}
+        ]
+        top_products = list(orders_col.aggregate(top_products_pipeline))
+        
+        # === RECENT ENROLLMENTS ===
+        recent_enrollments_pipeline = [
+            {"$sort": {"enrolled_date": -1}},
+            {"$limit": 10},
+            {"$lookup": {
+                "from": "training_programs",
+                "localField": "program_id",
+                "foreignField": "id",
+                "as": "program"
+            }},
+            {"$unwind": "$program"},
+            {"$project": {
+                "_id": 0,
+                "user_id": 1,
+                "program_name": "$program.title.en",
+                "enrolled_date": 1,
+                "status": 1
+            }}
+        ]
+        recent_enrollments = list(enrollments_col.aggregate(recent_enrollments_pipeline))
+        
+        # === ENGAGEMENT METRICS ===
+        total_engagements = eng_col.count_documents({})
+        
+        # Engagements this week
+        engagements_week = eng_col.count_documents({
+            "timestamp": {"$gte": seven_days_ago}
+        })
+        
+        # AI chat usage
+        ai_chats = eng_col.count_documents({"chat_type": "ai_enhanced"})
+        
+        # Most searched services
+        service_pipeline = [
+            {"$match": {"service": {"$exists": True, "$ne": None}}},
+            {"$group": {
+                "_id": "$service",
+                "count": {"$sum": 1}
+            }},
+            {"$sort": {"count": -1}},
+            {"$limit": 5}
+        ]
+        top_services = list(eng_col.aggregate(service_pipeline))
+        
+        # === SYSTEM METRICS ===
+        total_products = products_col.count_documents({"active": True})
+        total_training_programs = training_programs_col.count_documents({"active": True})
+        
+        # Average profile completeness
+        completeness_pipeline = [
+            {"$match": {"profile_completeness": {"$exists": True}}},
+            {"$group": {
+                "_id": None,
+                "avg_completeness": {"$avg": "$profile_completeness"}
+            }}
+        ]
+        completeness_data = list(segments_col.aggregate(completeness_pipeline))
+        avg_profile_completeness = round(completeness_data[0]["avg_completeness"], 1) if completeness_data else 0
+        
+        return jsonify({
+            "status": "success",
+            "timestamp": get_utc_now().isoformat(),
+            
+            # User Metrics
+            "users": {
+                "total": total_users,
+                "active": active_users,
+                "new_this_week": new_users_week,
+                "by_segment": segments_data,
+                "avg_profile_completeness": avg_profile_completeness
+            },
+            
+            # Order Metrics
+            "orders": {
+                "total": total_orders,
+                "this_month": orders_this_month,
+                "pending": pending_orders
+            },
+            
+            # Revenue Metrics
+            "revenue": {
+                "total": total_revenue,
+                "this_month": revenue_this_month,
+                "completed_payments": completed_payments,
+                "avg_order_value": round(total_revenue / max(completed_payments, 1), 2)
+            },
+            
+            # Training Metrics
+            "training": {
+                "total_programs": total_training_programs,
+                "top_courses": top_courses,
+                "recent_enrollments": recent_enrollments,
+                "total_enrollments": enrollments_col.count_documents({})
+            },
+            
+            # Product Metrics
+            "products": {
+                "total_active": total_products,
+                "top_selling": top_products
+            },
+            
+            # Engagement Metrics
+            "engagement": {
+                "total": total_engagements,
+                "this_week": engagements_week,
+                "ai_chats": ai_chats,
+                "top_services": top_services
+            }
+        })
+        
+    except Exception as e:
+        print(f"Analytics error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "status": "error",
+            "error": str(e)
+        }), 500
+
+
+@app.route("/api/admin/analytics/trends", methods=["GET"])
+@admin_required
+def get_analytics_trends():
+    """Get trend data for charts (last 30 days)"""
+    try:
+        # Daily user registrations (last 30 days)
+        thirty_days_ago = get_utc_now() - timedelta(days=30)
+        
+        user_trend_pipeline = [
+            {"$match": {"created": {"$gte": thirty_days_ago}}},
+            {"$group": {
+                "_id": {
+                    "$dateToString": {
+                        "format": "%Y-%m-%d",
+                        "date": "$created"
+                    }
+                },
+                "count": {"$sum": 1}
+            }},
+            {"$sort": {"_id": 1}}
+        ]
+        user_trends = list(users_col.aggregate(user_trend_pipeline))
+        
+        # Daily revenue (last 30 days)
+        revenue_trend_pipeline = [
+            {"$match": {
+                "status": "completed",
+                "created": {"$gte": thirty_days_ago}
+            }},
+            {"$group": {
+                "_id": {
+                    "$dateToString": {
+                        "format": "%Y-%m-%d",
+                        "date": "$created"
+                    }
+                },
+                "revenue": {"$sum": "$amount"}
+            }},
+            {"$sort": {"_id": 1}}
+        ]
+        revenue_trends = list(payments_col.aggregate(revenue_trend_pipeline))
+        
+        # Daily enrollments (last 30 days)
+        enrollment_trend_pipeline = [
+            {"$match": {"enrolled_date": {"$gte": thirty_days_ago}}},
+            {"$group": {
+                "_id": {
+                    "$dateToString": {
+                        "format": "%Y-%m-%d",
+                        "date": "$enrolled_date"
+                    }
+                },
+                "count": {"$sum": 1}
+            }},
+            {"$sort": {"_id": 1}}
+        ]
+        enrollment_trends = list(enrollments_col.aggregate(enrollment_trend_pipeline))
+        
+        return jsonify({
+            "status": "success",
+            "user_registrations": user_trends,
+            "revenue": revenue_trends,
+            "enrollments": enrollment_trends
+        })
+        
+    except Exception as e:
+        print(f"Trends error: {e}")
+        return jsonify({
+            "status": "error",
+            "error": str(e)
+        }), 500
 @app.route("/api/admin/ml-insights", methods=["GET"])
 @admin_required
 def ml_insights():
@@ -2219,7 +2518,187 @@ def ml_insights():
             "traceback": traceback.format_exc(),
             "status": "error"
         }), 500
+@app.route("/api/admin/orders", methods=["GET"])
+@admin_required
+def get_admin_orders():
+    """Get all orders for admin dashboard"""
+    try:
+        # Get filter parameters
+        status = request.args.get("status", "all")
+        limit = int(request.args.get("limit", 100))
+        
+        # Build query
+        query = {}
+        if status != "all":
+            query["status"] = status
+        
+        # Fetch orders with user information
+        orders = list(orders_col.find(query).sort("created", -1).limit(limit))
+        
+        # Enrich orders with user details
+        for order in orders:
+            order["_id"] = str(order["_id"])
+            
+            # Get user info
+            if order.get("user_id"):
+                user = users_col.find_one({"_id": ObjectId(order["user_id"])}, {"email": 1, "full_name": 1, "phone": 1})
+                if user:
+                    order["user_info"] = {
+                        "email": user.get("email"),
+                        "full_name": user.get("full_name"),
+                        "phone": user.get("phone")
+                    }
+            
+            # Format dates
+            if order.get("created"):
+                order["created"] = order["created"].isoformat()
+            if order.get("updated"):
+                order["updated"] = order["updated"].isoformat()
+        
+        return jsonify({
+            "status": "success",
+            "orders": orders,
+            "total": len(orders)
+        })
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+@app.route("/api/admin/orders/<order_id>/approve", methods=["POST"])
+@admin_required
+def approve_order(order_id):
+    """Approve an order"""
+    try:
+        order = orders_col.find_one({"order_id": order_id})
+        
+        if not order:
+            return jsonify({"error": "Order not found"}), 404
+        
+        # Update order status
+        result = orders_col.update_one(
+            {"order_id": order_id},
+            {
+                "$set": {
+                    "status": "approved",
+                    "admin_action": "approved",
+                    "admin_action_by": session.get("admin_user"),
+                    "admin_action_date": get_utc_now(),
+                    "updated": get_utc_now()
+                }
+            }
+        )
+        
+        if result.modified_count > 0:
+            # Log the action
+            eng_col.insert_one({
+                "type": "admin_action",
+                "action": "order_approved",
+                "order_id": order_id,
+                "admin_user": session.get("admin_user"),
+                "timestamp": get_utc_now()
+            })
+            
+            # TODO: Send email notification to customer
+            # send_order_status_email(order["user_id"], order_id, "approved")
+            
+            return jsonify({
+                "status": "success",
+                "message": "Order approved successfully"
+            })
+        else:
+            return jsonify({"error": "Failed to approve order"}), 500
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
+
+@app.route("/api/admin/orders/<order_id>/cancel", methods=["POST"])
+@admin_required
+def cancel_order(order_id):
+    """Cancel an order"""
+    try:
+        data = request.json or {}
+        cancel_reason = data.get("reason", "Cancelled by admin")
+        
+        order = orders_col.find_one({"order_id": order_id})
+        
+        if not order:
+            return jsonify({"error": "Order not found"}), 404
+        
+        # Update order status
+        result = orders_col.update_one(
+            {"order_id": order_id},
+            {
+                "$set": {
+                    "status": "cancelled",
+                    "admin_action": "cancelled",
+                    "cancel_reason": cancel_reason,
+                    "admin_action_by": session.get("admin_user"),
+                    "admin_action_date": get_utc_now(),
+                    "updated": get_utc_now()
+                }
+            }
+        )
+        
+        if result.modified_count > 0:
+            # Log the action
+            eng_col.insert_one({
+                "type": "admin_action",
+                "action": "order_cancelled",
+                "order_id": order_id,
+                "reason": cancel_reason,
+                "admin_user": session.get("admin_user"),
+                "timestamp": get_utc_now()
+            })
+            
+            # TODO: Send email notification to customer
+            # send_order_status_email(order["user_id"], order_id, "cancelled", cancel_reason)
+            
+            return jsonify({
+                "status": "success",
+                "message": "Order cancelled successfully"
+            })
+        else:
+            return jsonify({"error": "Failed to cancel order"}), 500
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/admin/orders/stats", methods=["GET"])
+@admin_required
+def get_order_stats():
+    """Get order statistics for admin dashboard"""
+    try:
+        total_orders = orders_col.count_documents({})
+        pending_orders = orders_col.count_documents({"status": "pending"})
+        approved_orders = orders_col.count_documents({"status": "approved"})
+        cancelled_orders = orders_col.count_documents({"status": "cancelled"})
+        
+        # Revenue calculation
+        total_revenue_pipeline = [
+            {"$match": {"status": {"$in": ["approved", "paid"]}}},
+            {"$group": {"_id": None, "total": {"$sum": "$total_amount"}}}
+        ]
+        revenue_result = list(orders_col.aggregate(total_revenue_pipeline))
+        total_revenue = revenue_result[0]["total"] if revenue_result else 0
+        
+        # Today's orders
+        today_start = get_utc_now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_orders = orders_col.count_documents({
+            "created": {"$gte": today_start}
+        })
+        
+        return jsonify({
+            "total_orders": total_orders,
+            "pending_orders": pending_orders,
+            "approved_orders": approved_orders,
+            "cancelled_orders": cancelled_orders,
+            "total_revenue": total_revenue,
+            "today_orders": today_orders
+        })
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 @app.route("/api/admin/questions-by-age", methods=["POST"])
 @admin_required
 def questions_by_age():

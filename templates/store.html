@@ -544,7 +544,140 @@ function clearFilters() {
     currentFilters = {};
     loadProducts();
 }
+// Update the checkout function in templates/store.html
 
+async function checkout() {
+    if (cart.length === 0) {
+        alert('Your cart is empty');
+        return;
+    }
+    
+    // Show loading
+    const checkoutBtn = document.querySelector('#cart-modal button[onclick="checkout()"]');
+    const originalText = checkoutBtn.textContent;
+    checkoutBtn.disabled = true;
+    checkoutBtn.textContent = '⏳ Processing...';
+    
+    try {
+        const orderData = {
+            items: cart.map(item => ({
+                product_id: item.id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity
+            })),
+            total_amount: cart.reduce((total, item) => total + (item.price * item.quantity), 0),
+            payment_method: 'card',
+            shipping_address: {
+                // You can add a form to collect this
+                address: 'Customer Address',
+                city: 'Colombo',
+                postal_code: '00100'
+            }
+        };
+        
+        const orderRes = await fetch('/api/store/order', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(orderData)
+        });
+        
+        const orderResult = await orderRes.json();
+        
+        if (orderResult.status === 'ok') {
+            // Process payment
+            const paymentData = {
+                order_id: orderResult.order_id,
+                amount: orderData.total_amount,
+                method: 'card',
+                items: cart,
+                transaction_id: 'TXN' + Date.now()
+            };
+            
+            const paymentRes = await fetch('/api/store/payment', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(paymentData)
+            });
+            
+            const paymentResult = await paymentRes.json();
+            
+            if (paymentResult.status === 'ok') {
+                // Show success message
+                showSuccessModal(orderResult.order_id, orderData.total_amount);
+                
+                // Clear cart
+                cart = [];
+                updateCart();
+                closeCart();
+            } else {
+                throw new Error('Payment processing failed');
+            }
+        } else {
+            throw new Error(orderResult.error || 'Order creation failed');
+        }
+    } catch (error) {
+        console.error('Checkout error:', error);
+        alert('❌ Checkout failed: ' + error.message + '\n\nPlease try again or contact support.');
+    } finally {
+        checkoutBtn.disabled = false;
+        checkoutBtn.textContent = originalText;
+    }
+}
+
+function showSuccessModal(orderId, amount) {
+    // Create success modal
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    
+    modal.innerHTML = `
+        <div style="background:white;border-radius:16px;padding:40px;max-width:500px;width:90%;text-align:center;animation:slideIn 0.3s ease-out;">
+            <div style="font-size:64px;margin-bottom:20px;">✅</div>
+            <h2 style="color:#28a745;font-size:28px;margin-bottom:16px;">Order Placed Successfully!</h2>
+            <p style="color:#666;margin-bottom:24px;">Thank you for your order. We'll process it soon.</p>
+            
+            <div style="background:#f8f9fa;padding:20px;border-radius:8px;margin-bottom:24px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+                    <span style="color:#666;">Order ID:</span>
+                    <strong style="color:#0b3b8c;">${orderId}</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;">
+                    <span style="color:#666;">Total Amount:</span>
+                    <strong style="color:#28a745;font-size:20px;">LKR ${amount.toLocaleString()}</strong>
+                </div>
+            </div>
+            
+            <div style="background:#fff3cd;border:1px solid #ffc107;padding:16px;border-radius:8px;margin-bottom:24px;">
+                <p style="margin:0;font-size:14px;color:#856404;">
+                    <strong>⏳ Pending Admin Approval</strong><br>
+                    Your order is awaiting review by our admin team. You'll receive a notification once approved.
+                </p>
+            </div>
+            
+            <button onclick="this.parentElement.parentElement.remove()" style="width:100%;padding:16px;background:#0b3b8c;color:white;border:none;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer;">
+                Continue Shopping
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Add animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
 async function checkout() {
     if (cart.length === 0) {
         alert('Your cart is empty');

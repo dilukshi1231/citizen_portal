@@ -166,7 +166,348 @@
 <div style="width:45%;margin:10px;"><canvas id="questionChart"></canvas></div>
 </div>
 </div>
+<!-- Add this section to templates/admin.html after the existing sections -->
 
+<!-- Order Management Section -->
+<div class="admin-section">
+    <div class="flex justify-between items-center mb-4">
+        <h3>📦 Placed Orders Management</h3>
+        <div class="flex gap-2">
+            <button onclick="loadOrders('all')" id="filter-all" class="btn-filter active">All</button>
+            <button onclick="loadOrders('pending')" id="filter-pending" class="btn-filter">Pending</button>
+            <button onclick="loadOrders('approved')" id="filter-approved" class="btn-filter">Approved</button>
+            <button onclick="loadOrders('cancelled')" id="filter-cancelled" class="btn-filter">Cancelled</button>
+            <button onclick="loadOrders()" class="btn-rebuild">🔄 Refresh</button>
+        </div>
+    </div>
+    
+    <!-- Order Statistics -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:20px;">
+        <div style="background:#e7f3ff;padding:15px;border-radius:8px;text-align:center;">
+            <div style="font-size:32px;font-weight:bold;color:#0b3b8c;" id="stat-total-orders">0</div>
+            <div style="font-size:12px;color:#666;">Total Orders</div>
+        </div>
+        <div style="background:#fff3cd;padding:15px;border-radius:8px;text-align:center;">
+            <div style="font-size:32px;font-weight:bold;color:#ffc107;" id="stat-pending-orders">0</div>
+            <div style="font-size:12px;color:#666;">Pending Review</div>
+        </div>
+        <div style="background:#d4edda;padding:15px;border-radius:8px;text-align:center;">
+            <div style="font-size:32px;font-weight:bold;color:#28a745;" id="stat-approved-orders">0</div>
+            <div style="font-size:12px;color:#666;">Approved</div>
+        </div>
+        <div style="background:#f8d7da;padding:15px;border-radius:8px;text-align:center;">
+            <div style="font-size:32px;font-weight:bold;color:#dc3545;" id="stat-cancelled-orders">0</div>
+            <div style="font-size:12px;color:#666;">Cancelled</div>
+        </div>
+        <div style="background:#d1ecf1;padding:15px;border-radius:8px;text-align:center;">
+            <div style="font-size:32px;font-weight:bold;color:#0c5460;" id="stat-revenue">LKR 0</div>
+            <div style="font-size:12px;color:#666;">Total Revenue</div>
+        </div>
+    </div>
+    
+    <!-- Orders Table -->
+    <div id="orders-loading" style="text-align:center;padding:40px;color:#666;">
+        🔄 Loading orders...
+    </div>
+    
+    <div id="orders-container" style="display:none;">
+        <table style="width:100%;border-collapse:collapse;background:white;border-radius:8px;overflow:hidden;">
+            <thead style="background:#f8f9fa;">
+                <tr>
+                    <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;">Order ID</th>
+                    <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;">Customer</th>
+                    <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;">Items</th>
+                    <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;">Amount</th>
+                    <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;">Status</th>
+                    <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;">Date</th>
+                    <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="orders-tbody">
+                <!-- Orders will be inserted here -->
+            </tbody>
+        </table>
+        
+        <div id="no-orders" style="display:none;text-align:center;padding:40px;color:#999;">
+            📦 No orders found
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Order Modal -->
+<div id="cancelModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:2000;align-items:center;justify-content:center;">
+    <div style="background:white;padding:30px;border-radius:12px;max-width:500px;width:90%;">
+        <h3 style="margin-top:0;color:#dc3545;">⚠️ Cancel Order</h3>
+        <p>Are you sure you want to cancel this order?</p>
+        <p style="color:#666;font-size:14px;">Order ID: <strong id="cancel-order-id"></strong></p>
+        
+        <div style="margin:20px 0;">
+            <label style="display:block;margin-bottom:8px;font-weight:600;">Cancellation Reason:</label>
+            <textarea id="cancel-reason" rows="4" style="width:100%;padding:10px;border:2px solid #ddd;border-radius:6px;font-family:inherit;" placeholder="Enter reason for cancellation..."></textarea>
+        </div>
+        
+        <div style="display:flex;gap:10px;margin-top:20px;">
+            <button onclick="confirmCancel()" style="flex:1;padding:12px;background:#dc3545;color:white;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">
+                ❌ Cancel Order
+            </button>
+            <button onclick="closeCancelModal()" style="flex:1;padding:12px;background:#6c757d;color:white;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">
+                ⬅️ Go Back
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.btn-filter {
+    padding: 8px 16px;
+    border: 2px solid #e5e7eb;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.btn-filter:hover {
+    background: #f3f4f6;
+    border-color: #0b3b8c;
+}
+
+.btn-filter.active {
+    background: #0b3b8c;
+    color: white;
+    border-color: #0b3b8c;
+}
+
+.order-row {
+    border-bottom: 1px solid #dee2e6;
+    transition: background 0.2s;
+}
+
+.order-row:hover {
+    background: #f8f9fa;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-approved {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-cancelled {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-paid {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+</style>
+
+<script>
+// Add this to static/admin.js or in the admin.html file
+
+let currentFilter = 'all';
+let currentOrderIdToCancel = null;
+
+async function loadOrders(status = 'all') {
+    currentFilter = status;
+    
+    // Update filter buttons
+    document.querySelectorAll('.btn-filter').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.getElementById(`filter-${status}`).classList.add('active');
+    
+    document.getElementById('orders-loading').style.display = 'block';
+    document.getElementById('orders-container').style.display = 'none';
+    
+    try {
+        // Load order statistics
+        const statsRes = await fetch('/api/admin/orders/stats');
+        const stats = await statsRes.json();
+        
+        document.getElementById('stat-total-orders').textContent = stats.total_orders;
+        document.getElementById('stat-pending-orders').textContent = stats.pending_orders;
+        document.getElementById('stat-approved-orders').textContent = stats.approved_orders;
+        document.getElementById('stat-cancelled-orders').textContent = stats.cancelled_orders;
+        document.getElementById('stat-revenue').textContent = 'LKR ' + stats.total_revenue.toLocaleString();
+        
+        // Load orders
+        const ordersRes = await fetch(`/api/admin/orders?status=${status}&limit=100`);
+        const data = await ordersRes.json();
+        
+        document.getElementById('orders-loading').style.display = 'none';
+        document.getElementById('orders-container').style.display = 'block';
+        
+        const tbody = document.getElementById('orders-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.orders.length === 0) {
+            document.getElementById('no-orders').style.display = 'block';
+            return;
+        }
+        
+        document.getElementById('no-orders').style.display = 'none';
+        
+        data.orders.forEach(order => {
+            const row = document.createElement('tr');
+            row.className = 'order-row';
+            
+            const statusClass = `status-${order.status}`;
+            const statusText = order.status.toUpperCase();
+            
+            const customerInfo = order.user_info 
+                ? `${order.user_info.full_name || order.user_info.email}<br><small style="color:#666;">${order.user_info.email}</small>`
+                : 'Guest User';
+            
+            const itemsCount = order.items ? order.items.length : 0;
+            const itemsList = order.items 
+                ? order.items.map(item => `${item.name} (x${item.quantity})`).join('<br>')
+                : 'N/A';
+            
+            let actionsHtml = '';
+            if (order.status === 'pending' || order.status === 'paid') {
+                actionsHtml = `
+                    <button onclick="approveOrder('${order.order_id}')" style="padding:6px 12px;background:#28a745;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:5px;" title="Approve Order">
+                        ✅ Approve
+                    </button>
+                    <button onclick="showCancelModal('${order.order_id}')" style="padding:6px 12px;background:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer;" title="Cancel Order">
+                        ❌ Cancel
+                    </button>
+                `;
+            } else if (order.status === 'approved') {
+                actionsHtml = `<span style="color:#28a745;font-weight:600;">✅ Approved</span>`;
+                if (order.admin_action_by) {
+                    actionsHtml += `<br><small style="color:#666;">by ${order.admin_action_by}</small>`;
+                }
+            } else if (order.status === 'cancelled') {
+                actionsHtml = `<span style="color:#dc3545;font-weight:600;">❌ Cancelled</span>`;
+                if (order.cancel_reason) {
+                    actionsHtml += `<br><small style="color:#666;" title="${order.cancel_reason}">Reason: ${order.cancel_reason.substring(0, 30)}...</small>`;
+                }
+            }
+            
+            row.innerHTML = `
+                <td style="padding:12px;border-bottom:1px solid #dee2e6;">
+                    <strong>${order.order_id}</strong>
+                </td>
+                <td style="padding:12px;border-bottom:1px solid #dee2e6;">
+                    ${customerInfo}
+                </td>
+                <td style="padding:12px;border-bottom:1px solid #dee2e6;" title="${itemsList}">
+                    ${itemsCount} item(s)
+                </td>
+                <td style="padding:12px;border-bottom:1px solid #dee2e6;">
+                    <strong style="color:#0b3b8c;">LKR ${order.total_amount.toLocaleString()}</strong>
+                </td>
+                <td style="padding:12px;border-bottom:1px solid #dee2e6;">
+                    <span class="status-badge ${statusClass}">${statusText}</span>
+                </td>
+                <td style="padding:12px;border-bottom:1px solid #dee2e6;font-size:12px;color:#666;">
+                    ${new Date(order.created).toLocaleString()}
+                </td>
+                <td style="padding:12px;border-bottom:1px solid #dee2e6;">
+                    ${actionsHtml}
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+        
+    } catch (error) {
+        console.error('Error loading orders:', error);
+        document.getElementById('orders-loading').innerHTML = '❌ Failed to load orders';
+    }
+}
+
+async function approveOrder(orderId) {
+    if (!confirm(`Approve order ${orderId}?\n\nThis will notify the customer that their order has been approved.`)) {
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/admin/orders/${orderId}/approve`, {
+            method: 'POST'
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+            alert('✅ ' + data.message);
+            loadOrders(currentFilter);
+        } else {
+            alert('❌ Error: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error approving order:', error);
+        alert('❌ Failed to approve order');
+    }
+}
+
+function showCancelModal(orderId) {
+    currentOrderIdToCancel = orderId;
+    document.getElementById('cancel-order-id').textContent = orderId;
+    document.getElementById('cancel-reason').value = '';
+    document.getElementById('cancelModal').style.display = 'flex';
+}
+
+function closeCancelModal() {
+    currentOrderIdToCancel = null;
+    document.getElementById('cancelModal').style.display = 'none';
+}
+
+async function confirmCancel() {
+    const reason = document.getElementById('cancel-reason').value.trim();
+    
+    if (!reason) {
+        alert('⚠️ Please enter a cancellation reason');
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/admin/orders/${currentOrderIdToCancel}/cancel`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ reason })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+            alert('✅ ' + data.message);
+            closeCancelModal();
+            loadOrders(currentFilter);
+        } else {
+            alert('❌ Error: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error cancelling order:', error);
+        alert('❌ Failed to cancel order');
+    }
+}
+
+// Load orders when dashboard loads
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('orders-container')) {
+        loadOrders('all');
+    }
+});
+</script>
 <!-- Premium Suggestions -->
 <div class="admin-section">
 <h3>💎 Premium Help Suggestions</h3>
