@@ -237,11 +237,22 @@
         };
 
         async function loadPrograms() {
-            try {
-                let endpoint = isMyTrainingPage ? '/api/my-training' : '/api/training-programs';
-                const res = await fetch(endpoint);
-                allPrograms = await res.json();
-                displayPrograms(allPrograms);
+         try {
+        let endpoint = isMyTrainingPage ? '/api/my-training' : '/api/training-programs';
+        const res = await fetch(endpoint);
+        const data = await res.json();
+        
+        if (isMyTrainingPage) {
+            // Store raw enrollment data
+            allEnrollments = data;
+            // Extract programs from enrollments
+            allPrograms = data.map(enrollment => enrollment.program).filter(p => p != null);
+        } else {
+            // Regular program list
+            allPrograms = data;
+        }
+        
+        displayPrograms(allPrograms);
             } catch (err) {
                 console.error('Error loading programs:', err);
                 document.getElementById('programs-grid').innerHTML = `
