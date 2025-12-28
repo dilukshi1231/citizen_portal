@@ -2124,12 +2124,12 @@ def admin_insights():
         "desires": desires,
         "premium_suggestions": premium_suggestions
     })
+
+
 @app.route("/api/admin/training/stats", methods=["GET"])
+@admin_required
 def get_training_stats():
     """Get comprehensive training enrollment statistics"""
-    if not session.get("admin_logged_in"):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     try:
         # Overall statistics
         total_programs = training_programs_col.count_documents({"active": True})
@@ -2167,7 +2167,7 @@ def get_training_stats():
         programs_near_full = sum(1 for p in programs_list if 80 <= p.get('enrollment_percentage', 0) < 100)
         
         # Enrollment trends (last 30 days)
-        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        thirty_days_ago = get_utc_now() - timedelta(days=30)
         recent_enrollments = list(enrollments_col.find(
             {"enrolled_date": {"$gte": thirty_days_ago}},
             {"enrolled_date": 1, "program_id": 1}
@@ -2225,11 +2225,9 @@ def get_training_stats():
 
 
 @app.route("/api/admin/training/programs", methods=["GET"])
+@admin_required
 def get_admin_training_programs():
     """Get detailed program statistics for admin"""
-    if not session.get("admin_logged_in"):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     try:
         programs = list(training_programs_col.find({"active": True}, {"_id": 0}))
         
@@ -2260,7 +2258,7 @@ def get_admin_training_programs():
             avg_progress = progress_result[0]['avg_progress'] if progress_result else 0
             
             # Get recent enrollments (last 7 days)
-            seven_days_ago = datetime.utcnow() - timedelta(days=7)
+            seven_days_ago = get_utc_now() - timedelta(days=7)
             recent_enrollments = enrollments_col.count_documents({
                 "program_id": program_id,
                 "enrolled_date": {"$gte": seven_days_ago}
@@ -2292,11 +2290,9 @@ def get_admin_training_programs():
 
 
 @app.route("/api/admin/training/program/<program_id>/enrollments", methods=["GET"])
+@admin_required
 def get_program_enrollments(program_id):
     """Get detailed enrollment list for a specific program"""
-    if not session.get("admin_logged_in"):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     try:
         # Get program details
         program = training_programs_col.find_one({"id": program_id}, {"_id": 0})
@@ -2309,11 +2305,11 @@ def get_program_enrollments(program_id):
         # Enrich with user data
         for enrollment in enrollments:
             user_id = enrollment.get('user_id')
-            user = users_col.find_one({"id": user_id}, {"_id": 0, "name": 1, "email": 1, "age": 1, "job": 1})
+            user = users_col.find_one({"_id": ObjectId(user_id)}, {"_id": 0, "full_name": 1, "email": 1, "age": 1, "job": 1})
             if user:
                 enrollment['user'] = user
             else:
-                enrollment['user'] = {"name": "Unknown", "email": "N/A"}
+                enrollment['user'] = {"full_name": "Unknown", "email": "N/A"}
             
             # Format dates
             if 'enrolled_date' in enrollment:
@@ -2334,11 +2330,9 @@ def get_program_enrollments(program_id):
 
 
 @app.route("/api/admin/training/analytics", methods=["GET"])
+@admin_required
 def get_training_analytics():
     """Get advanced analytics for training programs"""
-    if not session.get("admin_logged_in"):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     try:
         # Most popular programs (by enrollment)
         popular_programs = list(training_programs_col.aggregate([
@@ -2416,46 +2410,22 @@ def get_training_analytics():
         completion_time = list(enrollments_col.aggregate(completion_time_pipeline))
         avg_completion_days = completion_time[0]['avg_days'] if completion_time else 0
         
-        # Student demographics
-        demographics_pipeline = [
-            {
-                "$lookup": {
-                    "from": "users",
-                    "localField": "user_id",
-                    "foreignField": "id",
-                    "as": "user"
-                }
-            },
-            {"$unwind": "$user"},
-            {
-                "$group": {
-                    "_id": "$user.age_group",
-                    "count": {"$sum": 1}
-                }
-            }
-        ]
-        demographics = list(enrollments_col.aggregate(demographics_pipeline))
-        
         return jsonify({
             "popular_programs": popular_programs,
             "category_distribution": category_stats,
             "level_distribution": level_stats,
             "status_distribution": status_stats,
-            "avg_completion_days": round(avg_completion_days, 1) if avg_completion_days else 0,
-            "student_demographics": demographics
+            "avg_completion_days": round(avg_completion_days, 1) if avg_completion_days else 0
         })
         
     except Exception as e:
         print(f"Error getting training analytics: {e}")
         return jsonify({"error": str(e)}), 500
 
-
 @app.route("/api/admin/training/export", methods=["GET"])
+@admin_required
 def export_training_data():
     """Export training enrollment data as CSV"""
-    if not session.get("admin_logged_in"):
-        return jsonify({"error": "Unauthorized"}), 401
-    
     try:
         import csv
         from io import StringIO
@@ -2475,13 +2445,13 @@ def export_training_data():
         
         # Write data
         for enrollment in enrollments:
-            user = users_col.find_one({"id": enrollment.get('user_id')}, {"_id": 0, "email": 1, "name": 1})
+            user = users_col.find_one({"_id": ObjectId(enrollment.get('user_id'))}, {"_id": 0, "email": 1, "full_name": 1})
             program = training_programs_col.find_one({"id": enrollment.get('program_id')}, {"_id": 0, "title": 1})
             
             writer.writerow([
                 enrollment.get('user_id', 'N/A'),
                 user.get('email', 'N/A') if user else 'N/A',
-                user.get('name', 'N/A') if user else 'N/A',
+                user.get('full_name', 'N/A') if user else 'N/A',
                 enrollment.get('program_id', 'N/A'),
                 program.get('title', {}).get('en', 'N/A') if program else 'N/A',
                 enrollment.get('enrolled_date', 'N/A'),

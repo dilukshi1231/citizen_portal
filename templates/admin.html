@@ -126,7 +126,7 @@
 </head>
 <body>
 <div style="padding:18px;">
-<h1>🏛️ Admin Dashboard - Citizen Services Portal</h1>
+<h1>🛡️ Admin Dashboard - Citizen Services Portal</h1>
 
 <!-- Login Box -->
 <div id="login-box">
@@ -142,7 +142,7 @@
 <button id="logoutBtn" style="float:right;">Logout</button>
 <div style="clear:both;"></div>
 
-<!-- NEW: AI Index Management Section -->
+<!-- AI Index Management Section -->
 <div class="rebuild-section">
 <h3>🤖 AI Search Index Management <span class="index-status" id="indexStatus">Checking...</span></h3>
 <p>The vector search index powers AI semantic search. Rebuild after adding/updating services.</p>
@@ -166,7 +166,6 @@
 <div style="width:45%;margin:10px;"><canvas id="questionChart"></canvas></div>
 </div>
 </div>
-<!-- Add this section to templates/admin.html after the existing sections -->
 
 <!-- Order Management Section -->
 <div class="admin-section">
@@ -207,7 +206,7 @@
     
     <!-- Orders Table -->
     <div id="orders-loading" style="text-align:center;padding:40px;color:#666;">
-        🔄 Loading orders...
+        📄 Loading orders...
     </div>
     
     <div id="orders-container" style="display:none;">
@@ -318,9 +317,169 @@
 }
 </style>
 
-<script>
-// Add this to static/admin.js or in the admin.html file
+<!-- Premium Suggestions -->
+<div class="admin-section">
+<h3>💎 Premium Help Suggestions</h3>
+<p style="font-size:13px;color:#666;">Users who repeatedly asked the same questions may need personalized assistance.</p>
+<div id="premiumList"></div>
+</div>
 
+<!-- Recent Engagements -->
+<div class="admin-section">
+<h3>📋 Recent Engagements</h3>
+<button id="exportCsv" style="margin-bottom:10px;">📥 Export CSV</button>
+<table border="1" id="engTable" style="width:100%;margin-top:8px;border-collapse:collapse;">
+<thead>
+<tr style="background:#f0f0f0;">
+<th>Age</th>
+<th>Job</th>
+<th>Desires</th>
+<th>Question</th>
+<th>Service</th>
+<th>Timestamp</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<!-- Age Group Question Analytics -->
+<div class="admin-section" id="age-group-section">
+    <h3>👥 Questions by Age Group & Language</h3>
+    <p style="font-size:13px;color:#666;margin-bottom:15px;">
+        Analyze which questions are most popular among different age groups, across all languages (English, Sinhala, Tamil)
+    </p>
+    
+    <!-- Age Group Selector -->
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+        <button onclick="showAgeGroupQuestions('<18')" class="btn-age-group">
+            👶 Under 18
+        </button>
+        <button onclick="showAgeGroupQuestions('18-25')" class="btn-age-group active">
+            🎓 18-25 (Students)
+        </button>
+        <button onclick="showAgeGroupQuestions('26-40')" class="btn-age-group">
+            💼 26-40 (Professionals)
+        </button>
+        <button onclick="showAgeGroupQuestions('41-60')" class="btn-age-group">
+            👔 41-60 (Mid-Career)
+        </button>
+        <button onclick="showAgeGroupQuestions('60+')" class="btn-age-group">
+            👴 60+ (Seniors)
+        </button>
+    </div>
+    
+    <!-- Results Area -->
+    <div id="age-group-results">
+        <div style="text-align:center;padding:40px;color:#999;">
+            📊 Select an age group to view analytics
+        </div>
+    </div>
+    
+    <!-- Language Chart -->
+    <div style="margin-top:20px;max-width:400px;margin-left:auto;margin-right:auto;">
+        <canvas id="age-lang-chart"></canvas>
+    </div>
+</div>
+
+<!-- Training Statistics Section -->
+<div class="admin-section">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-2xl font-bold">🎓 Training Enrollment Statistics</h3>
+        <div class="flex gap-2">
+            <button onclick="loadTrainingStats()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                🔄 Refresh
+            </button>
+            <button onclick="exportTrainingData()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                📥 Export CSV
+            </button>
+        </div>
+    </div>
+
+    <!-- Overview Cards -->
+    <div id="training-overview" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:20px;">
+        <div style="background:#e7f3ff;padding:15px;border-radius:8px;text-align:center;">
+            <div style="font-size:32px;font-weight:bold;color:#0b3b8c;" id="total-programs">-</div>
+            <div style="font-size:12px;color:#666;">Active Programs</div>
+        </div>
+        <div style="background:#d4edda;padding:15px;border-radius:8px;text-align:center;">
+            <div style="font-size:32px;font-weight:bold;color:#28a745;" id="total-enrollments">-</div>
+            <div style="font-size:12px;color:#666;">Total Enrollments</div>
+        </div>
+        <div style="background:#fff3cd;padding:15px;border-radius:8px;text-align:center;">
+            <div style="font-size:32px;font-weight:bold;color:#ffc107;" id="active-students">-</div>
+            <div style="font-size:12px;color:#666;">Active Students</div>
+        </div>
+        <div style="background:#f8d7da;padding:15px;border-radius:8px;text-align:center;">
+            <div style="font-size:32px;font-weight:bold;color:#dc3545;" id="programs-full">-</div>
+            <div style="font-size:12px;color:#666;">Full Programs</div>
+        </div>
+        <div style="background:#d1ecf1;padding:15px;border-radius:8px;text-align:center;">
+            <div style="font-size:32px;font-weight:bold;color:#0c5460;" id="completion-rate">-%</div>
+            <div style="font-size:12px;color:#666;">Completion Rate</div>
+        </div>
+    </div>
+
+    <!-- Enrollment Trend Chart -->
+    <div style="background:white;padding:20px;border-radius:8px;margin-bottom:20px;">
+        <h4 style="margin-bottom:15px;">📈 Enrollment Trend (Last 30 Days)</h4>
+        <canvas id="enrollmentTrendChart"></canvas>
+    </div>
+
+    <!-- Programs with Enrollment Details -->
+    <div style="background:white;padding:20px;border-radius:8px;">
+        <h4 style="margin-bottom:15px;">📚 Programs & Enrollment Details</h4>
+        <div id="programs-loading" style="text-align:center;padding:20px;color:#666;">
+            📊 Loading program data...
+        </div>
+        <div id="programs-list" style="display:none;"></div>
+    </div>
+</div>
+
+<!-- Training Analytics Charts -->
+<div class="admin-section">
+    <h3 class="text-2xl font-bold mb-4">📊 Training Analytics</h3>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <!-- Category Distribution -->
+        <div style="background:white;padding:20px;border-radius:8px;">
+            <h4 style="margin-bottom:15px;">Categories</h4>
+            <canvas id="categoryChart"></canvas>
+        </div>
+        
+        <!-- Level Distribution -->
+        <div style="background:white;padding:20px;border-radius:8px;">
+            <h4 style="margin-bottom:15px;">Difficulty Levels</h4>
+            <canvas id="levelChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ML Insights Modal -->
+<div id="mlInsightsModal">
+<div class="modal-content">
+<span class="modal-close" onclick="closeMLModal()">&times;</span>
+<h2>🧠 Machine Learning Insights</h2>
+<div id="mlInsightsContent">Loading...</div>
+</div>
+</div>
+
+</div>
+
+<script src="/static/admin.js"></script>
+
+<script>
+// ============================================
+// GLOBAL CHART VARIABLES - DECLARE ONCE
+// ============================================
+let enrollmentTrendChart = null;
+let categoryChart = null;
+let levelChart = null;
+let ageLangChart = null;
+
+// ============================================
+// ORDERS MANAGEMENT
+// ============================================
 let currentFilter = 'all';
 let currentOrderIdToCancel = null;
 
@@ -331,7 +490,8 @@ async function loadOrders(status = 'all') {
     document.querySelectorAll('.btn-filter').forEach(btn => {
         btn.classList.remove('active');
     });
-    document.getElementById(`filter-${status}`).classList.add('active');
+    const activeBtn = document.getElementById(`filter-${status}`);
+    if (activeBtn) activeBtn.classList.add('active');
     
     document.getElementById('orders-loading').style.display = 'block';
     document.getElementById('orders-container').style.display = 'none';
@@ -501,718 +661,425 @@ async function confirmCancel() {
     }
 }
 
-// Load orders when dashboard loads
-document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('orders-container')) {
-        loadOrders('all');
-    }
-});
-</script>
-<!-- Premium Suggestions -->
-<div class="admin-section">
-<h3>💎 Premium Help Suggestions</h3>
-<p style="font-size:13px;color:#666;">Users who repeatedly asked the same questions may need personalized assistance.</p>
-<div id="premiumList"></div>
-</div>
-
-<!-- Recent Engagements -->
-<div class="admin-section">
-<h3>📋 Recent Engagements</h3>
-<button id="exportCsv" style="margin-bottom:10px;">📥 Export CSV</button>
-<table border="1" id="engTable" style="width:100%;margin-top:8px;border-collapse:collapse;">
-<thead>
-<tr style="background:#f0f0f0;">
-<th>Age</th>
-<th>Job</th>
-<th>Desires</th>
-<th>Question</th>
-<th>Service</th>
-<th>Timestamp</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-</div>
-</div>
-<script>
-// Load dashboard data
-async function loadDashboard() {
-  try {
-    const res = await fetch('/api/dashboard/analytics');
-    const data = await res.json();
-    
-    // Update metrics
-    document.getElementById('total-users').textContent = data.user_metrics.total_users;
-    document.getElementById('active-users').textContent = data.user_metrics.active_users;
-    document.getElementById('total-orders').textContent = data.store_metrics.total_orders;
-    document.getElementById('total-revenue').textContent = 'LKR ' + data.store_metrics.total_revenue.toLocaleString();
-    document.getElementById('conversion-rate').textContent = data.store_metrics.conversion_rate;
-    
-    // Age Chart
-    const ageCtx = document.getElementById('ageChart');
-    new Chart(ageCtx, {
-      type: 'bar',
-      data: {
-        labels: Object.keys(data.age_groups || {}),
-        datasets: [{
-          label: 'Users by Age Group',
-          data: Object.values(data.age_groups || {}),
-          backgroundColor: 'rgba(54, 162, 235, 0.6)'
-        }]
-      }
-    });
-    
-    // Job Chart
-    const jobCtx = document.getElementById('jobChart');
-    new Chart(jobCtx, {
-      type: 'pie',
-      data: {
-        labels: Object.keys(data.jobs || {}).slice(0, 6),
-        datasets: [{
-          data: Object.values(data.jobs || {}).slice(0, 6),
-          backgroundColor: [
-            'rgba(255, 99, 132, 0.6)',
-            'rgba(54, 162, 235, 0.6)',
-            'rgba(255, 206, 86, 0.6)',
-            'rgba(75, 192, 192, 0.6)',
-            'rgba(153, 102, 255, 0.6)',
-            'rgba(255, 159, 64, 0.6)'
-          ]
-        }]
-      }
-    });
-    
-    // Popular Products
-    const productsDiv = document.getElementById('popular-products');
-    if (data.popular_products && data.popular_products.length > 0) {
-      productsDiv.innerHTML = data.popular_products.map((p, i) => `
-        <div style="padding:12px; margin:8px 0; background:#f8f9fa; border-radius:6px; border-left:4px solid #0b3b8c;">
-          <div style="font-weight:600;">${i+1}. ${p.name}</div>
-          <div style="font-size:12px; color:#666; margin-top:4px;">
-            Rating: ${p.rating} ⭐ | Reviews: ${p.reviews_count} | LKR ${p.price.toLocaleString()}
-          </div>
-        </div>
-      `).join('');
-    }
-    
-    // User Segments
-    const segmentsDiv = document.getElementById('user-segments');
-    if (data.user_segments) {
-      segmentsDiv.innerHTML = Object.entries(data.user_segments).map(([segment, count]) => `
-        <div style="background:#e7f3ff; padding:15px; border-radius:8px; text-align:center;">
-          <div style="font-size:24px; font-weight:bold; color:#0b3b8c;">${count}</div>
-          <div style="font-size:13px; color:#666; margin-top:5px;">${segment.replace(/_/g, ' ')}</div>
-        </div>
-      `).join('');
-    }
-    
-    // Premium Suggestions
-    const premiumDiv = document.getElementById('premium-list');
-    if (data.premium_suggestions && data.premium_suggestions.length > 0) {
-      premiumDiv.innerHTML = data.premium_suggestions.map(p => `
-        <div style="background:#fff3cd; padding:12px; margin:8px 0; border-left:4px solid #ffc107; border-radius:4px;">
-          <strong>User:</strong> ${p.user || 'Anonymous'} | 
-          <strong>Question:</strong> ${p.question} | 
-          <strong>Asked ${p.count} times</strong>
-          <span style="float:right; background:#dc3545; color:white; padding:4px 8px; border-radius:12px; font-size:11px;">HIGH PRIORITY</span>
-        </div>
-      `).join('');
-    } else {
-      premiumDiv.innerHTML = '<p style="color:#999; text-align:center; padding:20px;">No premium help candidates yet</p>';
-    }
-    
-    // Recent Engagements
-    const engRes = await fetch('/api/admin/engagements');
-    const engagements = await engRes.json();
-    const tbody = document.querySelector('#engTable tbody');
-    tbody.innerHTML = '';
-    
-    engagements.slice(0, 50).forEach(eng => {
-      const chatType = eng.chat_type === 'ai_enhanced' 
-        ? '<span style="background:#28a745; color:white; padding:2px 6px; border-radius:3px; font-size:10px;">AI Enhanced</span>' 
-        : '';
-      
-      const row = `<tr>
-        <td style="padding:8px;">${eng.age || 'N/A'}</td>
-        <td style="padding:8px;">${eng.job || 'N/A'}</td>
-        <td style="padding:8px;">${(eng.question_clicked || 'N/A').substring(0, 50)}... ${chatType}</td>
-        <td style="padding:8px;">${eng.service || 'N/A'}</td>
-        <td style="padding:8px;">${eng.chat_type || 'standard'}</td>
-        <td style="padding:8px; font-size:11px;">${eng.timestamp || 'N/A'}</td>
-      </tr>`;
-      tbody.insertAdjacentHTML('beforeend', row);
-    });
-    
-  } catch (err) {
-    console.error('Dashboard error:', err);
-    alert('Error loading dashboard');
-  }
-}
-</script>
-<!-- Age Group Question Analytics -->
-<div class="admin-section" id="age-group-section">
-    <h3>👥 Questions by Age Group & Language</h3>
-    <p style="font-size:13px;color:#666;margin-bottom:15px;">
-        Analyze which questions are most popular among different age groups, across all languages (English, Sinhala, Tamil)
-    </p>
-    
-    <!-- Age Group Selector -->
-    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
-        <button onclick="showAgeGroupQuestions('<18')" class="btn-age-group">
-            👶 Under 18
-        </button>
-        <button onclick="showAgeGroupQuestions('18-25')" class="btn-age-group active">
-            🎓 18-25 (Students)
-        </button>
-        <button onclick="showAgeGroupQuestions('26-40')" class="btn-age-group">
-            💼 26-40 (Professionals)
-        </button>
-        <button onclick="showAgeGroupQuestions('41-60')" class="btn-age-group">
-            👔 41-60 (Mid-Career)
-        </button>
-        <button onclick="showAgeGroupQuestions('60+')" class="btn-age-group">
-            👴 60+ (Seniors)
-        </button>
-    </div>
-    
-    <!-- Results Area -->
-    <div id="age-group-results">
-        <div style="text-align:center;padding:40px;color:#999;">
-            📊 Select an age group to view analytics
-        </div>
-    </div>
-    
-    <!-- Language Chart -->
-    <div style="margin-top:20px;max-width:400px;margin-left:auto;margin-right:auto;">
-        <canvas id="age-lang-chart"></canvas>
-    </div>
-</div>
-<!-- Add after existing sections -->
-
-<!-- Service Ratings Section -->
-<div class="admin-section">
-    <h3>⭐ Service Ratings & Feedback</h3>
-    <canvas id="ratingsChart"></canvas>
-    <div id="feedback-list"></div>
-</div>
-
-<!-- Training Programs Section -->
-<!-- Add this section to your admin.html template -->
-<!-- Training Enrollment Statistics Section -->
-<div class="admin-section">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2>🎓 Training Enrollment Statistics</h2>
-        <div>
-            <button onclick="loadTrainingStats()" class="btn-rebuild" style="padding: 8px 16px;">🔄 Refresh</button>
-            <button onclick="exportTrainingData()" class="btn-rebuild" style="padding: 8px 16px; margin-left: 10px;">📥 Export CSV</button>
-        </div>
-    </div>
-
-    <!-- Loading State -->
-    <div id="training-stats-loading" style="text-align: center; padding: 40px; color: #666;">
-        🔄 Loading training statistics...
-    </div>
-
-    <!-- Overview Cards -->
-    <div id="training-overview" style="display: none;">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px;">
-            <!-- Total Programs -->
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
-                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Total Programs</div>
-                <div style="font-size: 36px; font-weight: bold;" id="stat-total-programs">0</div>
-            </div>
-
-            <!-- Total Enrollments -->
-            <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 20px; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3);">
-                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Total Enrollments</div>
-                <div style="font-size: 36px; font-weight: bold;" id="stat-total-enrollments">0</div>
-            </div>
-
-            <!-- Active Students -->
-            <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 20px; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);">
-                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Active Students</div>
-                <div style="font-size: 36px; font-weight: bold;" id="stat-active-students">0</div>
-            </div>
-
-            <!-- Completion Rate -->
-            <div style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); padding: 20px; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(67, 233, 123, 0.3);">
-                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Completion Rate</div>
-                <!--<div style="font-size: 36px; font-weight: bold;" id="stat-completion-rate">0%</div>
-            -->
-            </div>
-
-            <!-- Programs Full -->
-            <div style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); padding: 20px; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(250, 112, 154, 0.3);">
-                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Programs Full</div>
-                <div style="font-size: 36px; font-weight: bold;" id="stat-programs-full">0</div>
-            </div>
-
-            <!-- Average Progress -->
-            <div style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); padding: 20px; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(48, 207, 208, 0.3);">
-                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Avg Progress</div>
-                <div style="font-size: 36px; font-weight: bold;" id="stat-avg-progress">0%</div>
-            </div>
-        </div>
-
-        <!-- Enrollment Trend Chart -->
-        <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <h3 style="margin-top: 0;">📈 Enrollment Trend (Last 30 Days)</h3>
-            <canvas id="enrollmentTrendChart" style="max-height: 300px;"></canvas>
-        </div>
-
-        <!-- Program Statistics Table -->
-        <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <h3 style="margin-top: 0;">📊 Program Details</h3>
-            
-            <!-- Search and Filter -->
-            <div style="margin-bottom: 20px; display: flex; gap: 10px;">
-                <input type="text" id="program-search" placeholder="🔍 Search programs..." 
-                       style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px;"
-                       oninput="filterPrograms()">
-                <select id="category-filter-admin" onchange="filterPrograms()" 
-                        style="padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
-                    <option value="">All Categories</option>
-                    <option value="digital_literacy">Digital Literacy</option>
-                    <option value="cybersecurity">Cybersecurity</option>
-                    <option value="entrepreneurship">Entrepreneurship</option>
-                    <option value="programming">Programming</option>
-                    <option value="data_analysis">Data Analysis</option>
-                    <option value="design">Design</option>
-                    <option value="marketing">Marketing</option>
-                </select>
-            </div>
-
-            <!-- Programs Table -->
-            <div style="overflow-x: auto;">
-                <table id="programs-table" style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                            <th style="padding: 12px; text-align: left;">Program</th>
-                            <th style="padding: 12px; text-align: center;">Category</th>
-                            <th style="padding: 12px; text-align: center;">Level</th>
-                            <th style="padding: 12px; text-align: center;">Enrolled</th>
-                            <th style="padding: 12px; text-align: center;">Capacity</th>
-                            <th style="padding: 12px; text-align: center;">Fill Rate</th>
-                            <th style="padding: 12px; text-align: center;">Avg Progress</th>
-                            <th style="padding: 12px; text-align: center;">Completed</th>
-                            <th style="padding: 12px; text-align: center;">Recent (7d)</th>
-                            <th style="padding: 12px; text-align: center;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="programs-table-body">
-                        <!-- Will be populated dynamically -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Program Details Modal -->
-<div id="programDetailsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; overflow-y: auto;">
-    <div style="background: white; margin: 50px auto; padding: 0; width: 90%; max-width: 1200px; border-radius: 12px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column;">
-        <!-- Modal Header -->
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <h2 style="margin: 0;" id="modal-program-title">Program Details</h2>
-                <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;" id="modal-program-subtitle"></p>
-            </div>
-            <button onclick="closeModal()" style="background: none; border: none; color: white; font-size: 32px; cursor: pointer; padding: 0; line-height: 1;">&times;</button>
-        </div>
-
-        <!-- Modal Body -->
-        <div style="padding: 20px; overflow-y: auto; flex: 1;">
-            <!-- Quick Stats -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px;">
-                <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; text-align: center;">
-                    <div style="font-size: 24px; font-weight: bold; color: #0b3b8c;" id="modal-enrolled">0</div>
-                    <div style="font-size: 12px; color: #666;">Enrolled</div>
-                </div>
-                <div style="background: #d4edda; padding: 15px; border-radius: 8px; text-align: center;">
-                    <div style="font-size: 24px; font-weight: bold; color: #28a745;" id="modal-completed">0</div>
-                    <div style="font-size: 12px; color: #666;">Completed</div>
-                </div>
-                <div style="background: #fff3cd; padding: 15px; border-radius: 8px; text-align: center;">
-                    <div style="font-size: 24px; font-weight: bold; color: #ffc107;" id="modal-progress">0%</div>
-                    <div style="font-size: 12px; color: #666;">Avg Progress</div>
-                </div>
-                <div style="background: #f8d7da; padding: 15px; border-radius: 8px; text-align: center;">
-                    <div style="font-size: 24px; font-weight: bold; color: #dc3545;" id="modal-fill-rate">0%</div>
-                    <div style="font-size: 12px; color: #666;">Fill Rate</div>
-                </div>
-            </div>
-
-            <!-- Enrollments List -->
-            <h3>👥 Enrolled Students</h3>
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                            <th style="padding: 10px; text-align: left;">Student</th>
-                            <th style="padding: 10px; text-align: left;">Email</th>
-                            <th style="padding: 10px; text-align: center;">Age</th>
-                            <th style="padding: 10px; text-align: center;">Job</th>
-                            <th style="padding: 10px; text-align: center;">Enrolled Date</th>
-                            <th style="padding: 10px; text-align: center;">Progress</th>
-                            <th style="padding: 10px; text-align: center;">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="modal-enrollments-body">
-                        <!-- Will be populated dynamically -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-    /* Add these styles to your existing admin.html styles section */
-    .btn-view-details {
-        background: #667eea;
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-        transition: all 0.2s;
-    }
-    .btn-view-details:hover {
-        background: #764ba2;
-        transform: translateY(-1px);
-    }
-    .progress-bar-container {
-        background: #e9ecef;
-        border-radius: 10px;
-        height: 8px;
-        overflow: hidden;
-        width: 100%;
-    }
-    .progress-bar {
-        height: 100%;
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-        transition: width 0.3s ease;
-    }
-    .status-badge {
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 11px;
-        font-weight: bold;
-        text-transform: uppercase;
-    }
-    .status-completed {
-        background: #d4edda;
-        color: #155724;
-    }
-    .status-enrolled {
-        background: #fff3cd;
-        color: #856404;
-    }
-    .status-full {
-        background: #f8d7da;
-        color: #721c24;
-    }
-    .status-available {
-        background: #d1ecf1;
-        color: #0c5460;
-    }
-</style>
-
-<script>
-    // Training statistics JavaScript functions
-    let allPrograms = [];
-    let enrollmentTrendChart = null;
-
-    async function loadTrainingStats() {
-        try {
-            document.getElementById('training-stats-loading').style.display = 'block';
-            document.getElementById('training-overview').style.display = 'none';
-
-            // Load overview statistics
-            const statsRes = await fetch('/api/admin/training/stats');
-            const statsData = await statsRes.json();
-
-            // Load program details
-            const programsRes = await fetch('/api/admin/training/programs');
-            const programsData = await programsRes.json();
-            
-            allPrograms = programsData;
-
-            // Update overview cards
-            document.getElementById('stat-total-programs').textContent = statsData.overview.total_programs;
-            document.getElementById('stat-total-enrollments').textContent = statsData.overview.total_enrollments;
-            document.getElementById('stat-active-students').textContent = statsData.overview.active_students;
-            document.getElementById('stat-completion-rate').textContent = statsData.overview.completion_rate + '%';
-            document.getElementById('stat-programs-full').textContent = statsData.overview.programs_full;
-            document.getElementById('stat-avg-progress').textContent = statsData.overview.avg_progress + '%';
-
-            // Create enrollment trend chart
-            createEnrollmentTrendChart(statsData.enrollment_trend);
-
-            // Populate programs table
-            populateProgramsTable(programsData);
-
-            document.getElementById('training-stats-loading').style.display = 'none';
-            document.getElementById('training-overview').style.display = 'block';
-
-        } catch (error) {
-            console.error('Error loading training stats:', error);
-            document.getElementById('training-stats-loading').innerHTML = 
-                '<div style="color: red;">❌ Failed to load training statistics</div>';
-        }
-    }
-
-    function createEnrollmentTrendChart(trendData) {
-        const ctx = document.getElementById('enrollmentTrendChart').getContext('2d');
+// ============================================
+// TRAINING STATISTICS
+// ============================================
+async function loadTrainingStats() {
+    try {
+        const statsRes = await fetch('/api/admin/training/stats');
+        const stats = await statsRes.json();
         
-        // Destroy existing chart if it exists
-        if (enrollmentTrendChart) {
-            enrollmentTrendChart.destroy();
+        document.getElementById('total-programs').textContent = stats.overview.total_programs;
+        document.getElementById('total-enrollments').textContent = stats.overview.total_enrollments;
+        document.getElementById('active-students').textContent = stats.overview.active_students;
+        document.getElementById('programs-full').textContent = stats.overview.programs_full;
+        document.getElementById('completion-rate').textContent = stats.overview.completion_rate + '%';
+        
+        drawEnrollmentTrend(stats.enrollment_trend);
+        await loadProgramDetails();
+        await loadTrainingAnalytics();
+        
+    } catch (error) {
+        console.error('Error loading training stats:', error);
+        alert('Failed to load training statistics');
+    }
+}
+
+function drawEnrollmentTrend(trendData) {
+    const ctx = document.getElementById('enrollmentTrendChart');
+    if (!ctx) return;
+    
+    if (enrollmentTrendChart) {
+        enrollmentTrendChart.destroy();
+    }
+    
+    const labels = trendData.map(d => d.date);
+    const data = trendData.map(d => d.count);
+    
+    enrollmentTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Daily Enrollments',
+                data: data,
+                borderColor: 'rgba(11, 59, 140, 1)',
+                backgroundColor: 'rgba(11, 59, 140, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
         }
+    });
+}
 
-        const labels = trendData.map(d => d.date);
-        const data = trendData.map(d => d.count);
+async function loadProgramDetails() {
+    try {
+        document.getElementById('programs-loading').style.display = 'block';
+        document.getElementById('programs-list').style.display = 'none';
+        
+        const res = await fetch('/api/admin/training/programs');
+        const programs = await res.json();
+        
+        const listDiv = document.getElementById('programs-list');
+        listDiv.innerHTML = '';
+        
+        programs.forEach((program, index) => {
+            const stats = program.statistics;
+            const title = program.title.en;
+            const enrollmentPercentage = stats.enrollment_percentage;
+            
+            let fillRateColor = '#28a745';
+            if (enrollmentPercentage >= 100) fillRateColor = '#dc3545';
+            else if (enrollmentPercentage >= 80) fillRateColor = '#ffc107';
 
-        enrollmentTrendChart = new Chart(ctx, {
-            type: 'line',
+            const card = document.createElement('div');
+            card.style.cssText = 'background:#f8f9fa;padding:15px;margin-bottom:12px;border-radius:8px;border-left:4px solid #0b3b8c;';
+            
+            card.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:start;">
+                    <div style="flex:1;">
+                        <h5 style="margin:0 0 8px 0;font-size:16px;font-weight:bold;color:#333;">
+                            ${index + 1}. ${title}
+                        </h5>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:10px;">
+                            <div>
+                                <span style="font-size:11px;color:#666;">Total Enrolled</span>
+                                <div style="font-size:20px;font-weight:bold;color:#0b3b8c;">${stats.total_enrolled}</div>
+                            </div>
+                            <div>
+                                <span style="font-size:11px;color:#666;">Completed</span>
+                                <div style="font-size:20px;font-weight:bold;color:#28a745;">${stats.completed}</div>
+                            </div>
+                            <div>
+                                <span style="font-size:11px;color:#666;">Avg Progress</span>
+                                <div style="font-size:20px;font-weight:bold;color:#ffc107;">${stats.avg_progress}%</div>
+                            </div>
+                            <div>
+                                <span style="font-size:11px;color:#666;">Completion Rate</span>
+                                <div style="font-size:20px;font-weight:bold;color:#17a2b8;">${stats.completion_rate}%</div>
+                            </div>
+                            <div>
+                                <span style="font-size:11px;color:#666;">New (7 days)</span>
+                                <div style="font-size:20px;font-weight:bold;color:#6610f2;">${stats.recent_enrollments_7d}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top:12px;">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                                <span style="font-size:11px;color:#666;">Enrollment: ${program.current_enrollments}/${program.max_participants}</span>
+                                <span style="font-size:11px;font-weight:bold;color:${fillRateColor};">
+                                    ${enrollmentPercentage}%
+                                </span>
+                            </div>
+                            <div style="width:100%;background:#e9ecef;height:8px;border-radius:4px;overflow:hidden;">
+                                <div style="width:${Math.min(enrollmentPercentage, 100)}%;background:${fillRateColor};height:100%;transition:width 0.3s;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-left:15px;">
+                        <button onclick="viewEnrollments('${program.id}')" style="padding:8px 16px;background:#0b3b8c;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;">
+                            👥 View Students
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            listDiv.appendChild(card);
+        });
+        
+        document.getElementById('programs-loading').style.display = 'none';
+        document.getElementById('programs-list').style.display = 'block';
+        
+    } catch (error) {
+        console.error('Error loading program details:', error);
+        document.getElementById('programs-loading').innerHTML = '❌ Failed to load program details';
+    }
+}
+
+async function loadTrainingAnalytics() {
+    try {
+        const res = await fetch('/api/admin/training/analytics');
+        const analytics = await res.json();
+        
+        const categoryCtx = document.getElementById('categoryChart');
+        if (categoryChart) categoryChart.destroy();
+        
+        categoryChart = new Chart(categoryCtx, {
+            type: 'doughnut',
             data: {
-                labels: labels,
+                labels: analytics.category_distribution.map(c => c._id),
                 datasets: [{
-                    label: 'Daily Enrollments',
-                    data: data,
-                    borderColor: 'rgba(102, 126, 234, 1)',
-                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4
+                    data: analytics.category_distribution.map(c => c.total_enrollments),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)'
+                    ]
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
                 plugins: {
                     legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            precision: 0
-                        }
+                        position: 'bottom'
                     }
                 }
             }
         });
-    }
-
-    function populateProgramsTable(programs) {
-        const tbody = document.getElementById('programs-table-body');
-        tbody.innerHTML = '';
-
-        programs.forEach(program => {
-            const title = program.title.en || 'N/A';
-            const stats = program.statistics;
-            const fillRate = stats.enrollment_percentage;
-            
-            let fillRateColor = '#28a745'; // Green
-            if (fillRate >= 100) fillRateColor = '#dc3545'; // Red
-            else if (fillRate >= 80) fillRateColor = '#ffc107'; // Yellow
-
-            const row = document.createElement('tr');
-            row.style.borderBottom = '1px solid #dee2e6';
-            row.innerHTML = `
-                <td style="padding: 12px;">
-                    <strong>${title}</strong><br>
-                    <small style="color: #666;">${program.id}</small>
-                </td>
-                <td style="padding: 12px; text-align: center;">
-                    <span style="background: #e7f3ff; padding: 4px 8px; border-radius: 4px; font-size: 11px;">
-                        ${program.category || 'N/A'}
-                    </span>
-                </td>
-                <td style="padding: 12px; text-align: center;">${program.level || 'N/A'}</td>
-                <td style="padding: 12px; text-align: center; font-weight: bold;">${stats.total_enrolled}</td>
-                <td style="padding: 12px; text-align: center;">${program.current_enrollments || 0} / ${program.max_participants || 0}</td>
-                <td style="padding: 12px; text-align: center;">
-                    <div style="display: flex; align-items: center; gap: 10px; justify-content: center;">
-                        <div class="progress-bar-container" style="width: 60px;">
-                            <div class="progress-bar" style="width: ${fillRate}%; background: ${fillRateColor};"></div>
-                        </div>
-                        <span style="font-weight: bold; color: ${fillRateColor};">${fillRate.toFixed(0)}%</span>
-                    </div>
-                </td>
-                <td style="padding: 12px; text-align: center;">
-                    <div style="display: flex; align-items: center; gap: 10px; justify-content: center;">
-                        <div class="progress-bar-container" style="width: 60px;">
-                            <div class="progress-bar" style="width: ${stats.avg_progress}%;"></div>
-                        </div>
-                        <span>${stats.avg_progress}%</span>
-                    </div>
-                </td>
-                <td style="padding: 12px; text-align: center;">
-                    <span style="color: #28a745; font-weight: bold;">${stats.completed}</span>
-                    <span style="color: #666; font-size: 11px;"> (${stats.completion_rate}%)</span>
-                </td>
-                <td style="padding: 12px; text-align: center;">
-                    ${stats.recent_enrollments_7d > 0 
-                        ? `<span style="background: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-weight: bold;">+${stats.recent_enrollments_7d}</span>`
-                        : '<span style="color: #999;">0</span>'}
-                </td>
-                <td style="padding: 12px; text-align: center;">
-                    <button class="btn-view-details" onclick="viewProgramDetails('${program.id}')">
-                        📊 Details
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
-    }
-
-    async function viewProgramDetails(programId) {
-        try {
-            const response = await fetch(`/api/admin/training/program/${programId}/enrollments`);
-            const data = await response.json();
-
-            const program = data.program;
-            const enrollments = data.enrollments;
-
-            // Update modal header
-            document.getElementById('modal-program-title').textContent = program.title.en;
-            document.getElementById('modal-program-subtitle').textContent = 
-                `${program.category} • ${program.level} • ${program.duration}`;
-
-            // Update quick stats
-            const stats = program.statistics || {};
-            document.getElementById('modal-enrolled').textContent = data.total_count;
-            document.getElementById('modal-completed').textContent = stats.completed || 0;
-            document.getElementById('modal-progress').textContent = (stats.avg_progress || 0) + '%';
-            document.getElementById('modal-fill-rate').textContent = (stats.enrollment_percentage || 0).toFixed(0) + '%';
-
-            // Populate enrollments table
-            const tbody = document.getElementById('modal-enrollments-body');
-            tbody.innerHTML = '';
-
-            if (enrollments.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No enrollments yet</td></tr>';
-            } else {
-                enrollments.forEach(enrollment => {
-                    const user = enrollment.user || {};
-                    const progress = enrollment.progress || 0;
-                    const statusClass = enrollment.completion_status === 'completed' ? 'status-completed' : 'status-enrolled';
-                    const statusText = enrollment.completion_status === 'completed' ? 'Completed' : 'In Progress';
-
-                    const row = document.createElement('tr');
-                    row.style.borderBottom = '1px solid #eee';
-                    row.innerHTML = `
-                        <td style="padding: 10px;">${user.name || 'Unknown'}</td>
-                        <td style="padding: 10px;">${user.email || 'N/A'}</td>
-                        <td style="padding: 10px; text-align: center;">${user.age || 'N/A'}</td>
-                        <td style="padding: 10px; text-align: center;">${user.job || 'N/A'}</td>
-                        <td style="padding: 10px; text-align: center;">
-                            <small>${enrollment.enrolled_date_formatted || 'N/A'}</small>
-                        </td>
-                        <td style="padding: 10px; text-align: center;">
-                            <div style="display: flex; align-items: center; gap: 10px; justify-content: center;">
-                                <div class="progress-bar-container" style="width: 80px;">
-                                    <div class="progress-bar" style="width: ${progress}%;"></div>
-                                </div>
-                                <span style="font-size: 12px;">${progress}%</span>
-                            </div>
-                        </td>
-                        <td style="padding: 10px; text-align: center;">
-                            <span class="status-badge ${statusClass}">${statusText}</span>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
+        
+        const levelCtx = document.getElementById('levelChart');
+        if (levelChart) levelChart.destroy();
+        
+        levelChart = new Chart(levelCtx, {
+            type: 'bar',
+            data: {
+                labels: analytics.level_distribution.map(l => l._id),
+                datasets: [{
+                    label: 'Enrollments',
+                    data: analytics.level_distribution.map(l => l.total_enrollments),
+                    backgroundColor: 'rgba(11, 59, 140, 0.8)'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
             }
-
-            // Show modal
-            document.getElementById('programDetailsModal').style.display = 'block';
-
-        } catch (error) {
-            console.error('Error loading program details:', error);
-            alert('Failed to load program details');
-        }
-    }
-
-    function closeModal() {
-        document.getElementById('programDetailsModal').style.display = 'none';
-    }
-
-    function filterPrograms() {
-        const searchTerm = document.getElementById('program-search').value.toLowerCase();
-        const categoryFilter = document.getElementById('category-filter-admin').value;
-
-        const filtered = allPrograms.filter(program => {
-            const title = program.title.en.toLowerCase();
-            const matchesSearch = title.includes(searchTerm) || program.id.toLowerCase().includes(searchTerm);
-            const matchesCategory = !categoryFilter || program.category === categoryFilter;
-            return matchesSearch && matchesCategory;
         });
-
-        populateProgramsTable(filtered);
+        
+    } catch (error) {
+        console.error('Error loading analytics:', error);
     }
+}
 
-    async function exportTrainingData() {
-        try {
-            const response = await fetch('/api/admin/training/export');
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `training_enrollments_${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-            alert('✅ Training data exported successfully!');
-        } catch (error) {
-            console.error('Error exporting data:', error);
-            alert('❌ Failed to export training data');
+function viewEnrollments(programId) {
+    window.location.href = `/admin/training/program/${programId}/enrollments`;
+}
+
+async function exportTrainingData() {
+    try {
+        window.location.href = '/api/admin/training/export';
+    } catch (error) {
+        alert('Export failed: ' + error.message);
+    }
+}
+
+// ============================================
+// AGE GROUP ANALYTICS
+// ============================================
+function setActiveAgeButton(ageGroup) {
+    document.querySelectorAll('.btn-age-group').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    const activeBtn = Array.from(document.querySelectorAll('.btn-age-group'))
+        .find(btn => btn.textContent.includes(ageGroup) || btn.onclick.toString().includes(`'${ageGroup}'`));
+    
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
+}
+
+async function showAgeGroupQuestions(ageGroup) {
+    setActiveAgeButton(ageGroup);
+    const resultsDiv = document.getElementById('age-group-results');
+    const chartCanvas = document.getElementById('age-lang-chart');
+    
+    resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;">📊 Loading data...</div>';
+    
+    try {
+        const res = await fetch('/api/admin/questions-by-age', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ age_group: ageGroup })
+        });
+        
+        const data = await res.json();
+        
+        if (data.error) {
+            resultsDiv.innerHTML = `<div class="alert alert-danger">❌ ${data.error}</div>`;
+            return;
         }
-    }
-
-    // Close modal when clicking outside
-    window.onclick = function(event) {
-        const modal = document.getElementById('programDetailsModal');
-        if (event.target === modal) {
-            closeModal();
+        
+        let html = `
+            <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:20px;">
+                <h4 style="margin:0 0 10px 0;">📊 Age Group: ${data.age_group}</h4>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:15px;">
+                    <div style="background:white;padding:12px;border-radius:6px;text-align:center;">
+                        <div style="font-size:24px;font-weight:bold;color:#0b3b8c;">${data.total_engagements}</div>
+                        <div style="font-size:12px;color:#666;">Total Engagements</div>
+                    </div>
+                    <div style="background:white;padding:12px;border-radius:6px;text-align:center;">
+                        <div style="font-size:24px;font-weight:bold;color:#28a745;">${data.questions.length}</div>
+                        <div style="font-size:12px;color:#666;">Unique Questions</div>
+                    </div>
+                    <div style="background:white;padding:12px;border-radius:6px;text-align:center;">
+                        <div style="font-size:24px;font-weight:bold;color:#ffc107;">${data.age_range.min}-${data.age_range.max}</div>
+                        <div style="font-size:12px;color:#666;">Age Range</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        html += `
+            <div style="background:#e7f3ff;padding:15px;border-radius:8px;margin-bottom:20px;">
+                <h5 style="margin:0 0 10px 0;">🌍 Language Distribution</h5>
+                <div style="display:flex;gap:15px;justify-content:space-around;">
+        `;
+        
+        const langNames = { en: 'English', si: 'Sinhala', ta: 'Tamil' };
+        const langColors = { en: '#0b3b8c', si: '#28a745', ta: '#dc3545' };
+        
+        for (const [lang, count] of Object.entries(data.language_breakdown)) {
+            const percentage = ((count / data.total_engagements) * 100).toFixed(1);
+            const color = langColors[lang] || '#666';
+            html += `
+                <div style="text-align:center;">
+                    <div style="font-size:28px;font-weight:bold;color:${color};">${count}</div>
+                    <div style="font-size:12px;color:#666;">${langNames[lang] || lang}</div>
+                    <div style="font-size:11px;color:#999;">${percentage}%</div>
+                </div>
+            `;
         }
+        
+        html += `</div></div>`;
+        
+        html += `
+            <h5 style="margin:20px 0 10px 0;">🔥 Top 10 Questions Asked</h5>
+            <div style="background:white;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
+        `;
+        
+        data.questions.forEach((q, index) => {
+            const langBadges = q.languages.map(l => {
+                const color = langColors[l] || '#666';
+                return `<span style="background:${color};color:white;padding:2px 6px;border-radius:3px;font-size:10px;margin-left:5px;">${langNames[l] || l}</span>`;
+            }).join('');
+            
+            const serviceBadges = q.services.slice(0, 2).map(s => 
+                `<span style="background:#f3f4f6;padding:2px 6px;border-radius:3px;font-size:10px;margin-left:5px;">${s}</span>`
+            ).join('');
+            
+            html += `
+                <div style="padding:15px;border-bottom:1px solid #f3f4f6;${index === 0 ? 'background:#fffbeb;' : ''}">
+                    <div style="display:flex;justify-content:space-between;align-items:start;">
+                        <div style="flex:1;">
+                            <div style="font-weight:${index < 3 ? 'bold' : 'normal'};margin-bottom:5px;">
+                                <span style="background:#0b3b8c;color:white;padding:2px 8px;border-radius:50%;margin-right:8px;font-size:12px;">${index + 1}</span>
+                                ${q.question}
+                            </div>
+                            <div style="font-size:12px;color:#666;margin-top:5px;">
+                                ${langBadges}
+                                ${serviceBadges}
+                                ${q.services.length > 2 ? `<span style="color:#999;font-size:10px;margin-left:5px;">+${q.services.length - 2} more</span>` : ''}
+                            </div>
+                        </div>
+                        <div style="text-align:right;margin-left:15px;">
+                            <div style="font-size:24px;font-weight:bold;color:#0b3b8c;">${q.count}</div>
+                            <div style="font-size:11px;color:#666;">times</div>
+                            <div style="font-size:10px;color:#999;margin-top:2px;">Avg: ${q.avg_age}y</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `</div>`;
+        resultsDiv.innerHTML = html;
+        renderLanguageChart(data.language_breakdown, langNames, langColors);
+        
+    } catch (error) {
+        console.error('Error loading age group questions:', error);
+        resultsDiv.innerHTML = `<div class="alert alert-danger">❌ Failed to load data: ${error.message}</div>`;
     }
+}
 
-    // Load training stats when dashboard loads
-    // Add this to your existing loadDashboard() function or call it separately
-    // loadTrainingStats();
+function renderLanguageChart(langData, langNames, langColors) {
+    const canvas = document.getElementById('age-lang-chart');
+    if (!canvas) return;
+    
+    if (ageLangChart) {
+        ageLangChart.destroy();
+    }
+    
+    const labels = Object.keys(langData).map(l => langNames[l] || l);
+    const data = Object.values(langData);
+    const colors = Object.keys(langData).map(l => langColors[l] || '#666');
+    
+    ageLangChart = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors,
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Language Usage by Age Group'
+                },
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+// ============================================
+// INITIALIZE ON PAGE LOAD
+// ============================================
+document.addEventListener('DOMContentLoaded', () => {
+    const ageSection = document.getElementById('age-group-section');
+    if (ageSection) {
+        showAgeGroupQuestions('18-25');
+    }
+    
+    if (document.getElementById('orders-container')) {
+        loadOrders('all');
+    }
+    
+    if (document.getElementById('training-overview')) {
+        loadTrainingStats();
+    }
+});
+
+console.log('✅ Complete admin dashboard loaded');
 </script>
 
-<!-- Notification Management -->
-<div class="admin-section">
-    <h3>🔔 Notification Center</h3>
-    <button onclick="sendBulkNotification()" class="btn-primary">
-        Send Bulk Notification
-    </button>
-    <div id="notification-manager"></div>
-</div>
-
-<!-- ML Insights Modal -->
-<div id="mlInsightsModal">
-<div class="modal-content">
-<span class="modal-close" onclick="closeMLModal()">&times;</span>
-<h2>🧠 Machine Learning Insights</h2>
-<div id="mlInsightsContent">Loading...</div>
-</div>
-</div>
-
-</div>
-
-<script src="/static/admin.js"></script>
 </body>
 </html>
