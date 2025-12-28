@@ -122,6 +122,8 @@ def admin_required(fn):
         return fn(*a, **kw)
     return wrapper
 
+# Replace the UserSegmentationEngine class in app.py with this fixed version:
+
 class UserSegmentationEngine:
     """Intelligent user segmentation based on profile data"""
     
@@ -131,8 +133,9 @@ class UserSegmentationEngine:
         Segment user based on comprehensive profile data
         Returns segment info with recommendations
         """
+        # FIXED: Safely handle None values
         age = user_profile.get('age', 0)
-        job = user_profile.get('job', '').lower()
+        job = (user_profile.get('job') or '').lower()  # Handle None safely
         education = user_profile.get('extended_profile', {}).get('education', {})
         family = user_profile.get('extended_profile', {}).get('family', {})
         career = user_profile.get('extended_profile', {}).get('career', {})
@@ -144,7 +147,7 @@ class UserSegmentationEngine:
         if 'government' in job or 'public service' in job or 'civil servant' in job:
             segments.append('government_employee')
             
-            qualification = education.get('highest_qualification', '').lower()
+            qualification = (education.get('highest_qualification') or '').lower()
             if qualification and 'degree' not in qualification and 'bachelor' not in qualification:
                 priorities.append({
                     'type': 'degree_program',
@@ -169,7 +172,7 @@ class UserSegmentationEngine:
                     })
         
         # 3. Young Professional Segment
-        if 22 <= age <= 35 and age > 0:
+        if age and 22 <= age <= 35:  # Check age exists
             segments.append('young_professional')
             priorities.append({
                 'type': 'career_growth',
@@ -179,7 +182,7 @@ class UserSegmentationEngine:
             })
         
         # 4. Senior Citizen Segment
-        if age >= 60:
+        if age and age >= 60:
             segments.append('senior_citizen')
             priorities.append({
                 'type': 'senior_services',
@@ -189,7 +192,7 @@ class UserSegmentationEngine:
             })
         
         # 5. Student Segment
-        if 15 <= age <= 25 or 'student' in job:
+        if (age and 15 <= age <= 25) or 'student' in job:
             segments.append('student')
             priorities.append({
                 'type': 'student_services',
@@ -221,6 +224,7 @@ class UserSegmentationEngine:
         fields = ['age', 'job', 'location', 'phone']
         extended_fields = ['education', 'family', 'career', 'interests']
         
+        # Safely check if fields exist and are not None/empty
         basic_score = sum(1 for f in fields if profile.get(f)) / len(fields) * 50
         
         extended_profile = profile.get('extended_profile', {})
