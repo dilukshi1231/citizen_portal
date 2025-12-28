@@ -5,6 +5,7 @@ from flask import Flask, jsonify, render_template, request, session, redirect, s
 from flask_cors import CORS
 from pymongo import MongoClient
 from datetime import datetime, timedelta, timezone
+from collections import defaultdict
 from io import StringIO
 import csv
 from dotenv import load_dotenv
@@ -14,6 +15,9 @@ from sentence_transformers import SentenceTransformer
 from groq import Groq
 from bson.objectid import ObjectId
 import uuid
+from io import StringIO
+from flask.json.provider import DefaultJSONProvider
+from bson import ObjectId
 # Try FAISS import
 try:
     import faiss
@@ -35,7 +39,33 @@ load_dotenv()
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.secret_key = os.getenv("FLASK_SECRET", "dev-secret")
 CORS(app)
-
+def serialize_mongo_doc(doc):
+    """
+    Convert MongoDB document to JSON-serializable format
+    Converts ObjectId to string and datetime to ISO format
+    """
+    if doc is None:
+        return None
+    
+    if isinstance(doc, list):
+        return [serialize_mongo_doc(item) for item in doc]
+    
+    if isinstance(doc, dict):
+        serialized = {}
+        for key, value in doc.items():
+            if isinstance(value, ObjectId):
+                serialized[key] = str(value)
+            elif isinstance(value, datetime):
+                serialized[key] = value.isoformat()
+            elif isinstance(value, dict):
+                serialized[key] = serialize_mongo_doc(value)
+            elif isinstance(value, list):
+                serialized[key] = serialize_mongo_doc(value)
+            else:
+                serialized[key] = value
+        return serialized
+    
+    return doc
 # MongoDB connection
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
 client = MongoClient(MONGO_URI)
@@ -2090,6 +2120,385 @@ def admin_insights():
         "desires": desires,
         "premium_suggestions": premium_suggestions
     })
+@app.route("/api/admin/training/stats", methods=["GET"])
+def get_training_stats():
+    """Get comprehensive training enrollment statistics"""
+    if not session.get("admin_logged_in"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        # Overall statistics
+        total_programs = training_programs_col.count_documents({"active": True})
+        total_enrollments = enrollments_col.count_documents({})
+        active_students = len(enrollments_col.distinct("user_id"))
+        
+        # Programs by status
+        programs_with_enrollment = training_programs_col.aggregate([
+            {"$match": {"active": True}},
+            {
+                "$project": {
+                    "id": 1,
+                    "title": 1,
+                    "current_enrollments": 1,
+                    "max_participants": 1,
+                    "enrollment_open": 1,
+                    "enrollment_percentage": {
+                        "$cond": {
+                            "if": {"$eq": ["$max_participants", 0]},
+                            "then": 0,
+                            "else": {
+                                "$multiply": [
+                                    {"$divide": ["$current_enrollments", "$max_participants"]},
+                                    100
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        ])
+        
+        programs_list = list(programs_with_enrollment)
+        programs_full = sum(1 for p in programs_list if p.get('current_enrollments', 0) >= p.get('max_participants', 1))
+        programs_near_full = sum(1 for p in programs_list if 80 <= p.get('enrollment_percentage', 0) < 100)
+        
+        # Enrollment trends (last 30 days)
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        recent_enrollments = list(enrollments_col.find(
+            {"enrolled_date": {"$gte": thirty_days_ago}},
+            {"enrolled_date": 1, "program_id": 1}
+        ))
+        
+        # Daily enrollment counts
+        daily_enrollments = defaultdict(int)
+        for enrollment in recent_enrollments:
+            date_key = enrollment['enrolled_date'].strftime('%Y-%m-%d')
+            daily_enrollments[date_key] += 1
+        
+        # Sort by date
+        enrollment_trend = [
+            {"date": date, "count": count}
+            for date, count in sorted(daily_enrollments.items())
+        ]
+        
+        # Completion statistics
+        completed_count = enrollments_col.count_documents({"completion_status": "completed"})
+        in_progress_count = enrollments_col.count_documents({"completion_status": {"$ne": "completed"}})
+        completion_rate = (completed_count / total_enrollments * 100) if total_enrollments > 0 else 0
+        
+        # Average progress
+        progress_pipeline = [
+            {
+                "$group": {
+                    "_id": None,
+                    "avg_progress": {"$avg": "$progress"}
+                }
+            }
+        ]
+        progress_result = list(enrollments_col.aggregate(progress_pipeline))
+        avg_progress = progress_result[0]['avg_progress'] if progress_result else 0
+        
+        return jsonify({
+            "overview": {
+                "total_programs": total_programs,
+                "total_enrollments": total_enrollments,
+                "active_students": active_students,
+                "programs_full": programs_full,
+                "programs_near_full": programs_near_full,
+                "completion_rate": round(completion_rate, 2),
+                "avg_progress": round(avg_progress, 2)
+            },
+            "enrollment_trend": enrollment_trend,
+            "status_breakdown": {
+                "completed": completed_count,
+                "in_progress": in_progress_count
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error getting training stats: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/admin/training/programs", methods=["GET"])
+def get_admin_training_programs():
+    """Get detailed program statistics for admin"""
+    if not session.get("admin_logged_in"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        programs = list(training_programs_col.find({"active": True}, {"_id": 0}))
+        
+        # Enrich each program with enrollment statistics
+        for program in programs:
+            program_id = program.get('id')
+            
+            # Get enrollment count
+            enrollment_count = enrollments_col.count_documents({"program_id": program_id})
+            
+            # Get completion statistics
+            completed = enrollments_col.count_documents({
+                "program_id": program_id,
+                "completion_status": "completed"
+            })
+            
+            # Get average progress
+            progress_pipeline = [
+                {"$match": {"program_id": program_id}},
+                {
+                    "$group": {
+                        "_id": None,
+                        "avg_progress": {"$avg": "$progress"}
+                    }
+                }
+            ]
+            progress_result = list(enrollments_col.aggregate(progress_pipeline))
+            avg_progress = progress_result[0]['avg_progress'] if progress_result else 0
+            
+            # Get recent enrollments (last 7 days)
+            seven_days_ago = datetime.utcnow() - timedelta(days=7)
+            recent_enrollments = enrollments_col.count_documents({
+                "program_id": program_id,
+                "enrolled_date": {"$gte": seven_days_ago}
+            })
+            
+            # Calculate enrollment percentage
+            max_participants = program.get('max_participants', 1)
+            current_enrollments = program.get('current_enrollments', 0)
+            enrollment_percentage = (current_enrollments / max_participants * 100) if max_participants > 0 else 0
+            
+            # Add statistics to program
+            program['statistics'] = {
+                "total_enrolled": enrollment_count,
+                "completed": completed,
+                "avg_progress": round(avg_progress, 2),
+                "recent_enrollments_7d": recent_enrollments,
+                "enrollment_percentage": round(enrollment_percentage, 2),
+                "completion_rate": round((completed / enrollment_count * 100), 2) if enrollment_count > 0 else 0
+            }
+        
+        # Sort by enrollment count (descending)
+        programs.sort(key=lambda x: x['statistics']['total_enrolled'], reverse=True)
+        
+        return jsonify(programs)
+        
+    except Exception as e:
+        print(f"Error getting program stats: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/admin/training/program/<program_id>/enrollments", methods=["GET"])
+def get_program_enrollments(program_id):
+    """Get detailed enrollment list for a specific program"""
+    if not session.get("admin_logged_in"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        # Get program details
+        program = training_programs_col.find_one({"id": program_id}, {"_id": 0})
+        if not program:
+            return jsonify({"error": "Program not found"}), 404
+        
+        # Get all enrollments for this program
+        enrollments = list(enrollments_col.find({"program_id": program_id}, {"_id": 0}))
+        
+        # Enrich with user data
+        for enrollment in enrollments:
+            user_id = enrollment.get('user_id')
+            user = users_col.find_one({"id": user_id}, {"_id": 0, "name": 1, "email": 1, "age": 1, "job": 1})
+            if user:
+                enrollment['user'] = user
+            else:
+                enrollment['user'] = {"name": "Unknown", "email": "N/A"}
+            
+            # Format dates
+            if 'enrolled_date' in enrollment:
+                enrollment['enrolled_date_formatted'] = enrollment['enrolled_date'].strftime('%Y-%m-%d %H:%M')
+        
+        # Sort by enrollment date (newest first)
+        enrollments.sort(key=lambda x: x.get('enrolled_date', datetime.min), reverse=True)
+        
+        return jsonify({
+            "program": program,
+            "enrollments": enrollments,
+            "total_count": len(enrollments)
+        })
+        
+    except Exception as e:
+        print(f"Error getting program enrollments: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/admin/training/analytics", methods=["GET"])
+def get_training_analytics():
+    """Get advanced analytics for training programs"""
+    if not session.get("admin_logged_in"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        # Most popular programs (by enrollment)
+        popular_programs = list(training_programs_col.aggregate([
+            {"$match": {"active": True}},
+            {"$sort": {"current_enrollments": -1}},
+            {"$limit": 5},
+            {
+                "$project": {
+                    "title": 1,
+                    "current_enrollments": 1,
+                    "category": 1,
+                    "level": 1
+                }
+            }
+        ]))
+        
+        # Category distribution
+        category_pipeline = [
+            {"$match": {"active": True}},
+            {
+                "$group": {
+                    "_id": "$category",
+                    "count": {"$sum": 1},
+                    "total_enrollments": {"$sum": "$current_enrollments"}
+                }
+            },
+            {"$sort": {"total_enrollments": -1}}
+        ]
+        category_stats = list(training_programs_col.aggregate(category_pipeline))
+        
+        # Level distribution
+        level_pipeline = [
+            {"$match": {"active": True}},
+            {
+                "$group": {
+                    "_id": "$level",
+                    "count": {"$sum": 1},
+                    "total_enrollments": {"$sum": "$current_enrollments"}
+                }
+            }
+        ]
+        level_stats = list(training_programs_col.aggregate(level_pipeline))
+        
+        # Enrollment status distribution
+        status_pipeline = [
+            {
+                "$group": {
+                    "_id": "$status",
+                    "count": {"$sum": 1}
+                }
+            }
+        ]
+        status_stats = list(enrollments_col.aggregate(status_pipeline))
+        
+        # Average completion time (for completed enrollments)
+        completion_time_pipeline = [
+            {"$match": {"completion_status": "completed"}},
+            {
+                "$project": {
+                    "days_to_complete": {
+                        "$divide": [
+                            {"$subtract": ["$completion_date", "$enrolled_date"]},
+                            86400000  # milliseconds in a day
+                        ]
+                    }
+                }
+            },
+            {
+                "$group": {
+                    "_id": None,
+                    "avg_days": {"$avg": "$days_to_complete"}
+                }
+            }
+        ]
+        completion_time = list(enrollments_col.aggregate(completion_time_pipeline))
+        avg_completion_days = completion_time[0]['avg_days'] if completion_time else 0
+        
+        # Student demographics
+        demographics_pipeline = [
+            {
+                "$lookup": {
+                    "from": "users",
+                    "localField": "user_id",
+                    "foreignField": "id",
+                    "as": "user"
+                }
+            },
+            {"$unwind": "$user"},
+            {
+                "$group": {
+                    "_id": "$user.age_group",
+                    "count": {"$sum": 1}
+                }
+            }
+        ]
+        demographics = list(enrollments_col.aggregate(demographics_pipeline))
+        
+        return jsonify({
+            "popular_programs": popular_programs,
+            "category_distribution": category_stats,
+            "level_distribution": level_stats,
+            "status_distribution": status_stats,
+            "avg_completion_days": round(avg_completion_days, 1) if avg_completion_days else 0,
+            "student_demographics": demographics
+        })
+        
+    except Exception as e:
+        print(f"Error getting training analytics: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/admin/training/export", methods=["GET"])
+def export_training_data():
+    """Export training enrollment data as CSV"""
+    if not session.get("admin_logged_in"):
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        import csv
+        from io import StringIO
+        
+        # Get all enrollments with user and program data
+        enrollments = list(enrollments_col.find({}, {"_id": 0}))
+        
+        # Create CSV
+        output = StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow([
+            'User ID', 'User Email', 'User Name', 'Program ID', 'Program Title', 
+            'Enrolled Date', 'Status', 'Progress', 'Completion Status', 'Completion Date'
+        ])
+        
+        # Write data
+        for enrollment in enrollments:
+            user = users_col.find_one({"id": enrollment.get('user_id')}, {"_id": 0, "email": 1, "name": 1})
+            program = training_programs_col.find_one({"id": enrollment.get('program_id')}, {"_id": 0, "title": 1})
+            
+            writer.writerow([
+                enrollment.get('user_id', 'N/A'),
+                user.get('email', 'N/A') if user else 'N/A',
+                user.get('name', 'N/A') if user else 'N/A',
+                enrollment.get('program_id', 'N/A'),
+                program.get('title', {}).get('en', 'N/A') if program else 'N/A',
+                enrollment.get('enrolled_date', 'N/A'),
+                enrollment.get('status', 'N/A'),
+                enrollment.get('progress', 0),
+                enrollment.get('completion_status', 'N/A'),
+                enrollment.get('completion_date', 'N/A')
+            ])
+        
+        # Return CSV
+        output.seek(0)
+        from flask import Response
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': 'attachment; filename=training_enrollments.csv'}
+        )
+        
+    except Exception as e:
+        print(f"Error exporting training data: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/admin/engagements")
 @admin_required
