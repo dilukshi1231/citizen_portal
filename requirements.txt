@@ -1,26 +1,25 @@
 # Core Flask
-Flask==2.3.2
-flask-cors==3.0.10
-flask-bcrypt==1.0.1
-flask-login==0.6.3
+Flask
+flask-cors
+flask-bcrypt
+flask-login
 
 # Database
-pymongo[srv]==4.4.1
-dnspython==2.4.2
+pymongo[srv]
+dnspython
 
 # AI/ML - Core
-sentence-transformers==2.7.0
-faiss-cpu==1.13.2
+sentence-transformers
+faiss-cpu
 numpy
 scikit-learn
-pandas==2.0.3
+pandas
 
 # Groq AI (Free LLM)
-groq==0.9.0
+groq
 
 # Security
-bcrypt==4.2.0
-python-dotenv==1.0.1
-
+bcrypt
+python-dotenv
 # Optional but recommended
-requests==2.31.0
+requests
