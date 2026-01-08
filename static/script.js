@@ -1,4 +1,4 @@
-// Citizen Services Portal - Main Script
+// Citizen Services Portal - Main Script (FIXED for new index.html)
 let lang = "en";
 let services = [];
 let categories = [];
@@ -6,6 +6,7 @@ let currentServiceName = "";
 let currentSub = null;
 let profile_id = null;
 let allOfficers = [];
+
 // ============================================
 // INITIALIZATION
 // ============================================
@@ -14,6 +15,7 @@ window.onload = async () => {
     await loadCategories();
     await loadServices();
     await loadAds();
+    await loadOfficers();
     console.log("✅ Portal ready!");
 };
 
@@ -24,411 +26,25 @@ async function loadCategories() {
     try {
         const res = await fetch("/api/categories");
         categories = await res.json();
-        const el = document.getElementById("category-list");
-        el.innerHTML = "";
-        
-        categories.forEach(c => {
-            const btn = document.createElement("div");
-            btn.className = "cat-item";
-            btn.textContent = c.name?.[lang] || c.name?.en || c.id;
-            btn.onclick = () => loadMinistriesInCategory(c);
-            el.appendChild(btn);
-        });
+        console.log("✅ Loaded categories:", categories.length);
     } catch (error) {
         console.error("Error loading categories:", error);
     }
 }
 
-/*
-async function loadServices() {
-    try {
-        const res = await fetch("/api/services");
-        services = await res.json();
-        console.log(`✅ Loaded ${services.length} services`);
-        
-        const list = document.getElementById("service-list");
-        list.innerHTML = "";
-        
-        if (services.length === 0) {
-            list.innerHTML = "<li style='background:#ef4444; padding:10px;'>No services found. Run seed_data.py</li>";
-            return;
-        }
-        
-        services.forEach(s => {
-            let li = document.createElement("li");
-            li.textContent = s.name?.[lang] || s.name?.en;
-            li.onclick = () => loadSubservices(s);
-            list.appendChild(li);
-        });
-    } catch (error) {
-        console.error("Error loading services:", error);
-    }
-}
-*/
-// Load officers on page load
-async function loadOfficers() {
-    try {
-        const res = await fetch("/api/officers");
-        allOfficers = await res.json();
-        console.log(`✅ Loaded ${allOfficers.length} officers:`, allOfficers);
-    } catch (error) {
-        console.error("Error loading officers:", error);
-    }
-}
-async function loadAds() {
-    try {
-        const res = await fetch("/api/ads");
-        const ads = await res.json();
-        const el = document.getElementById("ads-area");
-        
-        if (ads.length === 0) {
-            el.style.display = 'none';
-            return;
-        }
-        
-        el.innerHTML = '<h4>📢 Announcements</h4>';
-        ads.forEach(a => {
-            const card = document.createElement("div");
-            card.className = "ad-card";
-            card.innerHTML = `
-                <a href="${a.link || '#'}" target="_blank">
-                    <h4>${a.title?.[lang] || a.title?.en}</h4>
-                    <p>${(a.body?.[lang] || a.body?.en || '').substring(0, 80)}...</p>
-                </a>
-            `;
-            el.appendChild(card);
-        });
-    } catch (error) {
-        console.error("Error loading ads:", error);
-    }
-}
-
-// ============================================
-// CATEGORY NAVIGATION
-// ============================================
-async function loadMinistriesInCategory(cat) {
-    document.getElementById("sub-list").innerHTML = "";
-    document.getElementById("sub-title").innerText = cat.name?.[lang] || cat.name?.en || cat.id;
-    
-    if (cat.ministry_ids && cat.ministry_ids.length) {
-        for (let id of cat.ministry_ids) {
-            const s = services.find(svc => svc.id === id);
-            if (s && s.subservices) {
-                s.subservices.forEach(sub => {
-                    let li = document.createElement("li");
-                    li.textContent = sub.name?.[lang] || sub.name?.en || sub.id;
-                    li.onclick = () => loadQuestions(s, sub);
-                    document.getElementById("sub-list").appendChild(li);
-                });
-            }
-        }
-    } else {
-        // Fallback: filter by category
-        services.filter(s => s.category === cat.id).forEach(s => {
-            s.subservices?.forEach(sub => {
-                let li = document.createElement("li");
-                li.textContent = sub.name?.[lang] || sub.name?.en || sub.id;
-                li.onclick = () => loadQuestions(s, sub);
-                document.getElementById("sub-list").appendChild(li);
-            });
-        });
-    }
-}
-// Show officers for a specific ministry
-function showOfficersForMinistry(ministryId) {
-    const officers = allOfficers.filter(o => o.ministry_id === ministryId);
-    
-    if (officers.length === 0) {
-        return ''; // No officers for this ministry
-    }
-    
-    let html = `
-        <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-top:20px; border-left:4px solid #0b3b8c;">
-            <h4 style="margin:0 0 15px 0; color:#0b3b8c;">
-                👤 Contact Officers
-            </h4>
-    `;
-    
-    officers.forEach(officer => {
-        html += `
-            <div style="background:white; padding:12px; margin:10px 0; border-radius:6px; border:1px solid #e5e7eb;">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    ${officer.photo ? 
-                        `<img src="${officer.photo}" alt="${officer.name}" style="width:50px; height:50px; border-radius:50%; object-fit:cover;">` :
-                        `<div style="width:50px; height:50px; border-radius:50%; background:#0b3b8c; color:white; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:bold;">
-                            ${officer.name.charAt(0)}
-                        </div>`
-                    }
-                    <div style="flex:1;">
-                        <div style="font-weight:600; color:#333; margin-bottom:2px;">
-                            ${officer.name}
-                        </div>
-                        <div style="font-size:12px; color:#666; margin-bottom:4px;">
-                            ${officer.role}
-                        </div>
-                        <div style="font-size:12px; color:#0b3b8c;">
-                            📧 <a href="mailto:${officer.contact.email}" style="color:#0b3b8c; text-decoration:none;">
-                                ${officer.contact.email}
-                            </a>
-                            ${officer.contact.phone ? 
-                                `<span style="margin-left:10px;">📞 ${officer.contact.phone}</span>` : 
-                                ''
-                            }
-                        </div>
-                    </div>
-                    <button onclick="contactOfficer('${officer.id}')" style="padding:6px 12px; background:#0b3b8c; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px; white-space:nowrap;">
-                        Contact
-                    </button>
-                </div>
-                ${officer.bio ? 
-                    `<p style="margin:8px 0 0 62px; font-size:12px; color:#666; font-style:italic;">${officer.bio}</p>` : 
-                    ''
-                }
-            </div>
-        `;
-    });
-    
-    html += `</div>`;
-    return html;
-}
-
-// Contact officer (opens email or shows modal)
-function contactOfficer(officerId) {
-    const officer = allOfficers.find(o => o.id === officerId);
-    if (!officer) return;
-    
-    // Log engagement
-    logEngagement(`Contact Officer: ${officer.name}`, officer.ministry_id);
-    
-    // Open email client
-    const subject = encodeURIComponent(`Inquiry regarding ${officer.role}`);
-    const body = encodeURIComponent(`Dear ${officer.name},\n\nI would like to inquire about:\n\n[Your question here]\n\nThank you.`);
-    
-    window.location.href = `mailto:${officer.contact.email}?subject=${subject}&body=${body}`;
-}
-
-// Show all officers directory
-function showOfficersDirectory() {
-    if (allOfficers.length === 0) {
-        return `
-            <div style="padding:40px; text-align:center; color:#666;">
-                <p>No officers information available</p>
-            </div>
-        `;
-    }
-    
-    // Group officers by ministry
-    const officersByMinistry = {};
-    allOfficers.forEach(officer => {
-        if (!officersByMinistry[officer.ministry_id]) {
-            officersByMinistry[officer.ministry_id] = [];
-        }
-        officersByMinistry[officer.ministry_id].push(officer);
-    });
-    
-    let html = `
-        <div style="padding:20px;">
-            <h2 style="color:#0b3b8c; margin-bottom:20px;">
-                👥 Government Officers Directory
-            </h2>
-    `;
-    
-    // Get ministry names from services
-    services.forEach(ministry => {
-        const ministryOfficers = officersByMinistry[ministry.id];
-        if (!ministryOfficers) return;
-        
-        html += `
-            <div style="background:white; padding:20px; margin-bottom:20px; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
-                <h3 style="color:#0b3b8c; margin-bottom:15px; border-bottom:2px solid #e5e7eb; padding-bottom:10px;">
-                    ${ministry.name[lang] || ministry.name.en}
-                </h3>
-                <div style="display:grid; gap:15px;">
-        `;
-        
-        ministryOfficers.forEach(officer => {
-            html += `
-                <div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #e5e7eb;">
-                    <div style="display:flex; align-items:start; gap:15px;">
-                        ${officer.photo ? 
-                            `<img src="${officer.photo}" alt="${officer.name}" style="width:60px; height:60px; border-radius:50%; object-fit:cover;">` :
-                            `<div style="width:60px; height:60px; border-radius:50%; background:#0b3b8c; color:white; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:bold; flex-shrink:0;">
-                                ${officer.name.charAt(0)}
-                            </div>`
-                        }
-                        <div style="flex:1;">
-                            <div style="font-weight:600; font-size:16px; color:#333; margin-bottom:4px;">
-                                ${officer.name}
-                            </div>
-                            <div style="font-size:14px; color:#666; margin-bottom:8px;">
-                                ${officer.role}
-                            </div>
-                            ${officer.bio ? 
-                                `<p style="font-size:13px; color:#666; margin-bottom:8px; line-height:1.4;">${officer.bio}</p>` : 
-                                ''
-                            }
-                            <div style="font-size:13px; margin-top:8px;">
-                                <div style="margin-bottom:4px;">
-                                    📧 <a href="mailto:${officer.contact.email}" style="color:#0b3b8c; text-decoration:none;">
-                                        ${officer.contact.email}
-                                    </a>
-                                </div>
-                                ${officer.contact.phone ? 
-                                    `<div>📞 <span style="color:#333;">${officer.contact.phone}</span></div>` : 
-                                    ''
-                                }
-                            </div>
-                        </div>
-                        <button onclick="contactOfficer('${officer.id}')" style="padding:8px 16px; background:#0b3b8c; color:white; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:600; white-space:nowrap;">
-                            📧 Contact
-                        </button>
-                    </div>
-                </div>
-            `;
-        });
-        
-        html += `
-                </div>
-            </div>
-        `;
-    });
-    
-    html += `</div>`;
-    return html;
-}
-
-// Open officers directory in modal or new section
-function openOfficersDirectory() {
-    const modal = document.getElementById("officers-modal");
-    if (!modal) {
-        // Create modal if it doesn't exist
-        const modalHTML = `
-            <div id="officers-modal" class="modal" style="display:none;">
-                <div class="modal-content" style="max-width:900px; max-height:80vh; overflow-y:auto;">
-                    <span class="modal-close" onclick="closeOfficersModal()">&times;</span>
-                    <div id="officers-modal-content"></div>
-                </div>
-            </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-    }
-    
-    document.getElementById("officers-modal-content").innerHTML = showOfficersDirectory();
-    document.getElementById("officers-modal").style.display = "flex";
-    
-    // Log engagement
-    logEngagement("Viewed Officers Directory", "System");
-}
-
-function closeOfficersModal() {
-    document.getElementById("officers-modal").style.display = "none";
-}
-
-// ============================================
-// INTEGRATION: Update existing functions
-// ============================================
-
-// Modify loadQuestions() to show officers
-const originalLoadQuestions = loadQuestions;
-loadQuestions = function(service, sub) {
-    // Call original function
-    originalLoadQuestions(service, sub);
-    
-    // Add officers section after questions
-    const officersHTML = showOfficersForMinistry(service.id);
-    if (officersHTML) {
-        // Insert after question list
-        const qList = document.getElementById("question-list");
-        qList.insertAdjacentHTML('afterend', officersHTML);
-    }
-};
-
-// Modify window.onload to load officers
-const originalOnload = window.onload;
-window.onload = async function() {
-    if (originalOnload) await originalOnload();
-    await loadOfficers();
-};
-
-console.log("✅ Officers feature loaded");
-// ============================================
-// SERVICE NAVIGATION
-// ============================================
-function loadSubservices(service) {
-    currentServiceName = service.name?.[lang] || service.name?.en;
-    const subList = document.getElementById("sub-list");
-    subList.innerHTML = "";
-    document.getElementById("sub-title").innerText = currentServiceName;
-    
-    (service.subservices || []).forEach(sub => {
-        let li = document.createElement("li");
-        li.textContent = sub.name?.[lang] || sub.name?.en;
-        li.onclick = () => loadQuestions(service, sub);
-        subList.appendChild(li);
-    });
-}
-
-function loadQuestions(service, sub) {
-    currentServiceName = service.name?.[lang] || service.name?.en;
-    currentSub = sub;
-    
-    const qList = document.getElementById("question-list");
-    qList.innerHTML = "";
-    document.getElementById("q-title").innerText = sub.name?.[lang] || sub.name?.en || sub.id;
-    
-    (sub.questions || []).forEach(q => {
-        let li = document.createElement("li");
-        li.textContent = q.q?.[lang] || q.q?.en;
-        li.onclick = () => showAnswer(service, sub, q);
-        qList.appendChild(li);
-    });
-}
-
-function showAnswer(service, sub, q) {
-    let html = `<h3>${q.q?.[lang] || q.q?.en}</h3>`;
-    html += `<p>${q.answer?.[lang] || q.answer?.en}</p>`;
-    
-    if (q.downloads && q.downloads.length) {
-        html += `<p><b>📄 Downloads:</b> `;
-        q.downloads.forEach(d => {
-            html += `<a href="${d}" target="_blank">${d.split("/").pop()}</a> `;
-        });
-        html += `</p>`;
-    }
-    
-    if (q.location) {
-        html += `<p><b>📍 Location:</b> <a href="${q.location}" target="_blank">View on Map</a></p>`;
-    }
-    
-    if (q.instructions) {
-        html += `<p><b>ℹ️ Instructions:</b> ${q.instructions}</p>`;
-    }
-    
-    document.getElementById("answer-box").innerHTML = html;
-    
-    // Log engagement
-    logEngagement(q.q?.[lang] || q.q?.en, currentServiceName);
-    
-    // Show profile modal after 3rd interaction (non-intrusive)
-    const interactionCount = parseInt(localStorage.getItem('interaction_count') || '0') + 1;
-    localStorage.setItem('interaction_count', interactionCount);
-    
-    if (interactionCount === 3 && !localStorage.getItem('profile_completed')) {
-        setTimeout(() => showProfileModal(), 2000);
-    }
-}
 async function loadServices() {
     try {
         const response = await fetch('/api/services');
         services = await response.json();
         
         const serviceList = document.getElementById('service-list');
+        if (!serviceList) return;
+        
         serviceList.innerHTML = '';
         
         services.forEach(service => {
             const li = document.createElement('li');
             li.dataset.id = service.id;
-            // FIX: service.name is an object with language keys, not a string
             const serviceName = service.name?.[lang] || service.name?.en || service.id;
             li.textContent = serviceName;
             li.onclick = (e) => {
@@ -437,6 +53,8 @@ async function loadServices() {
             };
             serviceList.appendChild(li);
         });
+        
+        console.log(`✅ Loaded ${services.length} services`);
         
         // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
@@ -450,73 +68,48 @@ async function loadServices() {
         console.error('Error loading services:', error);
     }
 }
-// ============================================
-// AI SEARCH
-// ============================================
-async function handleSearch() {
-    const query = document.getElementById("search-input").value.trim();
-    if (!query) return;
-    
-    const resultsDiv = document.getElementById("ai-results");
-    const answerDiv = document.getElementById("ai-answer");
-    
-    resultsDiv.style.display = "block";
-    answerDiv.innerHTML = '<div style="text-align:center; color:#666;">🔍 Searching...</div>';
-    
+
+async function loadOfficers() {
     try {
-        const res = await fetch('/api/ai/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query, language: lang })
-        });
-        
-        const data = await res.json();
-        
-        if (data.error) {
-            answerDiv.innerHTML = `<div style="color:#dc3545;">❌ ${data.error}</div>`;
-            return;
-        }
-        
-        if (!data.results || data.results.length === 0) {
-            answerDiv.innerHTML = `
-                <div style="color:#666;">
-                    No results found. Try:
-                    <ul style="margin:10px 0;">
-                        <li>Different keywords</li>
-                        <li>Simpler language</li>
-                        <li>Browse categories on the left</li>
-                    </ul>
-                </div>`;
-            return;
-        }
-        
-        // Display results
-        let html = `<p><b>${data.results.length} relevant results found:</b></p>`;
-        
-        data.results.slice(0, 3).forEach((result, i) => {
-            html += `
-                <div style="background:white; padding:12px; margin:10px 0; border-left:4px solid #0b3b8c; border-radius:4px;">
-                    <h4 style="margin:0 0 8px 0; color:#0b3b8c;">
-                        ${i + 1}. ${result.service_name}
-                    </h4>
-                    <p style="margin:5px 0;"><b>Q:</b> ${result.question_text}</p>
-                    <p style="margin:5px 0; color:#555;"><b>A:</b> ${result.answer_text}</p>
-                    ${result.metadata?.downloads?.length ? 
-                        `<p style="margin:5px 0; font-size:0.9em;">📄 Forms available</p>` : ''}
-                </div>
-            `;
-        });
-        
-        answerDiv.innerHTML = html;
-        
-        // Log search
-        logEngagement(query, 'AI Search');
-        
+        const res = await fetch("/api/officers");
+        allOfficers = await res.json();
+        console.log(`✅ Loaded ${allOfficers.length} officers`);
     } catch (error) {
-        console.error('Search error:', error);
-        answerDiv.innerHTML = `<div style="color:#dc3545;">❌ Search failed. Please try again.</div>`;
+        console.error("Error loading officers:", error);
     }
 }
+
+async function loadAds() {
+    try {
+        const res = await fetch("/api/ads");
+        const ads = await res.json();
+        const el = document.getElementById("ads-area");
+        
+        if (!el) return;
+        
+        if (ads.length === 0) {
+            el.innerHTML = '<div class="col-span-full text-center text-gray-500 p-8">No announcements at this time</div>';
+            return;
+        }
+        
+        el.innerHTML = ads.map(a => `
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg hover:shadow-md transition">
+                <a href="${a.link || '#'}" target="_blank" class="block">
+                    <h4 class="font-bold text-yellow-900 mb-2">${a.title?.[lang] || a.title?.en || 'Announcement'}</h4>
+                    <p class="text-sm text-yellow-800">${(a.body?.[lang] || a.body?.en || '').substring(0, 120)}...</p>
+                </a>
+            </div>
+        `).join('');
+        
+        console.log("✅ Loaded announcements");
+    } catch (error) {
+        console.error("Error loading ads:", error);
+    }
+}
+
+// ============================================
+// DROPDOWN FUNCTIONALITY
+// ============================================
 let dropdownOpen = false;
 let selectedService = null;
 
@@ -528,10 +121,10 @@ function toggleDropdown() {
     
     if (dropdownOpen) {
         dropdownList.classList.add('show');
-        arrow.classList.add('open');
+        if (arrow) arrow.classList.add('open');
     } else {
         dropdownList.classList.remove('show');
-        arrow.classList.remove('open');
+        if (arrow) arrow.classList.remove('open');
     }
 }
 
@@ -540,13 +133,16 @@ function closeDropdown() {
     const arrow = document.querySelector('.dropdown-arrow');
     
     dropdownOpen = false;
-    dropdownList.classList.remove('show');
-    arrow.classList.remove('open');
+    if (dropdownList) dropdownList.classList.remove('show');
+    if (arrow) arrow.classList.remove('open');
 }
 
 function selectService(serviceId, serviceName) {
     // Update dropdown button text
-    document.getElementById('dropdown-text').textContent = serviceName;
+    const dropdownText = document.getElementById('dropdown-text');
+    if (dropdownText) {
+        dropdownText.textContent = serviceName;
+    }
     
     // Mark as selected in the list
     const items = document.querySelectorAll('#service-list li');
@@ -557,14 +153,10 @@ function selectService(serviceId, serviceName) {
         }
     });
     
-    // Set as selected
     selectedService = serviceId;
-    
-    // Close dropdown
     closeDropdown();
     
-    // Load subservices for this ministry
-    // Find the service object from the services array
+    // Find and load the service
     const service = services.find(s => s.id === serviceId);
     if (service) {
         loadSubservices(service);
@@ -573,110 +165,223 @@ function selectService(serviceId, serviceName) {
     }
 }
 
-// Update loadServices function to create dropdown items:
-/*async function loadServices() {
-    try {
-        const response = await fetch('/api/services');
-        const services = await response.json();
-        
-        const serviceList = document.getElementById('service-list');
-        serviceList.innerHTML = '';
-        
-        services.forEach(service => {
-            const li = document.createElement('li');
-            li.dataset.id = service.id;
-            li.textContent = service.name;
-            li.onclick = (e) => {
-                e.stopPropagation();
-                selectService(service.id, service.name);
-            };
-            serviceList.appendChild(li);
-        });
-        
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            const dropdownContainer = document.querySelector('.dropdown-container');
-            if (!dropdownContainer.contains(e.target)) {
-                closeDropdown();
-            }
-        });
-        
-    } catch (error) {
-        console.error('Error loading services:', error);
+// ============================================
+// SERVICE NAVIGATION (FIXED FOR NEW HTML)
+// ============================================
+function loadSubservices(service) {
+    currentServiceName = service.name?.[lang] || service.name?.en;
+    
+    // Show sub-panel
+    const subPanel = document.getElementById("sub-panel");
+    const subList = document.getElementById("sub-list");
+    const subTitle = document.getElementById("sub-title");
+    
+    if (!subPanel || !subList || !subTitle) {
+        console.error("Sub-panel elements not found");
+        return;
     }
-}*/
+    
+    // Clear previous content
+    subList.innerHTML = "";
+    
+    // Update title
+    subTitle.textContent = `${currentServiceName} - Select Service`;
+    
+    // Show panel
+    subPanel.style.display = "block";
+    
+    // Hide question panel
+    const questionPanel = document.getElementById("question-panel");
+    if (questionPanel) questionPanel.style.display = "none";
+    
+    // Hide answer box
+    const answerBox = document.getElementById("answer-box");
+    if (answerBox) answerBox.innerHTML = "";
+    
+    // Load subservices
+    const subservices = service.subservices || [];
+    
+    if (subservices.length === 0) {
+        subList.innerHTML = '<li class="text-gray-500 p-3">No services available</li>';
+        return;
+    }
+    
+    subservices.forEach(sub => {
+        const li = document.createElement("li");
+        li.textContent = sub.name?.[lang] || sub.name?.en;
+        li.className = "bg-white p-3 rounded-lg hover:bg-blue-50 hover:border-blue-500 border-2 border-transparent cursor-pointer transition";
+        li.onclick = () => loadQuestions(service, sub);
+        subList.appendChild(li);
+    });
+    
+    // Scroll to sub-panel
+    subPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', loadServices);
+function loadQuestions(service, sub) {
+    currentServiceName = service.name?.[lang] || service.name?.en;
+    currentSub = sub;
+    
+    const questionPanel = document.getElementById("question-panel");
+    const qList = document.getElementById("question-list");
+    const qTitle = document.getElementById("q-title");
+    
+    if (!questionPanel || !qList || !qTitle) {
+        console.error("Question panel elements not found");
+        return;
+    }
+    
+    // Clear previous content
+    qList.innerHTML = "";
+    
+    // Update title
+    qTitle.textContent = sub.name?.[lang] || sub.name?.en || sub.id;
+    
+    // Show panel
+    questionPanel.style.display = "block";
+    
+    // Hide answer box
+    const answerBox = document.getElementById("answer-box");
+    if (answerBox) answerBox.innerHTML = "";
+    
+    // Load questions
+    const questions = sub.questions || [];
+    
+    if (questions.length === 0) {
+        qList.innerHTML = '<li class="text-gray-500 p-3">No questions available</li>';
+        return;
+    }
+    
+    questions.forEach(q => {
+        const li = document.createElement("li");
+        li.textContent = q.q?.[lang] || q.q?.en;
+        li.className = "bg-gray-50 p-3 rounded-lg hover:bg-blue-50 hover:border-blue-500 border-2 border-transparent cursor-pointer transition";
+        li.onclick = () => showAnswer(service, sub, q);
+        qList.appendChild(li);
+    });
+    
+    // Scroll to question panel
+    questionPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function showAnswer(service, sub, q) {
+    const answerBox = document.getElementById("answer-box");
+    if (!answerBox) return;
+    
+    let html = `
+        <div class="bg-white p-6 rounded-xl shadow-lg border-l-4 border-blue-600">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">❓ ${q.q?.[lang] || q.q?.en}</h3>
+            <div class="prose max-w-none">
+                <p class="text-gray-700 mb-4">${q.answer?.[lang] || q.answer?.en}</p>
+            </div>
+    `;
+    
+    if (q.downloads && q.downloads.length) {
+        html += `
+            <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                <p class="font-bold text-blue-900 mb-2">📄 Downloads:</p>
+                <div class="space-y-2">
+        `;
+        q.downloads.forEach(d => {
+            html += `<a href="${d}" target="_blank" class="block text-blue-600 hover:text-blue-800 hover:underline">📎 ${d.split("/").pop()}</a>`;
+        });
+        html += `</div></div>`;
+    }
+    
+    if (q.location) {
+        html += `
+            <div class="mt-4 p-4 bg-green-50 rounded-lg">
+                <p class="font-bold text-green-900 mb-2">📍 Location:</p>
+                <a href="${q.location}" target="_blank" class="text-green-600 hover:text-green-800 hover:underline">View on Map</a>
+            </div>
+        `;
+    }
+    
+    if (q.instructions) {
+        html += `
+            <div class="mt-4 p-4 bg-yellow-50 rounded-lg">
+                <p class="font-bold text-yellow-900 mb-2">ℹ️ Instructions:</p>
+                <p class="text-yellow-800">${q.instructions}</p>
+            </div>
+        `;
+    }
+    
+    html += `</div>`;
+    
+    answerBox.innerHTML = html;
+    answerBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    
+    // Log engagement
+    logEngagement(q.q?.[lang] || q.q?.en, currentServiceName);
+}
+
 // ============================================
-// PROGRESSIVE PROFILE
+// AI SEARCH
 // ============================================
-function showProfileModal() {
-    document.getElementById("profile-modal").style.display = "flex";
-}
-
-function closeProfileModal() {
-    document.getElementById("profile-modal").style.display = "none";
-}
-
-function profileNext(step) {
-    document.getElementById(`profile-step-${step}`).style.display = "none";
-    document.getElementById(`profile-step-${step + 1}`).style.display = "block";
-}
-
-function profileBack(step) {
-    document.getElementById(`profile-step-${step}`).style.display = "none";
-    document.getElementById(`profile-step-${step - 1}`).style.display = "block";
-}
-
-async function profileSubmit() {
-    const data1 = {
-        name: document.getElementById("p_name").value,
-        age: document.getElementById("p_age").value
-    };
-    const data2 = {
-        email: document.getElementById("p_email").value,
-        phone: document.getElementById("p_phone").value
-    };
-    const data3 = {
-        job: document.getElementById("p_job").value,
-        notifications: document.getElementById("p_notify").checked
-    };
+async function handleSearch() {
+    const query = document.getElementById("search-input").value.trim();
+    if (!query) return;
+    
+    const resultsDiv = document.getElementById("ai-results");
+    const answerDiv = document.getElementById("ai-answer");
+    
+    if (!resultsDiv || !answerDiv) return;
+    
+    resultsDiv.style.display = "block";
+    answerDiv.innerHTML = '<div class="text-center text-gray-600">🔍 Searching...</div>';
     
     try {
-        // Save step 1
-        let res = await fetch("/api/profile/step", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: data2.email, step: "basic", data: data1 })
-        });
-        let json = await res.json();
-        profile_id = json.profile_id;
-        
-        // Save step 2
-        await fetch("/api/profile/step", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ profile_id, step: "contact", data: data2 })
+        const res = await fetch('/api/ai/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, language: lang })
         });
         
-        // Save step 3
-        await fetch("/api/profile/step", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ profile_id, step: "employment", data: data3 })
+        const data = await res.json();
+        
+        if (data.error) {
+            answerDiv.innerHTML = `<div class="text-red-600">❌ ${data.error}</div>`;
+            return;
+        }
+        
+        if (!data.results || data.results.length === 0) {
+            answerDiv.innerHTML = `
+                <div class="text-gray-600">
+                    <p class="mb-2">No results found. Try:</p>
+                    <ul class="list-disc list-inside space-y-1">
+                        <li>Different keywords</li>
+                        <li>Simpler language</li>
+                        <li>Browse ministries using the dropdown above</li>
+                    </ul>
+                </div>`;
+            return;
+        }
+        
+        // Display results
+        let html = `<p class="font-bold mb-3">Found ${data.results.length} relevant results:</p>`;
+        
+        data.results.slice(0, 3).forEach((result, i) => {
+            html += `
+                <div class="bg-white p-4 mb-3 rounded-lg border-l-4 border-blue-600 shadow-sm">
+                    <h4 class="font-bold text-blue-900 mb-2">
+                        ${i + 1}. ${result.service_name}
+                    </h4>
+                    <p class="text-sm mb-2"><strong>Q:</strong> ${result.question_text}</p>
+                    <p class="text-sm text-gray-700"><strong>A:</strong> ${result.answer_text}</p>
+                    ${result.metadata?.downloads?.length ? 
+                        `<p class="text-xs text-green-600 mt-2">📄 Forms available</p>` : ''}
+                </div>
+            `;
         });
         
-        localStorage.setItem('profile_completed', 'true');
-        closeProfileModal();
+        answerDiv.innerHTML = html;
         
-        // Thank you message
-        alert("Thank you! Your preferences have been saved to help us serve you better.");
+        // Log search
+        logEngagement(query, 'AI Search');
         
     } catch (error) {
-        console.error("Profile save error:", error);
-        alert("Profile save failed. You can continue using the portal.");
-        closeProfileModal();
+        console.error('Search error:', error);
+        answerDiv.innerHTML = `<div class="text-red-600">❌ Search failed. Please try again.</div>`;
     }
 }
 
@@ -694,7 +399,8 @@ async function logEngagement(question, service) {
                 job: localStorage.getItem('user_job'),
                 desires: [],
                 question_clicked: question,
-                service: service
+                service: service,
+                language: lang
             })
         });
     } catch (error) {
@@ -707,22 +413,40 @@ async function logEngagement(question, service) {
 // ============================================
 function setLang(l) {
     lang = l;
-    loadCategories();
+    
+    // Update nav language selector if exists
+    const navLang = document.getElementById("nav-language");
+    if (navLang) navLang.value = l;
+    
+    // Reload data
     loadServices();
     loadAds();
     
     // Clear current selections
-    document.getElementById("sub-list").innerHTML = "";
-    document.getElementById("question-list").innerHTML = "";
-    document.getElementById("answer-box").innerHTML = "";
+    const subPanel = document.getElementById("sub-panel");
+    const questionPanel = document.getElementById("question-panel");
+    const answerBox = document.getElementById("answer-box");
+    
+    if (subPanel) subPanel.style.display = "none";
+    if (questionPanel) questionPanel.style.display = "none";
+    if (answerBox) answerBox.innerHTML = "";
+    
+    // Reset dropdown
+    const dropdownText = document.getElementById("dropdown-text");
+    if (dropdownText) dropdownText.textContent = "Select a Ministry / Department";
 }
 
 // ============================================
 // KEYBOARD SHORTCUTS
 // ============================================
-document.getElementById("search-input")?.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") {
-        handleSearch();
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById("search-input");
+    if (searchInput) {
+        searchInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                handleSearch();
+            }
+        });
     }
 });
 
