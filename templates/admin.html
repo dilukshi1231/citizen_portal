@@ -1,1085 +1,896 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<title>Admin Dashboard - Citizen Portal</title>
-<link rel="stylesheet" href="/static/style.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-  .admin-section {
-    background: #fff;
-    padding: 20px;
-    margin: 20px 0;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  }
-  .rebuild-section {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 25px;
-    margin: 20px 0;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  }
-  .rebuild-section h3 {
-    margin-top: 0;
-    font-size: 1.5em;
-  }
-  .btn-rebuild {
-    background: white;
-    color: #667eea;
-    border: none;
-    padding: 12px 24px;
-    font-size: 16px;
-    font-weight: bold;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.3s;
-  }
-  .btn-rebuild:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  }
-  .btn-rebuild:disabled {
-    background: #ccc;
-    color: #666;
-    cursor: not-allowed;
-  }
-  .alert {
-    padding: 12px 20px;
-    margin: 15px 0;
-    border-radius: 6px;
-    font-size: 14px;
-  }
-  .alert-success {
-    background: #d4edda;
-    border: 1px solid #c3e6cb;
-    color: #155724;
-  }
-  .alert-danger {
-    background: #f8d7da;
-    border: 1px solid #f5c6cb;
-    color: #721c24;
-  }
-  .alert-info {
-    background: #d1ecf1;
-    border: 1px solid #bee5eb;
-    color: #0c5460;
-  }
-  .help-text {
-    font-size: 13px;
-    color: rgba(255,255,255,0.9);
-    margin-top: 8px;
-  }
-  .index-status {
-    display: inline-block;
-    padding: 4px 12px;
-    background: rgba(255,255,255,0.2);
-    border-radius: 20px;
-    font-size: 13px;
-    margin-left: 10px;
-  }
-  .btn-ml-insights {
-    background: #28a745;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    margin-left: 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-  }
-  .btn-ml-insights:hover {
-    background: #218838;
-  }
-  #mlInsightsModal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.7);
-    z-index: 1000;
-  }
-  .modal-content {
-    background: white;
-    margin: 50px auto;
-    padding: 30px;
-    width: 80%;
-    max-width: 900px;
-    border-radius: 12px;
-    max-height: 80vh;
-    overflow-y: auto;
-  }
-  .modal-close {
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    color: #aaa;
-  }
-  .modal-close:hover {
-    color: #000;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Citizen Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .nav-item {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .nav-item:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid #3b82f6;
+        }
+        .nav-item.active {
+            background: rgba(59, 130, 246, 0.15);
+            border-left: 4px solid #2563eb;
+            font-weight: 600;
+        }
+        .section-content {
+            display: none;
+        }
+        .section-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .sidebar {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+    </style>
 </head>
-<body>
-<div style="padding:18px;">
-<h1>🛡️ Admin Dashboard - Citizen Services Portal</h1>
-
-<!-- Login Box -->
-<div id="login-box">
-<form id="login-form">
-<label>Username</label><input name="username" />
-<label>Password</label><input name="password" type="password"/>
-<button type="submit">Login</button>
-</form>
-</div>
-
-<!-- Dashboard Content -->
-<div id="dashboard" style="display:none;">
-<button id="logoutBtn" style="float:right;">Logout</button>
-<div style="clear:both;"></div>
-
-<!-- AI Index Management Section -->
-<div class="rebuild-section">
-<h3>🤖 AI Search Index Management <span class="index-status" id="indexStatus">Checking...</span></h3>
-<p>The vector search index powers AI semantic search. Rebuild after adding/updating services.</p>
-<button id="rebuildIndexBtn" class="btn-rebuild" onclick="rebuildIndex()">
-🔧 Rebuild Vector Search Index
-</button>
-<button class="btn-ml-insights" onclick="showMLInsights()">
-📊 Show ML Insights
-</button>
-<p class="help-text">⏱️ Rebuild typically takes 30-60 seconds depending on data size</p>
-<div id="rebuildStatus"></div>
-</div>
-
-<!-- Insights Charts -->
-<div class="admin-section">
-<h2>📊 User Analytics</h2>
-<div style="display:flex;flex-wrap:wrap;">
-<div style="width:45%;margin:10px;"><canvas id="ageChart"></canvas></div>
-<div style="width:45%;margin:10px;"><canvas id="jobChart"></canvas></div>
-<div style="width:45%;margin:10px;"><canvas id="serviceChart"></canvas></div>
-<div style="width:45%;margin:10px;"><canvas id="questionChart"></canvas></div>
-</div>
-</div>
-
-<!-- Order Management Section -->
-<div class="admin-section">
-    <div class="flex justify-between items-center mb-4">
-        <h3>📦 Placed Orders Management</h3>
-        <div class="flex gap-2">
-            <button onclick="loadOrders('all')" id="filter-all" class="btn-filter active">All</button>
-            <button onclick="loadOrders('pending')" id="filter-pending" class="btn-filter">Pending</button>
-            <button onclick="loadOrders('approved')" id="filter-approved" class="btn-filter">Approved</button>
-            <button onclick="loadOrders('cancelled')" id="filter-cancelled" class="btn-filter">Cancelled</button>
-            <button onclick="loadOrders()" class="btn-rebuild">🔄 Refresh</button>
-        </div>
-    </div>
+<body class="bg-gray-50">
     
-    <!-- Order Statistics -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:20px;">
-        <div style="background:#e7f3ff;padding:15px;border-radius:8px;text-align:center;">
-            <div style="font-size:32px;font-weight:bold;color:#0b3b8c;" id="stat-total-orders">0</div>
-            <div style="font-size:12px;color:#666;">Total Orders</div>
-        </div>
-        <div style="background:#fff3cd;padding:15px;border-radius:8px;text-align:center;">
-            <div style="font-size:32px;font-weight:bold;color:#ffc107;" id="stat-pending-orders">0</div>
-            <div style="font-size:12px;color:#666;">Pending Review</div>
-        </div>
-        <div style="background:#d4edda;padding:15px;border-radius:8px;text-align:center;">
-            <div style="font-size:32px;font-weight:bold;color:#28a745;" id="stat-approved-orders">0</div>
-            <div style="font-size:12px;color:#666;">Approved</div>
-        </div>
-        <div style="background:#f8d7da;padding:15px;border-radius:8px;text-align:center;">
-            <div style="font-size:32px;font-weight:bold;color:#dc3545;" id="stat-cancelled-orders">0</div>
-            <div style="font-size:12px;color:#666;">Cancelled</div>
-        </div>
-        <div style="background:#d1ecf1;padding:15px;border-radius:8px;text-align:center;">
-            <div style="font-size:32px;font-weight:bold;color:#0c5460;" id="stat-revenue">LKR 0</div>
-            <div style="font-size:12px;color:#666;">Total Revenue</div>
-        </div>
-    </div>
-    
-    <!-- Orders Table -->
-    <div id="orders-loading" style="text-align:center;padding:40px;color:#666;">
-        📄 Loading orders...
-    </div>
-    
-    <div id="orders-container" style="display:none;">
-        <table style="width:100%;border-collapse:collapse;background:white;border-radius:8px;overflow:hidden;">
-            <thead style="background:#f8f9fa;">
-                <tr>
-                    <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;">Order ID</th>
-                    <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;">Customer</th>
-                    <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;">Items</th>
-                    <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;">Amount</th>
-                    <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;">Status</th>
-                    <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;">Date</th>
-                    <th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="orders-tbody">
-                <!-- Orders will be inserted here -->
-            </tbody>
-        </table>
-        
-        <div id="no-orders" style="display:none;text-align:center;padding:40px;color:#999;">
-            📦 No orders found
-        </div>
-    </div>
-</div>
-
-<!-- Cancel Order Modal -->
-<div id="cancelModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:2000;align-items:center;justify-content:center;">
-    <div style="background:white;padding:30px;border-radius:12px;max-width:500px;width:90%;">
-        <h3 style="margin-top:0;color:#dc3545;">⚠️ Cancel Order</h3>
-        <p>Are you sure you want to cancel this order?</p>
-        <p style="color:#666;font-size:14px;">Order ID: <strong id="cancel-order-id"></strong></p>
-        
-        <div style="margin:20px 0;">
-            <label style="display:block;margin-bottom:8px;font-weight:600;">Cancellation Reason:</label>
-            <textarea id="cancel-reason" rows="4" style="width:100%;padding:10px;border:2px solid #ddd;border-radius:6px;font-family:inherit;" placeholder="Enter reason for cancellation..."></textarea>
-        </div>
-        
-        <div style="display:flex;gap:10px;margin-top:20px;">
-            <button onclick="confirmCancel()" style="flex:1;padding:12px;background:#dc3545;color:white;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">
-                ❌ Cancel Order
-            </button>
-            <button onclick="closeCancelModal()" style="flex:1;padding:12px;background:#6c757d;color:white;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">
-                ⬅️ Go Back
-            </button>
-        </div>
-    </div>
-</div>
-
-<style>
-.btn-filter {
-    padding: 8px 16px;
-    border: 2px solid #e5e7eb;
-    background: white;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-    font-size: 14px;
-    transition: all 0.2s;
-}
-
-.btn-filter:hover {
-    background: #f3f4f6;
-    border-color: #0b3b8c;
-}
-
-.btn-filter.active {
-    background: #0b3b8c;
-    color: white;
-    border-color: #0b3b8c;
-}
-
-.order-row {
-    border-bottom: 1px solid #dee2e6;
-    transition: background 0.2s;
-}
-
-.order-row:hover {
-    background: #f8f9fa;
-}
-
-.status-badge {
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.status-pending {
-    background: #fff3cd;
-    color: #856404;
-}
-
-.status-approved {
-    background: #d4edda;
-    color: #155724;
-}
-
-.status-cancelled {
-    background: #f8d7da;
-    color: #721c24;
-}
-
-.status-paid {
-    background: #d1ecf1;
-    color: #0c5460;
-}
-</style>
-
-<!-- Premium Suggestions -->
-<div class="admin-section">
-<h3>💎 Premium Help Suggestions</h3>
-<p style="font-size:13px;color:#666;">Users who repeatedly asked the same questions may need personalized assistance.</p>
-<div id="premiumList"></div>
-</div>
-
-<!-- Recent Engagements -->
-<div class="admin-section">
-<h3>📋 Recent Engagements</h3>
-<button id="exportCsv" style="margin-bottom:10px;">📥 Export CSV</button>
-<table border="1" id="engTable" style="width:100%;margin-top:8px;border-collapse:collapse;">
-<thead>
-<tr style="background:#f0f0f0;">
-<th>Age</th>
-<th>Job</th>
-<th>Desires</th>
-<th>Question</th>
-<th>Service</th>
-<th>Timestamp</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-</div>
-
-<!-- Age Group Question Analytics -->
-<div class="admin-section" id="age-group-section">
-    <h3>👥 Questions by Age Group & Language</h3>
-    <p style="font-size:13px;color:#666;margin-bottom:15px;">
-        Analyze which questions are most popular among different age groups, across all languages (English, Sinhala, Tamil)
-    </p>
-    
-    <!-- Age Group Selector -->
-    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
-        <button onclick="showAgeGroupQuestions('<18')" class="btn-age-group">
-            👶 Under 18
-        </button>
-        <button onclick="showAgeGroupQuestions('18-25')" class="btn-age-group active">
-            🎓 18-25 (Students)
-        </button>
-        <button onclick="showAgeGroupQuestions('26-40')" class="btn-age-group">
-            💼 26-40 (Professionals)
-        </button>
-        <button onclick="showAgeGroupQuestions('41-60')" class="btn-age-group">
-            👔 41-60 (Mid-Career)
-        </button>
-        <button onclick="showAgeGroupQuestions('60+')" class="btn-age-group">
-            👴 60+ (Seniors)
-        </button>
-    </div>
-    
-    <!-- Results Area -->
-    <div id="age-group-results">
-        <div style="text-align:center;padding:40px;color:#999;">
-            📊 Select an age group to view analytics
-        </div>
-    </div>
-    
-    <!-- Language Chart -->
-    <div style="margin-top:20px;max-width:400px;margin-left:auto;margin-right:auto;">
-        <canvas id="age-lang-chart"></canvas>
-    </div>
-</div>
-
-<!-- Training Statistics Section -->
-<div class="admin-section">
-    <div class="flex justify-between items-center mb-4">
-        <h3 class="text-2xl font-bold">🎓 Training Enrollment Statistics</h3>
-        <div class="flex gap-2">
-            <button onclick="loadTrainingStats()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                🔄 Refresh
-            </button>
-            <button onclick="exportTrainingData()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                📥 Export CSV
-            </button>
-        </div>
-    </div>
-
-    <!-- Overview Cards -->
-    <div id="training-overview" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:20px;">
-        <div style="background:#e7f3ff;padding:15px;border-radius:8px;text-align:center;">
-            <div style="font-size:32px;font-weight:bold;color:#0b3b8c;" id="total-programs">-</div>
-            <div style="font-size:12px;color:#666;">Active Programs</div>
-        </div>
-        <div style="background:#d4edda;padding:15px;border-radius:8px;text-align:center;">
-            <div style="font-size:32px;font-weight:bold;color:#28a745;" id="total-enrollments">-</div>
-            <div style="font-size:12px;color:#666;">Total Enrollments</div>
-        </div>
-        <div style="background:#fff3cd;padding:15px;border-radius:8px;text-align:center;">
-            <div style="font-size:32px;font-weight:bold;color:#ffc107;" id="active-students">-</div>
-            <div style="font-size:12px;color:#666;">Active Students</div>
-        </div>
-        <div style="background:#f8d7da;padding:15px;border-radius:8px;text-align:center;">
-            <div style="font-size:32px;font-weight:bold;color:#dc3545;" id="programs-full">-</div>
-            <div style="font-size:12px;color:#666;">Full Programs</div>
-        </div>
-        <div style="background:#d1ecf1;padding:15px;border-radius:8px;text-align:center;">
-            <div style="font-size:32px;font-weight:bold;color:#0c5460;" id="completion-rate">-%</div>
-            <div style="font-size:12px;color:#666;">Completion Rate</div>
-        </div>
-    </div>
-
-    <!-- Enrollment Trend Chart -->
-    <div style="background:white;padding:20px;border-radius:8px;margin-bottom:20px;">
-        <h4 style="margin-bottom:15px;">📈 Enrollment Trend (Last 30 Days)</h4>
-        <canvas id="enrollmentTrendChart"></canvas>
-    </div>
-
-    <!-- Programs with Enrollment Details -->
-    <div style="background:white;padding:20px;border-radius:8px;">
-        <h4 style="margin-bottom:15px;">📚 Programs & Enrollment Details</h4>
-        <div id="programs-loading" style="text-align:center;padding:20px;color:#666;">
-            📊 Loading program data...
-        </div>
-        <div id="programs-list" style="display:none;"></div>
-    </div>
-</div>
-
-<!-- Training Analytics Charts -->
-<div class="admin-section">
-    <h3 class="text-2xl font-bold mb-4">📊 Training Analytics</h3>
-    
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-        <!-- Category Distribution -->
-        <div style="background:white;padding:20px;border-radius:8px;">
-            <h4 style="margin-bottom:15px;">Categories</h4>
-            <canvas id="categoryChart"></canvas>
-        </div>
-        
-        <!-- Level Distribution -->
-        <div style="background:white;padding:20px;border-radius:8px;">
-            <h4 style="margin-bottom:15px;">Difficulty Levels</h4>
-            <canvas id="levelChart"></canvas>
-        </div>
-    </div>
-</div>
-
-<!-- ML Insights Modal -->
-<div id="mlInsightsModal">
-<div class="modal-content">
-<span class="modal-close" onclick="closeMLModal()">&times;</span>
-<h2>🧠 Machine Learning Insights</h2>
-<div id="mlInsightsContent">Loading...</div>
-</div>
-</div>
-
-</div>
-
-<script src="/static/admin.js"></script>
-
-<script>
-// ============================================
-// GLOBAL CHART VARIABLES - DECLARE ONCE
-// ============================================
-let enrollmentTrendChart = null;
-let categoryChart = null;
-let levelChart = null;
-let ageLangChart = null;
-
-// ============================================
-// ORDERS MANAGEMENT
-// ============================================
-let currentFilter = 'all';
-let currentOrderIdToCancel = null;
-
-async function loadOrders(status = 'all') {
-    currentFilter = status;
-    
-    // Update filter buttons
-    document.querySelectorAll('.btn-filter').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    const activeBtn = document.getElementById(`filter-${status}`);
-    if (activeBtn) activeBtn.classList.add('active');
-    
-    document.getElementById('orders-loading').style.display = 'block';
-    document.getElementById('orders-container').style.display = 'none';
-    
-    try {
-        // Load order statistics
-        const statsRes = await fetch('/api/admin/orders/stats');
-        const stats = await statsRes.json();
-        
-        document.getElementById('stat-total-orders').textContent = stats.total_orders;
-        document.getElementById('stat-pending-orders').textContent = stats.pending_orders;
-        document.getElementById('stat-approved-orders').textContent = stats.approved_orders;
-        document.getElementById('stat-cancelled-orders').textContent = stats.cancelled_orders;
-        document.getElementById('stat-revenue').textContent = 'LKR ' + stats.total_revenue.toLocaleString();
-        
-        // Load orders
-        const ordersRes = await fetch(`/api/admin/orders?status=${status}&limit=100`);
-        const data = await ordersRes.json();
-        
-        document.getElementById('orders-loading').style.display = 'none';
-        document.getElementById('orders-container').style.display = 'block';
-        
-        const tbody = document.getElementById('orders-tbody');
-        tbody.innerHTML = '';
-        
-        if (data.orders.length === 0) {
-            document.getElementById('no-orders').style.display = 'block';
-            return;
-        }
-        
-        document.getElementById('no-orders').style.display = 'none';
-        
-        data.orders.forEach(order => {
-            const row = document.createElement('tr');
-            row.className = 'order-row';
+    <!-- Top Header -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-full mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <div class="bg-gradient-to-br from-blue-600 to-indigo-600 w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold">
+                    CP
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-900">Citizen Portal Admin</h1>
+                    <p class="text-xs text-gray-500">Analytics & Management Dashboard</p>
+                </div>
+            </div>
             
-            const statusClass = `status-${order.status}`;
-            const statusText = order.status.toUpperCase();
+            <div class="flex items-center space-x-4">
+                <button class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">
+                    🔔 Notifications
+                </button>
+                <button onclick="logout()" class="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700">
+                    🚪 Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar w-64 bg-white border-r border-gray-200">
+            <nav class="p-4 space-y-1">
+                <div class="nav-item active px-4 py-3 rounded-lg" onclick="showSection('overview')">
+                    <div class="flex items-center justify-between">
+                        <span>📊 Overview</span>
+                    </div>
+                </div>
+                
+                <div class="nav-item px-4 py-3 rounded-lg" onclick="showSection('ai-management')">
+                    <div class="flex items-center justify-between">
+                        <span>🤖 AI Management</span>
+                        <span class="badge bg-purple-100 text-purple-700">AI</span>
+                    </div>
+                </div>
+                
+                <div class="nav-item px-4 py-3 rounded-lg" onclick="showSection('analytics')">
+                    <div class="flex items-center justify-between">
+                        <span>📈 User Analytics</span>
+                    </div>
+                </div>
+                
+                <div class="nav-item px-4 py-3 rounded-lg" onclick="showSection('orders')">
+                    <div class="flex items-center justify-between">
+                        <span>📦 Orders</span>
+                        <span id="pending-badge" class="badge bg-yellow-100 text-yellow-700">0</span>
+                    </div>
+                </div>
+                
+                <div class="nav-item px-4 py-3 rounded-lg" onclick="showSection('training')">
+                    <div class="flex items-center justify-between">
+                        <span>🎓 Training Programs</span>
+                    </div>
+                </div>
+                
+                <div class="nav-item px-4 py-3 rounded-lg" onclick="showSection('age-analytics')">
+                    <div class="flex items-center justify-between">
+                        <span>👥 Age Analytics</span>
+                    </div>
+                </div>
+                
+                <div class="nav-item px-4 py-3 rounded-lg" onclick="showSection('ml-insights')">
+                    <div class="flex items-center justify-between">
+                        <span>🧠 ML Insights</span>
+                        <span class="badge bg-green-100 text-green-700">Beta</span>
+                    </div>
+                </div>
+                
+                <div class="nav-item px-4 py-3 rounded-lg" onclick="showSection('engagements')">
+                    <div class="flex items-center justify-between">
+                        <span>📋 Engagements</span>
+                    </div>
+                </div>
+                
+                <div class="nav-item px-4 py-3 rounded-lg" onclick="showSection('premium-help')">
+                    <div class="flex items-center justify-between">
+                        <span>💎 Premium Help</span>
+                    </div>
+                </div>
+                
+                <div class="nav-item px-4 py-3 rounded-lg" onclick="window.open('/admin/segment-analytics', '_blank')">
+                    <div class="flex items-center justify-between">
+                        <span>🎯 Segment Analytics</span>
+                        <span>↗️</span>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 p-6 overflow-y-auto" style="height: calc(100vh - 73px);">
             
-            const customerInfo = order.user_info 
-                ? `${order.user_info.full_name || order.user_info.email}<br><small style="color:#666;">${order.user_info.email}</small>`
-                : 'Guest User';
-            
-            const itemsCount = order.items ? order.items.length : 0;
-            const itemsList = order.items 
-                ? order.items.map(item => `${item.name} (x${item.quantity})`).join('<br>')
-                : 'N/A';
-            
-            let actionsHtml = '';
-            if (order.status === 'pending' || order.status === 'paid') {
-                actionsHtml = `
-                    <button onclick="approveOrder('${order.order_id}')" style="padding:6px 12px;background:#28a745;color:white;border:none;border-radius:4px;cursor:pointer;margin-right:5px;" title="Approve Order">
-                        ✅ Approve
-                    </button>
-                    <button onclick="showCancelModal('${order.order_id}')" style="padding:6px 12px;background:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer;" title="Cancel Order">
-                        ❌ Cancel
-                    </button>
-                `;
-            } else if (order.status === 'approved') {
-                actionsHtml = `<span style="color:#28a745;font-weight:600;">✅ Approved</span>`;
-                if (order.admin_action_by) {
-                    actionsHtml += `<br><small style="color:#666;">by ${order.admin_action_by}</small>`;
-                }
-            } else if (order.status === 'cancelled') {
-                actionsHtml = `<span style="color:#dc3545;font-weight:600;">❌ Cancelled</span>`;
-                if (order.cancel_reason) {
-                    actionsHtml += `<br><small style="color:#666;" title="${order.cancel_reason}">Reason: ${order.cancel_reason.substring(0, 30)}...</small>`;
-                }
-            }
-            
-            row.innerHTML = `
-                <td style="padding:12px;border-bottom:1px solid #dee2e6;">
-                    <strong>${order.order_id}</strong>
-                </td>
-                <td style="padding:12px;border-bottom:1px solid #dee2e6;">
-                    ${customerInfo}
-                </td>
-                <td style="padding:12px;border-bottom:1px solid #dee2e6;" title="${itemsList}">
-                    ${itemsCount} item(s)
-                </td>
-                <td style="padding:12px;border-bottom:1px solid #dee2e6;">
-                    <strong style="color:#0b3b8c;">LKR ${order.total_amount.toLocaleString()}</strong>
-                </td>
-                <td style="padding:12px;border-bottom:1px solid #dee2e6;">
-                    <span class="status-badge ${statusClass}">${statusText}</span>
-                </td>
-                <td style="padding:12px;border-bottom:1px solid #dee2e6;font-size:12px;color:#666;">
-                    ${new Date(order.created).toLocaleString()}
-                </td>
-                <td style="padding:12px;border-bottom:1px solid #dee2e6;">
-                    ${actionsHtml}
-                </td>
-            `;
-            
-            tbody.appendChild(row);
-        });
-        
-    } catch (error) {
-        console.error('Error loading orders:', error);
-        document.getElementById('orders-loading').innerHTML = '❌ Failed to load orders';
-    }
-}
+            <!-- Overview Section -->
+            <section id="overview" class="section-content active">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">📊 Dashboard Overview</h2>
+                
+                <div class="grid md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <div class="text-3xl mb-2">👥</div>
+                        <div class="text-2xl font-bold text-blue-600">1,234</div>
+                        <div class="text-sm text-gray-600">Total Users</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <div class="text-3xl mb-2">📦</div>
+                        <div class="text-2xl font-bold text-green-600">567</div>
+                        <div class="text-sm text-gray-600">Total Orders</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <div class="text-3xl mb-2">🎓</div>
+                        <div class="text-2xl font-bold text-purple-600">89</div>
+                        <div class="text-sm text-gray-600">Training Enrollments</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <div class="text-3xl mb-2">💰</div>
+                        <div class="text-2xl font-bold text-yellow-600">$45.2K</div>
+                        <div class="text-sm text-gray-600">Revenue</div>
+                    </div>
+                </div>
 
-async function approveOrder(orderId) {
-    if (!confirm(`Approve order ${orderId}?\n\nThis will notify the customer that their order has been approved.`)) {
-        return;
-    }
-    
-    try {
-        const res = await fetch(`/api/admin/orders/${orderId}/approve`, {
-            method: 'POST'
-        });
-        
-        const data = await res.json();
-        
-        if (res.ok) {
-            alert('✅ ' + data.message);
-            loadOrders(currentFilter);
-        } else {
-            alert('❌ Error: ' + data.error);
-        }
-    } catch (error) {
-        console.error('Error approving order:', error);
-        alert('❌ Failed to approve order');
-    }
-}
-
-function showCancelModal(orderId) {
-    currentOrderIdToCancel = orderId;
-    document.getElementById('cancel-order-id').textContent = orderId;
-    document.getElementById('cancel-reason').value = '';
-    document.getElementById('cancelModal').style.display = 'flex';
-}
-
-function closeCancelModal() {
-    currentOrderIdToCancel = null;
-    document.getElementById('cancelModal').style.display = 'none';
-}
-
-async function confirmCancel() {
-    const reason = document.getElementById('cancel-reason').value.trim();
-    
-    if (!reason) {
-        alert('⚠️ Please enter a cancellation reason');
-        return;
-    }
-    
-    try {
-        const res = await fetch(`/api/admin/orders/${currentOrderIdToCancel}/cancel`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ reason })
-        });
-        
-        const data = await res.json();
-        
-        if (res.ok) {
-            alert('✅ ' + data.message);
-            closeCancelModal();
-            loadOrders(currentFilter);
-        } else {
-            alert('❌ Error: ' + data.error);
-        }
-    } catch (error) {
-        console.error('Error cancelling order:', error);
-        alert('❌ Failed to cancel order');
-    }
-}
-
-// ============================================
-// TRAINING STATISTICS
-// ============================================
-async function loadTrainingStats() {
-    try {
-        const statsRes = await fetch('/api/admin/training/stats');
-        const stats = await statsRes.json();
-        
-        document.getElementById('total-programs').textContent = stats.overview.total_programs;
-        document.getElementById('total-enrollments').textContent = stats.overview.total_enrollments;
-        document.getElementById('active-students').textContent = stats.overview.active_students;
-        document.getElementById('programs-full').textContent = stats.overview.programs_full;
-        document.getElementById('completion-rate').textContent = stats.overview.completion_rate + '%';
-        
-        drawEnrollmentTrend(stats.enrollment_trend);
-        await loadProgramDetails();
-        await loadTrainingAnalytics();
-        
-    } catch (error) {
-        console.error('Error loading training stats:', error);
-        alert('Failed to load training statistics');
-    }
-}
-
-function drawEnrollmentTrend(trendData) {
-    const ctx = document.getElementById('enrollmentTrendChart');
-    if (!ctx) return;
-    
-    if (enrollmentTrendChart) {
-        enrollmentTrendChart.destroy();
-    }
-    
-    const labels = trendData.map(d => d.date);
-    const data = trendData.map(d => d.count);
-    
-    enrollmentTrendChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Daily Enrollments',
-                data: data,
-                borderColor: 'rgba(11, 59, 140, 1)',
-                backgroundColor: 'rgba(11, 59, 140, 0.1)',
-                borderWidth: 3,
-                fill: true,
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
-                    }
-                }
-            }
-        }
-    });
-}
-
-async function loadProgramDetails() {
-    try {
-        document.getElementById('programs-loading').style.display = 'block';
-        document.getElementById('programs-list').style.display = 'none';
-        
-        const res = await fetch('/api/admin/training/programs');
-        const programs = await res.json();
-        
-        const listDiv = document.getElementById('programs-list');
-        listDiv.innerHTML = '';
-        
-        programs.forEach((program, index) => {
-            const stats = program.statistics;
-            const title = program.title.en;
-            const enrollmentPercentage = stats.enrollment_percentage;
-            
-            let fillRateColor = '#28a745';
-            if (enrollmentPercentage >= 100) fillRateColor = '#dc3545';
-            else if (enrollmentPercentage >= 80) fillRateColor = '#ffc107';
-
-            const card = document.createElement('div');
-            card.style.cssText = 'background:#f8f9fa;padding:15px;margin-bottom:12px;border-radius:8px;border-left:4px solid #0b3b8c;';
-            
-            card.innerHTML = `
-                <div style="display:flex;justify-content:space-between;align-items:start;">
-                    <div style="flex:1;">
-                        <h5 style="margin:0 0 8px 0;font-size:16px;font-weight:bold;color:#333;">
-                            ${index + 1}. ${title}
-                        </h5>
-                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:10px;">
-                            <div>
-                                <span style="font-size:11px;color:#666;">Total Enrolled</span>
-                                <div style="font-size:20px;font-weight:bold;color:#0b3b8c;">${stats.total_enrolled}</div>
-                            </div>
-                            <div>
-                                <span style="font-size:11px;color:#666;">Completed</span>
-                                <div style="font-size:20px;font-weight:bold;color:#28a745;">${stats.completed}</div>
-                            </div>
-                            <div>
-                                <span style="font-size:11px;color:#666;">Avg Progress</span>
-                                <div style="font-size:20px;font-weight:bold;color:#ffc107;">${stats.avg_progress}%</div>
-                            </div>
-                            <div>
-                                <span style="font-size:11px;color:#666;">Completion Rate</span>
-                                <div style="font-size:20px;font-weight:bold;color:#17a2b8;">${stats.completion_rate}%</div>
-                            </div>
-                            <div>
-                                <span style="font-size:11px;color:#666;">New (7 days)</span>
-                                <div style="font-size:20px;font-weight:bold;color:#6610f2;">${stats.recent_enrollments_7d}</div>
-                            </div>
-                        </div>
-                        
-                        <div style="margin-top:12px;">
-                            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-                                <span style="font-size:11px;color:#666;">Enrollment: ${program.current_enrollments}/${program.max_participants}</span>
-                                <span style="font-size:11px;font-weight:bold;color:${fillRateColor};">
-                                    ${enrollmentPercentage}%
-                                </span>
-                            </div>
-                            <div style="width:100%;background:#e9ecef;height:8px;border-radius:4px;overflow:hidden;">
-                                <div style="width:${Math.min(enrollmentPercentage, 100)}%;background:${fillRateColor};height:100%;transition:width 0.3s;"></div>
-                            </div>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="text-lg font-bold mb-4">Recent Activity</h3>
+                        <div class="space-y-3 text-sm text-gray-600">
+                            <p>✅ New user registered: john@example.com</p>
+                            <p>📦 Order #1234 placed</p>
+                            <p>🎓 5 new training enrollments</p>
+                            <p>💎 3 premium help requests</p>
                         </div>
                     </div>
                     
-                    <div style="margin-left:15px;">
-                        <button onclick="viewEnrollments('${program.id}')" style="padding:8px 16px;background:#0b3b8c;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;">
-                            👥 View Students
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            listDiv.appendChild(card);
-        });
-        
-        document.getElementById('programs-loading').style.display = 'none';
-        document.getElementById('programs-list').style.display = 'block';
-        
-    } catch (error) {
-        console.error('Error loading program details:', error);
-        document.getElementById('programs-loading').innerHTML = '❌ Failed to load program details';
-    }
-}
-
-async function loadTrainingAnalytics() {
-    try {
-        const res = await fetch('/api/admin/training/analytics');
-        const analytics = await res.json();
-        
-        const categoryCtx = document.getElementById('categoryChart');
-        if (categoryChart) categoryChart.destroy();
-        
-        categoryChart = new Chart(categoryCtx, {
-            type: 'doughnut',
-            data: {
-                labels: analytics.category_distribution.map(c => c._id),
-                datasets: [{
-                    data: analytics.category_distribution.map(c => c.total_enrollments),
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.8)',
-                        'rgba(54, 162, 235, 0.8)',
-                        'rgba(255, 206, 86, 0.8)',
-                        'rgba(75, 192, 192, 0.8)',
-                        'rgba(153, 102, 255, 0.8)'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                }
-            }
-        });
-        
-        const levelCtx = document.getElementById('levelChart');
-        if (levelChart) levelChart.destroy();
-        
-        levelChart = new Chart(levelCtx, {
-            type: 'bar',
-            data: {
-                labels: analytics.level_distribution.map(l => l._id),
-                datasets: [{
-                    label: 'Enrollments',
-                    data: analytics.level_distribution.map(l => l.total_enrollments),
-                    backgroundColor: 'rgba(11, 59, 140, 0.8)'
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-        
-    } catch (error) {
-        console.error('Error loading analytics:', error);
-    }
-}
-
-function viewEnrollments(programId) {
-    window.location.href = `/admin/training/program/${programId}/enrollments`;
-}
-
-async function exportTrainingData() {
-    try {
-        window.location.href = '/api/admin/training/export';
-    } catch (error) {
-        alert('Export failed: ' + error.message);
-    }
-}
-
-// ============================================
-// AGE GROUP ANALYTICS
-// ============================================
-function setActiveAgeButton(ageGroup) {
-    document.querySelectorAll('.btn-age-group').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    const activeBtn = Array.from(document.querySelectorAll('.btn-age-group'))
-        .find(btn => btn.textContent.includes(ageGroup) || btn.onclick.toString().includes(`'${ageGroup}'`));
-    
-    if (activeBtn) {
-        activeBtn.classList.add('active');
-    }
-}
-
-async function showAgeGroupQuestions(ageGroup) {
-    setActiveAgeButton(ageGroup);
-    const resultsDiv = document.getElementById('age-group-results');
-    const chartCanvas = document.getElementById('age-lang-chart');
-    
-    resultsDiv.innerHTML = '<div style="text-align:center;padding:20px;">📊 Loading data...</div>';
-    
-    try {
-        const res = await fetch('/api/admin/questions-by-age', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ age_group: ageGroup })
-        });
-        
-        const data = await res.json();
-        
-        if (data.error) {
-            resultsDiv.innerHTML = `<div class="alert alert-danger">❌ ${data.error}</div>`;
-            return;
-        }
-        
-        let html = `
-            <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:20px;">
-                <h4 style="margin:0 0 10px 0;">📊 Age Group: ${data.age_group}</h4>
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:15px;">
-                    <div style="background:white;padding:12px;border-radius:6px;text-align:center;">
-                        <div style="font-size:24px;font-weight:bold;color:#0b3b8c;">${data.total_engagements}</div>
-                        <div style="font-size:12px;color:#666;">Total Engagements</div>
-                    </div>
-                    <div style="background:white;padding:12px;border-radius:6px;text-align:center;">
-                        <div style="font-size:24px;font-weight:bold;color:#28a745;">${data.questions.length}</div>
-                        <div style="font-size:12px;color:#666;">Unique Questions</div>
-                    </div>
-                    <div style="background:white;padding:12px;border-radius:6px;text-align:center;">
-                        <div style="font-size:24px;font-weight:bold;color:#ffc107;">${data.age_range.min}-${data.age_range.max}</div>
-                        <div style="font-size:12px;color:#666;">Age Range</div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        html += `
-            <div style="background:#e7f3ff;padding:15px;border-radius:8px;margin-bottom:20px;">
-                <h5 style="margin:0 0 10px 0;">🌍 Language Distribution</h5>
-                <div style="display:flex;gap:15px;justify-content:space-around;">
-        `;
-        
-        const langNames = { en: 'English', si: 'Sinhala', ta: 'Tamil' };
-        const langColors = { en: '#0b3b8c', si: '#28a745', ta: '#dc3545' };
-        
-        for (const [lang, count] of Object.entries(data.language_breakdown)) {
-            const percentage = ((count / data.total_engagements) * 100).toFixed(1);
-            const color = langColors[lang] || '#666';
-            html += `
-                <div style="text-align:center;">
-                    <div style="font-size:28px;font-weight:bold;color:${color};">${count}</div>
-                    <div style="font-size:12px;color:#666;">${langNames[lang] || lang}</div>
-                    <div style="font-size:11px;color:#999;">${percentage}%</div>
-                </div>
-            `;
-        }
-        
-        html += `</div></div>`;
-        
-        html += `
-            <h5 style="margin:20px 0 10px 0;">🔥 Top 10 Questions Asked</h5>
-            <div style="background:white;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
-        `;
-        
-        data.questions.forEach((q, index) => {
-            const langBadges = q.languages.map(l => {
-                const color = langColors[l] || '#666';
-                return `<span style="background:${color};color:white;padding:2px 6px;border-radius:3px;font-size:10px;margin-left:5px;">${langNames[l] || l}</span>`;
-            }).join('');
-            
-            const serviceBadges = q.services.slice(0, 2).map(s => 
-                `<span style="background:#f3f4f6;padding:2px 6px;border-radius:3px;font-size:10px;margin-left:5px;">${s}</span>`
-            ).join('');
-            
-            html += `
-                <div style="padding:15px;border-bottom:1px solid #f3f4f6;${index === 0 ? 'background:#fffbeb;' : ''}">
-                    <div style="display:flex;justify-content:space-between;align-items:start;">
-                        <div style="flex:1;">
-                            <div style="font-weight:${index < 3 ? 'bold' : 'normal'};margin-bottom:5px;">
-                                <span style="background:#0b3b8c;color:white;padding:2px 8px;border-radius:50%;margin-right:8px;font-size:12px;">${index + 1}</span>
-                                ${q.question}
-                            </div>
-                            <div style="font-size:12px;color:#666;margin-top:5px;">
-                                ${langBadges}
-                                ${serviceBadges}
-                                ${q.services.length > 2 ? `<span style="color:#999;font-size:10px;margin-left:5px;">+${q.services.length - 2} more</span>` : ''}
-                            </div>
-                        </div>
-                        <div style="text-align:right;margin-left:15px;">
-                            <div style="font-size:24px;font-weight:bold;color:#0b3b8c;">${q.count}</div>
-                            <div style="font-size:11px;color:#666;">times</div>
-                            <div style="font-size:10px;color:#999;margin-top:2px;">Avg: ${q.avg_age}y</div>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="text-lg font-bold mb-4">Quick Actions</h3>
+                        <div class="space-y-2">
+                            <button onclick="showSection('ai-management')" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                                🔧 Rebuild AI Index
+                            </button>
+                            <button onclick="showSection('orders')" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                                📦 Manage Orders
+                            </button>
+                            <button onclick="exportAllData()" class="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm">
+                                📥 Export Data
+                            </button>
                         </div>
                     </div>
                 </div>
-            `;
-        });
-        
-        html += `</div>`;
-        resultsDiv.innerHTML = html;
-        renderLanguageChart(data.language_breakdown, langNames, langColors);
-        
-    } catch (error) {
-        console.error('Error loading age group questions:', error);
-        resultsDiv.innerHTML = `<div class="alert alert-danger">❌ Failed to load data: ${error.message}</div>`;
-    }
-}
+            </section>
 
-function renderLanguageChart(langData, langNames, langColors) {
-    const canvas = document.getElementById('age-lang-chart');
-    if (!canvas) return;
-    
-    if (ageLangChart) {
-        ageLangChart.destroy();
-    }
-    
-    const labels = Object.keys(langData).map(l => langNames[l] || l);
-    const data = Object.values(langData);
-    const colors = Object.keys(langData).map(l => langColors[l] || '#666');
-    
-    ageLangChart = new Chart(canvas, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: colors,
-                borderWidth: 2,
-                borderColor: '#fff'
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Language Usage by Age Group'
-                },
-                legend: {
-                    position: 'bottom'
+            <!-- AI Management Section -->
+            <section id="ai-management" class="section-content">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">🤖 AI Management</h2>
+                
+                <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl shadow-xl p-8 text-white mb-6">
+                    <h3 class="text-xl font-bold mb-2">AI Search Index Status</h3>
+                    <div id="index-status" class="text-lg">Checking...</div>
+                    <button onclick="rebuildIndex()" class="mt-4 px-6 py-3 bg-white text-purple-600 rounded-lg hover:bg-gray-100 font-semibold">
+                        🔧 Rebuild Vector Search Index
+                    </button>
+                </div>
+                
+                <div id="rebuild-status" class="mb-6"></div>
+            </section>
+
+            <!-- Analytics Section -->
+            <section id="analytics" class="section-content">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">📈 User Analytics</h2>
+                
+                <div class="grid md:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="text-lg font-bold mb-4">Age Distribution</h3>
+                        <canvas id="ageChart"></canvas>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="text-lg font-bold mb-4">Job Distribution</h3>
+                        <canvas id="jobChart"></canvas>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="text-lg font-bold mb-4">Top Services</h3>
+                        <canvas id="serviceChart"></canvas>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="text-lg font-bold mb-4">Top Questions</h3>
+                        <canvas id="questionChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Orders Section -->
+            <section id="orders" class="section-content">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">📦 Order Management</h2>
+                
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold">Recent Orders</h3>
+                        <div class="space-x-2">
+                            <button onclick="filterOrders('all')" class="px-4 py-2 bg-gray-200 rounded-lg text-sm">All</button>
+                            <button onclick="filterOrders('pending')" class="px-4 py-2 bg-yellow-200 rounded-lg text-sm">Pending</button>
+                            <button onclick="filterOrders('approved')" class="px-4 py-2 bg-green-200 rounded-lg text-sm">Approved</button>
+                        </div>
+                    </div>
+                    <div id="orders-table" class="overflow-x-auto">
+                        <p class="text-gray-500 text-center py-8">Loading orders...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Training Section -->
+            <section id="training" class="section-content">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">🎓 Training Programs</h2>
+                
+                <div class="grid md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <div class="text-3xl mb-2">📚</div>
+                        <div id="total-programs" class="text-2xl font-bold text-blue-600">-</div>
+                        <div class="text-sm text-gray-600">Active Programs</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <div class="text-3xl mb-2">👥</div>
+                        <div id="total-enrollments" class="text-2xl font-bold text-green-600">-</div>
+                        <div class="text-sm text-gray-600">Total Enrollments</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <div class="text-3xl mb-2">⚠️</div>
+                        <div id="programs-full" class="text-2xl font-bold text-red-600">-</div>
+                        <div class="text-sm text-gray-600">Full Programs</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <div class="text-3xl mb-2">✅</div>
+                        <div id="completion-rate" class="text-2xl font-bold text-purple-600">-%</div>
+                        <div class="text-sm text-gray-600">Completion Rate</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Age Analytics Section -->
+            <section id="age-analytics" class="section-content">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">👥 Questions by Age Group</h2>
+                
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <div class="flex space-x-2 mb-6">
+                        <button onclick="loadAgeGroup('18-25')" class="px-4 py-2 bg-blue-600 text-white rounded-lg">18-25</button>
+                        <button onclick="loadAgeGroup('26-40')" class="px-4 py-2 bg-blue-600 text-white rounded-lg">26-40</button>
+                        <button onclick="loadAgeGroup('41-60')" class="px-4 py-2 bg-blue-600 text-white rounded-lg">41-60</button>
+                        <button onclick="loadAgeGroup('60+')" class="px-4 py-2 bg-blue-600 text-white rounded-lg">60+</button>
+                    </div>
+                    <div id="age-results">Select an age group to view analytics</div>
+                </div>
+            </section>
+
+            <!-- ML Insights Section -->
+            <section id="ml-insights" class="section-content">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">🧠 Machine Learning Insights</h2>
+                
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <button onclick="loadMLInsights()" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 mb-4">
+                        🔄 Load ML Insights
+                    </button>
+                    <div id="ml-content">
+                        <p class="text-gray-500">Click to load ML-powered insights</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Engagements Section -->
+            <section id="engagements" class="section-content">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">📋 Recent Engagements</h2>
+                
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <button onclick="exportCSV()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mb-4">
+                        📥 Export CSV
+                    </button>
+                    <div class="overflow-x-auto">
+                        <table id="engTable" class="w-full text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left">Age</th>
+                                    <th class="px-4 py-2 text-left">Job</th>
+                                    <th class="px-4 py-2 text-left">Question</th>
+                                    <th class="px-4 py-2 text-left">Service</th>
+                                    <th class="px-4 py-2 text-left">Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Premium Help Section -->
+            <section id="premium-help" class="section-content">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">💎 Premium Help Suggestions</h2>
+                
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <div id="premiumList">
+                        <p class="text-gray-500">Loading premium help candidates...</p>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        let currentSection = 'overview';
+        let charts = {};
+        let currentOrderFilter = 'all';
+
+        // Navigation function
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section-content').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active class from all nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Add active class to clicked nav item
+            event.currentTarget.classList.add('active');
+            
+            currentSection = sectionId;
+            
+            // Load section data if needed
+            loadSectionData(sectionId);
+        }
+
+        // Load data based on section
+        function loadSectionData(sectionId) {
+            switch(sectionId) {
+                case 'overview':
+                    loadDashboard();
+                    break;
+                case 'ai-management':
+                    checkIndexStatus();
+                    break;
+                case 'orders':
+                    loadOrders();
+                    break;
+                case 'training':
+                    loadTrainingStats();
+                    break;
+                case 'analytics':
+                    loadAnalytics();
+                    break;
+                case 'engagements':
+                    loadEngagements();
+                    break;
+                case 'premium-help':
+                    loadPremiumHelp();
+                    break;
+            }
+        }
+
+        // DASHBOARD - Load overview stats
+        async function loadDashboard() {
+            try {
+                const res = await fetch('/api/admin/insights');
+                const data = await res.json();
+                
+                // Load orders stats
+                const ordersRes = await fetch('/api/admin/orders/stats');
+                const ordersData = await ordersRes.json();
+                
+                // Update pending badge
+                document.getElementById('pending-badge').textContent = ordersData.pending_orders || 0;
+                
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        // AI MANAGEMENT - Check and rebuild index
+        async function checkIndexStatus() {
+            const statusEl = document.getElementById('index-status');
+            statusEl.textContent = 'Checking index status...';
+            
+            try {
+                const res = await fetch('/api/ai/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: 'test', top_k: 1 })
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.results && data.results.length > 0) {
+                        statusEl.textContent = '✅ Index Ready - ' + data.results.length + ' documents indexed';
+                        statusEl.className = 'text-lg text-green-300';
+                    } else {
+                        statusEl.textContent = '⚠️ Index Empty - Please rebuild';
+                        statusEl.className = 'text-lg text-yellow-300';
+                    }
+                } else {
+                    statusEl.textContent = '❌ Index Not Built - Click rebuild below';
+                    statusEl.className = 'text-lg text-red-300';
+                }
+            } catch (error) {
+                statusEl.textContent = '❓ Status Unknown - ' + error.message;
+                statusEl.className = 'text-lg text-gray-300';
+            }
+        }
+
+        async function rebuildIndex() {
+            if (!confirm('Rebuild the AI search index?\n\nThis will:\n- Re-generate embeddings\n- Update the vector database\n- Take 30-60 seconds\n\nContinue?')) {
+                return;
+            }
+
+            const statusDiv = document.getElementById('rebuild-status');
+            statusDiv.innerHTML = '<div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">🔄 Building AI search index... Please wait up to 60 seconds.</div>';
+
+            try {
+                const res = await fetch('/api/admin/rebuild-index', {
+                    method: 'POST'
+                });
+
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    statusDiv.innerHTML = `<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">✅ ${data.message}</div>`;
+                    setTimeout(checkIndexStatus, 1000);
+                } else {
+                    statusDiv.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">❌ Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">❌ Network error: ${error.message}</div>`;
+            }
+        }
+
+        // ANALYTICS - Load charts
+        async function loadAnalytics() {
+            try {
+                const res = await fetch('/api/admin/insights');
+                const data = await res.json();
+                
+                // Destroy existing charts
+                Object.values(charts).forEach(chart => chart?.destroy());
+                charts = {};
+
+                // Age Chart
+                const ageCtx = document.getElementById('ageChart');
+                if (ageCtx) {
+                    charts.age = new Chart(ageCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: Object.keys(data.age_groups || {}),
+                            datasets: [{
+                                label: 'Users by Age Group',
+                                data: Object.values(data.age_groups || {}),
+                                backgroundColor: 'rgba(54, 162, 235, 0.6)'
+                            }]
+                        },
+                        options: { responsive: true }
+                    });
+                }
+
+                // Job Chart
+                const jobCtx = document.getElementById('jobChart');
+                if (jobCtx) {
+                    const jobs = data.jobs || {};
+                    charts.job = new Chart(jobCtx, {
+                        type: 'pie',
+                        data: {
+                            labels: Object.keys(jobs).slice(0, 8),
+                            datasets: [{
+                                data: Object.values(jobs).slice(0, 8),
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.6)',
+                                    'rgba(54, 162, 235, 0.6)',
+                                    'rgba(255, 206, 86, 0.6)',
+                                    'rgba(75, 192, 192, 0.6)',
+                                    'rgba(153, 102, 255, 0.6)',
+                                    'rgba(255, 159, 64, 0.6)',
+                                    'rgba(199, 199, 199, 0.6)',
+                                    'rgba(83, 102, 255, 0.6)'
+                                ]
+                            }]
+                        },
+                        options: { responsive: true }
+                    });
+                }
+
+                // Service Chart
+                const serviceCtx = document.getElementById('serviceChart');
+                if (serviceCtx) {
+                    const services = data.services || {};
+                    charts.service = new Chart(serviceCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: Object.keys(services).slice(0, 10),
+                            datasets: [{
+                                data: Object.values(services).slice(0, 10),
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.6)',
+                                    'rgba(54, 162, 235, 0.6)',
+                                    'rgba(255, 206, 86, 0.6)',
+                                    'rgba(75, 192, 192, 0.6)',
+                                    'rgba(153, 102, 255, 0.6)',
+                                    'rgba(255, 159, 64, 0.6)',
+                                    'rgba(199, 199, 199, 0.6)',
+                                    'rgba(83, 102, 255, 0.6)',
+                                    'rgba(255, 99, 255, 0.6)',
+                                    'rgba(99, 255, 132, 0.6)'
+                                ]
+                            }]
+                        },
+                        options: { responsive: true }
+                    });
+                }
+
+                // Question Chart
+                const questionCtx = document.getElementById('questionChart');
+                if (questionCtx) {
+                    const questions = data.questions || {};
+                    charts.question = new Chart(questionCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: Object.keys(questions).slice(0, 10).map(q => q.substring(0, 30) + '...'),
+                            datasets: [{
+                                label: 'Top Questions',
+                                data: Object.values(questions).slice(0, 10),
+                                backgroundColor: 'rgba(75, 192, 192, 0.6)'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            indexAxis: 'y'
+                        }
+                    });
+                }
+
+                // Load premium help
+                loadPremiumHelp();
+                
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+            }
+        }
+
+        // ORDERS - Load and manage orders
+        async function loadOrders(status = 'all') {
+            currentOrderFilter = status;
+            try {
+                const res = await fetch(`/api/admin/orders?status=${status}&limit=100`);
+                const data = await res.json();
+                
+                const tableDiv = document.getElementById('orders-table');
+                
+                if (!data.orders || data.orders.length === 0) {
+                    tableDiv.innerHTML = '<p class="text-gray-500 text-center py-8">No orders found</p>';
+                    return;
+                }
+
+                let html = '<table class="w-full text-sm"><thead class="bg-gray-50"><tr>';
+                html += '<th class="px-4 py-2 text-left">Order ID</th>';
+                html += '<th class="px-4 py-2 text-left">Customer</th>';
+                html += '<th class="px-4 py-2 text-left">Amount</th>';
+                html += '<th class="px-4 py-2 text-left">Status</th>';
+                html += '<th class="px-4 py-2 text-left">Date</th>';
+                html += '<th class="px-4 py-2 text-left">Actions</th>';
+                html += '</tr></thead><tbody>';
+
+                data.orders.forEach(order => {
+                    const statusColor = order.status === 'pending' ? 'yellow' : order.status === 'approved' ? 'green' : 'red';
+                    html += '<tr class="border-b hover:bg-gray-50">';
+                    html += `<td class="px-4 py-2">${order.order_id}</td>`;
+                    html += `<td class="px-4 py-2">${order.user_info?.email || 'N/A'}</td>`;
+                    html += `<td class="px-4 py-2">LKR ${order.total_amount.toLocaleString()}</td>`;
+                    html += `<td class="px-4 py-2"><span class="px-2 py-1 bg-${statusColor}-100 text-${statusColor}-700 rounded text-xs">${order.status}</span></td>`;
+                    html += `<td class="px-4 py-2 text-xs">${new Date(order.created).toLocaleString()}</td>`;
+                    html += '<td class="px-4 py-2">';
+                    if (order.status === 'pending') {
+                        html += `<button onclick="approveOrder('${order.order_id}')" class="px-2 py-1 bg-green-600 text-white rounded text-xs mr-1">Approve</button>`;
+                        html += `<button onclick="cancelOrder('${order.order_id}')" class="px-2 py-1 bg-red-600 text-white rounded text-xs">Cancel</button>`;
+                    } else {
+                        html += '<span class="text-gray-400 text-xs">-</span>';
+                    }
+                    html += '</td></tr>';
+                });
+
+                html += '</tbody></table>';
+                tableDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error loading orders:', error);
+            }
+        }
+
+        function filterOrders(status) {
+            loadOrders(status);
+        }
+
+        async function approveOrder(orderId) {
+            if (!confirm('Approve this order?')) return;
+            
+            try {
+                const res = await fetch(`/api/admin/orders/${orderId}/approve`, {
+                    method: 'POST'
+                });
+                
+                if (res.ok) {
+                    alert('Order approved successfully!');
+                    loadOrders(currentOrderFilter);
+                }
+            } catch (error) {
+                alert('Error approving order: ' + error.message);
+            }
+        }
+
+        async function cancelOrder(orderId) {
+            const reason = prompt('Enter cancellation reason:');
+            if (!reason) return;
+            
+            try {
+                const res = await fetch(`/api/admin/orders/${orderId}/cancel`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason })
+                });
+                
+                if (res.ok) {
+                    alert('Order cancelled successfully!');
+                    loadOrders(currentOrderFilter);
+                }
+            } catch (error) {
+                alert('Error cancelling order: ' + error.message);
+            }
+        }
+
+        // TRAINING - Load training statistics
+        async function loadTrainingStats() {
+            try {
+                const res = await fetch('/api/admin/training/stats');
+                const data = await res.json();
+                
+                document.getElementById('total-programs').textContent = data.overview.total_programs;
+                document.getElementById('total-enrollments').textContent = data.overview.total_enrollments;
+                document.getElementById('programs-full').textContent = data.overview.programs_full;
+                document.getElementById('completion-rate').textContent = data.overview.completion_rate + '%';
+                
+            } catch (error) {
+                console.error('Error loading training stats:', error);
+            }
+        }
+
+        // ENGAGEMENTS - Load engagement data
+        async function loadEngagements() {
+            try {
+                const res = await fetch('/api/admin/engagements');
+                const items = await res.json();
+                
+                const tbody = document.querySelector('#engTable tbody');
+                tbody.innerHTML = '';
+                
+                items.slice(0, 100).forEach(item => {
+                    const row = `<tr class="border-b hover:bg-gray-50">
+                        <td class="px-4 py-2">${item.age || 'N/A'}</td>
+                        <td class="px-4 py-2">${item.job || 'N/A'}</td>
+                        <td class="px-4 py-2 text-xs">${item.question_clicked || 'N/A'}</td>
+                        <td class="px-4 py-2">${item.service || 'N/A'}</td>
+                        <td class="px-4 py-2 text-xs">${item.timestamp || 'N/A'}</td>
+                    </tr>`;
+                    tbody.insertAdjacentHTML('beforeend', row);
+                });
+                
+            } catch (error) {
+                console.error('Error loading engagements:', error);
+            }
+        }
+
+        // PREMIUM HELP - Load premium suggestions
+        async function loadPremiumHelp() {
+            try {
+                const res = await fetch('/api/admin/insights');
+                const data = await res.json();
+                
+                const premiumList = document.getElementById('premiumList');
+                
+                if (!data.premium_suggestions || data.premium_suggestions.length === 0) {
+                    premiumList.innerHTML = '<p class="text-gray-500 text-center py-8">No premium help suggestions at this time</p>';
+                    return;
+                }
+
+                premiumList.innerHTML = data.premium_suggestions.map(p => `
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-3 rounded">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p><strong>User:</strong> ${p.user || 'Anonymous'}</p>
+                                <p><strong>Question:</strong> ${p.question}</p>
+                                <p><strong>Repeat Count:</strong> ${p.count} times</p>
+                            </div>
+                            <span class="bg-red-500 text-white text-xs px-2 py-1 rounded">HIGH PRIORITY</span>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error loading premium help:', error);
+            }
+        }
+
+        // AGE ANALYTICS - Load questions by age group
+        async function loadAgeGroup(ageGroup) {
+            const resultsDiv = document.getElementById('age-results');
+            resultsDiv.innerHTML = '<p class="text-center py-8">📊 Loading data...</p>';
+            
+            try {
+                const res = await fetch('/api/admin/questions-by-age', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ age_group: ageGroup })
+                });
+                
+                const data = await res.json();
+                
+                if (data.error) {
+                    resultsDiv.innerHTML = `<p class="text-red-500">${data.error}</p>`;
+                    return;
+                }
+
+                let html = `<div class="space-y-4">`;
+                html += `<h3 class="text-xl font-bold">Age Group: ${data.age_group}</h3>`;
+                html += `<p>Total Engagements: ${data.total_engagements}</p>`;
+                html += `<h4 class="font-bold mt-4">Top 10 Questions:</h4>`;
+                
+                data.questions.forEach((q, i) => {
+                    html += `<div class="bg-gray-50 p-3 rounded">
+                        <div class="flex justify-between">
+                            <span><strong>${i + 1}.</strong> ${q.question}</span>
+                            <span class="font-bold text-blue-600">${q.count} times</span>
+                        </div>
+                    </div>`;
+                });
+                
+                html += `</div>`;
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+            }
+        }
+
+        // ML INSIGHTS - Load ML-powered insights
+        async function loadMLInsights() {
+            const contentDiv = document.getElementById('ml-content');
+            contentDiv.innerHTML = '<p class="text-center py-8">🔄 Loading ML insights...</p>';
+            
+            try {
+                const res = await fetch('/api/admin/ml-insights');
+                const data = await res.json();
+                
+                if (data.error) {
+                    contentDiv.innerHTML = `<div class="bg-yellow-100 border border-yellow-400 p-4 rounded">
+                        <p><strong>⚠️ ML Engine Unavailable</strong></p>
+                        <p class="text-sm">${data.error}</p>
+                        <p class="text-sm mt-2">${data.message || ''}</p>
+                    </div>`;
+                    return;
+                }
+
+                let html = '<div class="space-y-6">';
+                
+                // Analytics
+                if (data.analytics) {
+                    html += `<div class="grid grid-cols-4 gap-4">
+                        <div class="bg-blue-50 p-4 rounded">
+                            <div class="text-2xl font-bold">${data.analytics.total_engagements}</div>
+                            <div class="text-sm">Total Engagements</div>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded">
+                            <div class="text-2xl font-bold">${data.analytics.ai_chat_queries}</div>
+                            <div class="text-sm">AI Chats</div>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded">
+                            <div class="text-2xl font-bold">${data.analytics.vector_searches}</div>
+                            <div class="text-sm">Vector Searches</div>
+                        </div>
+                        <div class="bg-yellow-50 p-4 rounded">
+                            <div class="text-2xl font-bold">${data.analytics.success_rate}%</div>
+                            <div class="text-sm">Success Rate</div>
+                        </div>
+                    </div>`;
+                }
+
+                // Premium Candidates
+                if (data.premium_candidates && data.premium_candidates.length > 0) {
+                    html += '<h3 class="text-lg font-bold mt-6">💎 Premium Help Candidates</h3>';
+                    data.premium_candidates.slice(0, 5).forEach(c => {
+                        html += `<div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-2">
+                            <p><strong>User:</strong> ${c.user_id}</p>
+                            <p><strong>Question:</strong> ${c.question}</p>
+                            <p><strong>Repeat Count:</strong> ${c.repeat_count}</p>
+                            <p><strong>Suggested Action:</strong> ${c.suggested_action}</p>
+                        </div>`;
+                    });
+                }
+
+                html += '</div>';
+                contentDiv.innerHTML = html;
+                
+            } catch (error) {
+                contentDiv.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+            }
+        }
+
+        // EXPORT - Export CSV
+        function exportCSV() {
+            window.location.href = '/api/admin/export_csv';
+        }
+
+        function exportAllData() {
+            if (confirm('Export all admin data?')) {
+                window.location.href = '/api/admin/export_csv';
+            }
+        }
+
+        // LOGOUT
+        async function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                try {
+                    await fetch('/api/admin/logout', {method: 'POST'});
+                    window.location.href = '/admin/login';
+                } catch (error) {
+                    window.location.href = '/admin/login';
                 }
             }
         }
-    });
-}
 
-// ============================================
-// INITIALIZE ON PAGE LOAD
-// ============================================
-document.addEventListener('DOMContentLoaded', () => {
-    const ageSection = document.getElementById('age-group-section');
-    if (ageSection) {
-        showAgeGroupQuestions('18-25');
-    }
-    
-    if (document.getElementById('orders-container')) {
-        loadOrders('all');
-    }
-    
-    if (document.getElementById('training-overview')) {
-        loadTrainingStats();
-    }
-});
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+        });
 
-console.log('✅ Complete admin dashboard loaded');
-</script>
-
+        console.log('✅ Admin dashboard loaded successfully');
+    </script>
 </body>
 </html>
