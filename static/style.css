@@ -1,5 +1,88 @@
 /* Citizen Services Portal - Complete Stylesheet (FIXED) */
+/* ===== Section Title with Icon ===== */
+.section-title {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 3rem;
+    color: #1a202c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
 
+/* ===== Announcement Icon ===== */
+.announcement-icon {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    animation: gentle-pulse 3s ease-in-out infinite;
+}
+
+@keyframes gentle-pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.08);
+    }
+}
+
+/* ===== Announcement Cards ===== */
+.announcement-banner {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.announcement-banner:hover {
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.announcement-banner a {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+.announcement-banner h4 {
+    font-weight: bold;
+    color: #92400e;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.announcement-banner p {
+    font-size: 0.875rem;
+    color: #78350f;
+    line-height: 1.5;
+}
+
+/* ===== Empty State ===== */
+.announcement-empty {
+    text-align: center;
+    padding: 3rem;
+    color: #9ca3af;
+    font-size: 1rem;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+    .section-title {
+        font-size: 1.5rem;
+        gap: 8px;
+    }
+    
+    .announcement-icon {
+        width: 32px;
+        height: 32px;
+    }
+}
 /* ===== Global Styles ===== */
 * {
   box-sizing: border-box;
