@@ -45,6 +45,12 @@
             font-weight: 600;
             margin-left: 8px;
         }
+        .stat-card {
+            transition: transform 0.2s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -74,7 +80,6 @@
     </header>
 
     <div class="flex">
-        <!-- Sidebar Navigation -->
         <aside class="sidebar w-64 bg-white border-r border-gray-200">
             <nav class="p-4 space-y-1">
                 <div class="nav-item active px-4 py-3 rounded-lg" onclick="showSection('overview')">
@@ -82,13 +87,7 @@
                         <span>📊 Overview</span>
                     </div>
                 </div>
-                
-                <div class="nav-item px-4 py-3 rounded-lg" onclick="showSection('ai-management')">
-                    <div class="flex items-center justify-between">
-                        <span>🤖 AI Management</span>
-                        <span class="badge bg-purple-100 text-purple-700">AI</span>
-                    </div>
-                </div>
+               
                 
                 <div class="nav-item px-4 py-3 rounded-lg" onclick="showSection('analytics')">
                     <div class="flex items-center justify-between">
@@ -115,12 +114,7 @@
                     </div>
                 </div>
                 
-                <div class="nav-item px-4 py-3 rounded-lg" onclick="showSection('ml-insights')">
-                    <div class="flex items-center justify-between">
-                        <span>🧠 ML Insights</span>
-                        <span class="badge bg-green-100 text-green-700">Beta</span>
-                    </div>
-                </div>
+                
                 
                 <div class="nav-item px-4 py-3 rounded-lg" onclick="showSection('engagements')">
                     <div class="flex items-center justify-between">
@@ -143,44 +137,105 @@
             </nav>
         </aside>
 
-        <!-- Main Content Area -->
         <main class="flex-1 p-6 overflow-y-auto" style="height: calc(100vh - 73px);">
             
-            <!-- Overview Section -->
             <section id="overview" class="section-content active">
                 <h2 class="text-2xl font-bold text-gray-900 mb-6">📊 Dashboard Overview</h2>
                 
-                <div class="grid md:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-white p-6 rounded-xl shadow-md">
-                        <div class="text-3xl mb-2">👥</div>
-                        <div class="text-2xl font-bold text-blue-600">1,234</div>
-                        <div class="text-sm text-gray-600">Total Users</div>
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl shadow-lg text-white">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-3xl">👥</div>
+                            <div class="text-sm opacity-80">Total</div>
+                        </div>
+                        <div id="total-users-stat" class="text-3xl font-bold mb-1">0</div>
+                        <div class="text-sm opacity-90">Registered Users</div>
                     </div>
-                    <div class="bg-white p-6 rounded-xl shadow-md">
-                        <div class="text-3xl mb-2">📦</div>
-                        <div class="text-2xl font-bold text-green-600">567</div>
-                        <div class="text-sm text-gray-600">Total Orders</div>
+                    
+                    <div class="stat-card bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-xl shadow-lg text-white">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-3xl">📦</div>
+                            <div class="text-sm opacity-80">Orders</div>
+                        </div>
+                        <div id="total-orders-stat" class="text-3xl font-bold mb-1">0</div>
+                        <div class="text-sm opacity-90">Total Orders</div>
                     </div>
-                    <div class="bg-white p-6 rounded-xl shadow-md">
-                        <div class="text-3xl mb-2">🎓</div>
-                        <div class="text-2xl font-bold text-purple-600">89</div>
-                        <div class="text-sm text-gray-600">Training Enrollments</div>
+                    
+                    <div class="stat-card bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-xl shadow-lg text-white">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-3xl">🎓</div>
+                            <div class="text-sm opacity-80">Training</div>
+                        </div>
+                        <div id="total-training-stat" class="text-3xl font-bold mb-1">0</div>
+                        <div class="text-sm opacity-90">Enrollments</div>
                     </div>
-                    <div class="bg-white p-6 rounded-xl shadow-md">
-                        <div class="text-3xl mb-2">💰</div>
-                        <div class="text-2xl font-bold text-yellow-600">$45.2K</div>
-                        <div class="text-sm text-gray-600">Revenue</div>
+                    
+                    <div class="stat-card bg-gradient-to-br from-yellow-500 to-yellow-600 p-6 rounded-xl shadow-lg text-white">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-3xl">💰</div>
+                            <div class="text-sm opacity-80">Revenue</div>
+                        </div>
+                        <div id="total-revenue-stat" class="text-3xl font-bold mb-1">LKR 0</div>
+                        <div class="text-sm opacity-90">Total Revenue</div>
+                    </div>
+                </div>
+
+                <div class="grid md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+                    <div class="stat-card bg-white p-4 rounded-lg shadow-md border border-gray-200">
+                        <div class="text-2xl mb-2">🏢</div>
+                        <div id="total-services-stat" class="text-xl font-bold text-gray-800">0</div>
+                        <div class="text-xs text-gray-600">Services</div>
+                    </div>
+                    
+                    <div class="stat-card bg-white p-4 rounded-lg shadow-md border border-gray-200">
+                        <div class="text-2xl mb-2">❓</div>
+                        <div id="total-questions-stat" class="text-xl font-bold text-gray-800">0</div>
+                        <div class="text-xs text-gray-600">Questions</div>
+                    </div>
+                    
+                    <div class="stat-card bg-white p-4 rounded-lg shadow-md border border-gray-200">
+                        <div class="text-2xl mb-2">💬</div>
+                        <div id="total-engagements-stat" class="text-xl font-bold text-gray-800">0</div>
+                        <div class="text-xs text-gray-600">Engagements</div>
+                    </div>
+                    
+                    <div class="stat-card bg-white p-4 rounded-lg shadow-md border border-gray-200">
+                        <div class="text-2xl mb-2">💼</div>
+                        <div id="total-jobs-stat" class="text-xl font-bold text-gray-800">0</div>
+                        <div class="text-xs text-gray-600">Job Types</div>
+                    </div>
+                    
+                    <div class="stat-card bg-white p-4 rounded-lg shadow-md border border-gray-200">
+                        <div class="text-2xl mb-2">⏳</div>
+                        <div id="pending-orders-stat" class="text-xl font-bold text-yellow-600">0</div>
+                        <div class="text-xs text-gray-600">Pending Orders</div>
+                    </div>
+                    
+                   <div class="stat-card bg-white p-4 rounded-lg shadow-md border border-gray-200">
+                        <div class="text-2xl mb-2">❌</div>
+                        <div id="cancelled-orders-stat" class="text-xl font-bold text-red-600">0</div>
+                         <div class="text-xs text-gray-600">Cancelled</div>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl shadow-md border border-indigo-200 mb-8">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm font-semibold text-gray-600 mb-1">🌟 Most Popular Service</div>
+                            <div id="most-popular-service" class="text-2xl font-bold text-indigo-700">Loading...</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-600 mb-1">Engagement Count</div>
+                            <div id="popular-service-count" class="text-2xl font-bold text-purple-600">0</div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="grid md:grid-cols-2 gap-6">
                     <div class="bg-white p-6 rounded-xl shadow-md">
                         <h3 class="text-lg font-bold mb-4">Recent Activity</h3>
-                        <div class="space-y-3 text-sm text-gray-600">
-                            <p>✅ New user registered: john@example.com</p>
-                            <p>📦 Order #1234 placed</p>
-                            <p>🎓 5 new training enrollments</p>
-                            <p>💎 3 premium help requests</p>
+                        <div id="recent-activity" class="space-y-3 text-sm text-gray-600">
+                            <p class="text-gray-400">Loading recent activity...</p>
                         </div>
                     </div>
                     
@@ -248,9 +303,10 @@
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-bold">Recent Orders</h3>
                         <div class="space-x-2">
-                            <button onclick="filterOrders('all')" class="px-4 py-2 bg-gray-200 rounded-lg text-sm">All</button>
-                            <button onclick="filterOrders('pending')" class="px-4 py-2 bg-yellow-200 rounded-lg text-sm">Pending</button>
-                            <button onclick="filterOrders('approved')" class="px-4 py-2 bg-green-200 rounded-lg text-sm">Approved</button>
+                            <button onclick="filterOrders('all')" id="filter-all" class="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-semibold">All</button>
+                            <button onclick="filterOrders('pending')" id="filter-pending" class="px-4 py-2 bg-gray-200 rounded-lg text-sm hover:bg-yellow-200">Pending</button>
+                            <button onclick="filterOrders('approved')" id="filter-approved" class="px-4 py-2 bg-gray-200 rounded-lg text-sm hover:bg-green-200">Approved</button>
+                            <button onclick="filterOrders('cancelled')" id="filter-cancelled" class="px-4 py-2 bg-gray-200 rounded-lg text-sm hover:bg-red-200">Cancelled</button>
                         </div>
                     </div>
                     <div id="orders-table" class="overflow-x-auto">
@@ -279,11 +335,7 @@
                         <div id="programs-full" class="text-2xl font-bold text-red-600">-</div>
                         <div class="text-sm text-gray-600">Full Programs</div>
                     </div>
-                    <div class="bg-white p-6 rounded-xl shadow-md">
-                        <div class="text-3xl mb-2">✅</div>
-                        <div id="completion-rate" class="text-2xl font-bold text-purple-600">-%</div>
-                        <div class="text-sm text-gray-600">Completion Rate</div>
-                    </div>
+                    
                 </div>
             </section>
 
@@ -359,6 +411,7 @@
         let currentSection = 'overview';
         let charts = {};
         let currentOrderFilter = 'all';
+        let dashboardData = null;
 
         // Navigation function
         function showSection(sectionId) {
@@ -411,21 +464,111 @@
             }
         }
 
+        // Update statistics display
+        function updateStatistics(data, ordersData, trainingData) {
+            // Calculate totals from insights data
+            const totalUsers = Object.values(data.age_groups || {}).reduce((sum, count) => sum + count, 0);
+            const totalServices = Object.keys(data.services || {}).length;
+            const totalQuestions = Object.keys(data.questions || {}).length;
+            const totalJobs = Object.keys(data.jobs || {}).length;
+            const totalEngagements = Object.values(data.questions || {}).reduce((sum, count) => sum + count, 0);
+            
+            // Find most popular service
+            const servicesArray = Object.entries(data.services || {});
+            let mostPopularService = 'N/A';
+            let mostPopularCount = 0;
+            
+            if (servicesArray.length > 0) {
+                const sorted = servicesArray.sort((a, b) => b[1] - a[1]);
+                mostPopularService = sorted[0][0];
+                mostPopularCount = sorted[0][1];
+            }
+            
+            // Update primary stats
+            document.getElementById('total-users-stat').textContent = totalUsers.toLocaleString();
+            document.getElementById('total-orders-stat').textContent = (ordersData?.total_orders || 0).toLocaleString();
+            document.getElementById('total-training-stat').textContent = (trainingData?.overview?.total_enrollments || 0).toLocaleString();
+            
+            // Calculate and update revenue
+            const totalRevenue = ordersData?.total_revenue || 0;
+            document.getElementById('total-revenue-stat').textContent = `LKR ${(totalRevenue / 1000).toFixed(1)}K`;
+            
+            // Update secondary stats
+            document.getElementById('total-services-stat').textContent = totalServices.toLocaleString();
+            document.getElementById('total-questions-stat').textContent = totalQuestions.toLocaleString();
+            document.getElementById('total-engagements-stat').textContent = totalEngagements.toLocaleString();
+            document.getElementById('total-jobs-stat').textContent = totalJobs.toLocaleString();
+            document.getElementById('pending-orders-stat').textContent = (ordersData?.pending_orders || 0).toLocaleString();
+            document.getElementById('cancelled-orders-stat').textContent = (ordersData?.cancelled_orders || 0).toLocaleString();
+            
+            // Update most popular service
+            document.getElementById('most-popular-service').textContent = mostPopularService.length > 50 
+                ? mostPopularService.substring(0, 50) + '...' 
+                : mostPopularService;
+            document.getElementById('popular-service-count').textContent = mostPopularCount.toLocaleString();
+            
+            // Update recent activity
+            updateRecentActivity(ordersData, trainingData, data);
+        }
+
+        // Update recent activity section
+        function updateRecentActivity(ordersData, trainingData, insightsData) {
+            const activityDiv = document.getElementById('recent-activity');
+            const activities = [];
+            
+            if (ordersData?.total_orders > 0) {
+                activities.push(`📦 ${ordersData.total_orders} total orders processed`);
+            }
+            if (ordersData?.pending_orders > 0) {
+                activities.push(`⏳ ${ordersData.pending_orders} orders pending approval`);
+            }
+            if (trainingData?.overview?.total_enrollments > 0) {
+                activities.push(`🎓 ${trainingData.overview.total_enrollments} training enrollments`);
+            }
+            if (insightsData.premium_suggestions?.length > 0) {
+                activities.push(`💎 ${insightsData.premium_suggestions.length} premium help requests`);
+            }
+            
+            if (activities.length === 0) {
+                activities.push('✅ System running smoothly');
+                activities.push('📊 All services operational');
+            }
+            
+            activityDiv.innerHTML = activities.map(a => `<p>✅ ${a}</p>`).join('');
+        }
+
         // DASHBOARD - Load overview stats
         async function loadDashboard() {
             try {
-                const res = await fetch('/api/admin/insights');
-                const data = await res.json();
+                // Fetch all necessary data
+                const [insightsRes, ordersRes, trainingRes] = await Promise.all([
+                    fetch('/api/admin/insights'),
+                    fetch('/api/admin/orders/stats'),
+                    fetch('/api/admin/training/stats')
+                ]);
                 
-                // Load orders stats
-                const ordersRes = await fetch('/api/admin/orders/stats');
+                const insightsData = await insightsRes.json();
                 const ordersData = await ordersRes.json();
+                const trainingData = await trainingRes.json();
+                
+                // Store for later use
+                dashboardData = {
+                    insights: insightsData,
+                    orders: ordersData,
+                    training: trainingData
+                };
+                
+                // Update statistics display
+                updateStatistics(insightsData, ordersData, trainingData);
                 
                 // Update pending badge
                 document.getElementById('pending-badge').textContent = ordersData.pending_orders || 0;
                 
             } catch (error) {
                 console.error('Error loading dashboard:', error);
+                // Set error state
+                document.getElementById('total-users-stat').textContent = 'Error';
+                document.getElementById('recent-activity').innerHTML = '<p class="text-red-500">⚠️ Error loading dashboard data</p>';
             }
         }
 
@@ -620,20 +763,45 @@
                 html += '</tr></thead><tbody>';
 
                 data.orders.forEach(order => {
-                    const statusColor = order.status === 'pending' ? 'yellow' : order.status === 'approved' ? 'green' : 'red';
-                    html += '<tr class="border-b hover:bg-gray-50">';
-                    html += `<td class="px-4 py-2">${order.order_id}</td>`;
-                    html += `<td class="px-4 py-2">${order.user_info?.email || 'N/A'}</td>`;
-                    html += `<td class="px-4 py-2">LKR ${order.total_amount.toLocaleString()}</td>`;
-                    html += `<td class="px-4 py-2"><span class="px-2 py-1 bg-${statusColor}-100 text-${statusColor}-700 rounded text-xs">${order.status}</span></td>`;
-                    html += `<td class="px-4 py-2 text-xs">${new Date(order.created).toLocaleString()}</td>`;
-                    html += '<td class="px-4 py-2">';
+                    // Determine status color
+                    let statusColor = 'gray';
+                    let statusBg = 'bg-gray-100';
+                    let statusText = 'text-gray-700';
+                    
                     if (order.status === 'pending') {
-                        html += `<button onclick="approveOrder('${order.order_id}')" class="px-2 py-1 bg-green-600 text-white rounded text-xs mr-1">Approve</button>`;
-                        html += `<button onclick="cancelOrder('${order.order_id}')" class="px-2 py-1 bg-red-600 text-white rounded text-xs">Cancel</button>`;
+                        statusColor = 'yellow';
+                        statusBg = 'bg-yellow-100';
+                        statusText = 'text-yellow-700';
+                    } else if (order.status === 'approved') {
+                        statusColor = 'green';
+                        statusBg = 'bg-green-100';
+                        statusText = 'text-green-700';
+                    } else if (order.status === 'cancelled') {
+                        statusColor = 'red';
+                        statusBg = 'bg-red-100';
+                        statusText = 'text-red-700';
+                    }
+                    
+                    html += '<tr class="border-b hover:bg-gray-50">';
+                    html += `<td class="px-4 py-2 font-mono text-xs">${order.order_id}</td>`;
+                    html += `<td class="px-4 py-2">${order.user_info?.email || order.user_info?.name || 'N/A'}</td>`;
+                    html += `<td class="px-4 py-2 font-semibold">LKR ${order.total_amount.toLocaleString()}</td>`;
+                    html += `<td class="px-4 py-2"><span class="px-3 py-1 ${statusBg} ${statusText} rounded-full text-xs font-semibold uppercase">${order.status}</span></td>`;
+                    html += `<td class="px-4 py-2 text-xs text-gray-600">${new Date(order.created).toLocaleString()}</td>`;
+                    html += '<td class="px-4 py-2">';
+                    
+                    if (order.status === 'pending') {
+                        html += `<button onclick="approveOrder('${order.order_id}')" class="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 mr-1">✓ Approve</button>`;
+                        html += `<button onclick="cancelOrder('${order.order_id}')" class="px-3 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700">✗ Cancel</button>`;
+                    } else if (order.status === 'cancelled') {
+                        const reason = order.cancellation_reason || 'No reason provided';
+                        html += `<span class="text-xs text-gray-500" title="${reason}">Cancelled</span>`;
+                    } else if (order.status === 'approved') {
+                        html += '<span class="text-xs text-green-600 font-semibold">✓ Completed</span>';
                     } else {
                         html += '<span class="text-gray-400 text-xs">-</span>';
                     }
+                    
                     html += '</td></tr>';
                 });
 
@@ -642,10 +810,36 @@
                 
             } catch (error) {
                 console.error('Error loading orders:', error);
+                document.getElementById('orders-table').innerHTML = 
+                    '<p class="text-red-500 text-center py-8">⚠️ Error loading orders: ' + error.message + '</p>';
             }
         }
 
         function filterOrders(status) {
+            // Update button styles
+            const buttons = {
+                'all': document.getElementById('filter-all'),
+                'pending': document.getElementById('filter-pending'),
+                'approved': document.getElementById('filter-approved'),
+                'cancelled': document.getElementById('filter-cancelled')
+            };
+            
+            // Reset all buttons
+            Object.values(buttons).forEach(btn => {
+                btn.className = 'px-4 py-2 bg-gray-200 rounded-lg text-sm';
+            });
+            
+            // Highlight active button
+            if (buttons[status]) {
+                const colors = {
+                    'all': 'bg-blue-500 text-white',
+                    'pending': 'bg-yellow-500 text-white',
+                    'approved': 'bg-green-500 text-white',
+                    'cancelled': 'bg-red-500 text-white'
+                };
+                buttons[status].className = `px-4 py-2 ${colors[status]} rounded-lg text-sm font-semibold`;
+            }
+            
             loadOrders(status);
         }
 
@@ -695,7 +889,6 @@
                 document.getElementById('total-programs').textContent = data.overview.total_programs;
                 document.getElementById('total-enrollments').textContent = data.overview.total_enrollments;
                 document.getElementById('programs-full').textContent = data.overview.programs_full;
-                document.getElementById('completion-rate').textContent = data.overview.completion_rate + '%';
                 
             } catch (error) {
                 console.error('Error loading training stats:', error);
@@ -798,7 +991,7 @@
                 resultsDiv.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
             }
         }
-
+     
         // ML INSIGHTS - Load ML-powered insights
         async function loadMLInsights() {
             const contentDiv = document.getElementById('ml-content');
