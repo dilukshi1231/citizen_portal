@@ -1,5 +1,4 @@
 
-
 document.getElementById("login-form")?.addEventListener("submit", async (e) => {
   e.preventDefault();
   const form = new FormData(e.target);
@@ -19,11 +18,6 @@ function displayStatistics(data) {
   // Calculate total engagements from questions
   const totalEngagements = Object.values(data.questions).reduce((sum, count) => sum + count, 0);
   
-  // Find most popular service
-  const servicesArray = Object.entries(data.services);
-  const mostPopularService = servicesArray.length > 0 
-    ? servicesArray.sort((a, b) => b[1] - a[1])[0][0] 
-    : 'N/A';
   
   // Update the statistics display
   document.getElementById('totalUsers').textContent = totalUsers.toLocaleString();
@@ -31,9 +25,6 @@ function displayStatistics(data) {
   document.getElementById('totalQuestions').textContent = totalQuestions.toLocaleString();
   document.getElementById('totalEngagements').textContent = totalEngagements.toLocaleString();
   document.getElementById('totalJobTypes').textContent = totalJobTypes.toLocaleString();
-  document.getElementById('mostPopularService').textContent = mostPopularService.length > 30 
-    ? mostPopularService.substring(0, 30) + '...' 
-    : mostPopularService;
 }
 async function loadDashboard() {
   const dashEl = document.getElementById("dashboard");

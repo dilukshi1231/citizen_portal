@@ -219,18 +219,7 @@
                     </div>
                 </div>
 
-                <div class="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl shadow-md border border-indigo-200 mb-8">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="text-sm font-semibold text-gray-600 mb-1">🌟 Most Popular Service</div>
-                            <div id="most-popular-service" class="text-2xl font-bold text-indigo-700">Loading...</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-sm text-gray-600 mb-1">Engagement Count</div>
-                            <div id="popular-service-count" class="text-2xl font-bold text-purple-600">0</div>
-                        </div>
-                    </div>
-                </div>
+              
 
                 <div class="grid md:grid-cols-2 gap-6">
                     <div class="bg-white p-6 rounded-xl shadow-md">
@@ -466,51 +455,59 @@
         }
 
         // Update statistics display
-        function updateStatistics(data, ordersData, trainingData) {
-            // Calculate totals from insights data
-            const totalUsers = Object.values(data.age_groups || {}).reduce((sum, count) => sum + count, 0);
-            const totalServices = Object.keys(data.services || {}).length;
-            const totalQuestions = Object.keys(data.questions || {}).length;
-            const totalJobs = Object.keys(data.jobs || {}).length;
-            const totalEngagements = Object.values(data.questions || {}).reduce((sum, count) => sum + count, 0);
-            
-            // Find most popular service
-            const servicesArray = Object.entries(data.services || {});
-            let mostPopularService = 'N/A';
-            let mostPopularCount = 0;
-            
-            if (servicesArray.length > 0) {
-                const sorted = servicesArray.sort((a, b) => b[1] - a[1]);
-                mostPopularService = sorted[0][0];
-                mostPopularCount = sorted[0][1];
-            }
-            
-            // Update primary stats
-            document.getElementById('total-users-stat').textContent = totalUsers.toLocaleString();
-            document.getElementById('total-orders-stat').textContent = (ordersData?.total_orders || 0).toLocaleString();
-            document.getElementById('total-training-stat').textContent = (trainingData?.overview?.total_enrollments || 0).toLocaleString();
-            
-            // Calculate and update revenue
-            const totalRevenue = ordersData?.total_revenue || 0;
-            document.getElementById('total-revenue-stat').textContent = `LKR ${(totalRevenue / 1000).toFixed(1)}K`;
-            
-            // Update secondary stats
-            document.getElementById('total-services-stat').textContent = totalServices.toLocaleString();
-            document.getElementById('total-questions-stat').textContent = totalQuestions.toLocaleString();
-            document.getElementById('total-engagements-stat').textContent = totalEngagements.toLocaleString();
-            document.getElementById('total-jobs-stat').textContent = totalJobs.toLocaleString();
-            document.getElementById('pending-orders-stat').textContent = (ordersData?.pending_orders || 0).toLocaleString();
-            document.getElementById('cancelled-orders-stat').textContent = (ordersData?.cancelled_orders || 0).toLocaleString();
-            
-            // Update most popular service
-            document.getElementById('most-popular-service').textContent = mostPopularService.length > 50 
-                ? mostPopularService.substring(0, 50) + '...' 
-                : mostPopularService;
-            document.getElementById('popular-service-count').textContent = mostPopularCount.toLocaleString();
-            
-            // Update recent activity
-            updateRecentActivity(ordersData, trainingData, data);
-        }
+        function updateStatistics(insightsData, ordersData, trainingData) {
+    // Calculate totals from insights data
+    const totalUsers = Object.values(insightsData.age_groups || {}).reduce((sum, count) => sum + count, 0);
+    const totalServices = Object.keys(insightsData.services || {}).length;
+    const totalQuestions = Object.keys(insightsData.questions || {}).length;
+    const totalJobs = Object.keys(insightsData.jobs || {}).length;
+    const totalEngagements = Object.values(insightsData.questions || {}).reduce((sum, count) => sum + count, 0);
+    
+    // Update primary stats
+    document.getElementById('total-users-stat').textContent = totalUsers.toLocaleString();
+    document.getElementById('total-orders-stat').textContent = (ordersData?.total_orders || 0).toLocaleString();
+    document.getElementById('total-training-stat').textContent = (trainingData?.overview?.total_enrollments || 0).toLocaleString();
+    
+    // Calculate and update revenue
+    const totalRevenue = ordersData?.total_revenue || 0;
+    document.getElementById('total-revenue-stat').textContent = `LKR ${(totalRevenue / 1000).toFixed(1)}K`;
+    
+    // Update secondary stats
+    document.getElementById('total-services-stat').textContent = totalServices.toLocaleString();
+    document.getElementById('total-questions-stat').textContent = totalQuestions.toLocaleString();
+    document.getElementById('total-engagements-stat').textContent = totalEngagements.toLocaleString();
+    document.getElementById('total-jobs-stat').textContent = totalJobs.toLocaleString();
+    document.getElementById('pending-orders-stat').textContent = (ordersData?.pending_orders || 0).toLocaleString();
+    document.getElementById('cancelled-orders-stat').textContent = (ordersData?.cancelled_orders || 0).toLocaleString();
+    
+    // Update recent activity
+    updateRecentActivity(ordersData, trainingData, insightsData);
+}
+
+function updateRecentActivity(ordersData, trainingData, insightsData) {
+    const activityDiv = document.getElementById('recent-activity');
+    const activities = [];
+    
+    if (ordersData?.total_orders > 0) {
+        activities.push(`📦 ${ordersData.total_orders} total orders processed`);
+    }
+    if (ordersData?.pending_orders > 0) {
+        activities.push(`⏳ ${ordersData.pending_orders} orders pending approval`);
+    }
+    if (trainingData?.overview?.total_enrollments > 0) {
+        activities.push(`🎓 ${trainingData.overview.total_enrollments} training enrollments`);
+    }
+    if (insightsData.premium_suggestions?.length > 0) {
+        activities.push(`💎 ${insightsData.premium_suggestions.length} premium help requests`);
+    }
+    
+    if (activities.length === 0) {
+        activities.push('✅ System running smoothly');
+        activities.push('📊 All services operational');
+    }
+    
+    activityDiv.innerHTML = activities.map(a => `<p>✅ ${a}</p>`).join('');
+}
 
         // Update recent activity section
         function updateRecentActivity(ordersData, trainingData, insightsData) {
@@ -540,38 +537,43 @@
 
         // DASHBOARD - Load overview stats
         async function loadDashboard() {
-            try {
-                // Fetch all necessary data
-                const [insightsRes, ordersRes, trainingRes] = await Promise.all([
-                    fetch('/api/admin/insights'),
-                    fetch('/api/admin/orders/stats'),
-                    fetch('/api/admin/training/stats')
-                ]);
-                
-                const insightsData = await insightsRes.json();
-                const ordersData = await ordersRes.json();
-                const trainingData = await trainingRes.json();
-                
-                // Store for later use
-                dashboardData = {
-                    insights: insightsData,
-                    orders: ordersData,
-                    training: trainingData
-                };
-                
-                // Update statistics display
-                updateStatistics(insightsData, ordersData, trainingData);
-                
-                // Update pending badge
-                document.getElementById('pending-badge').textContent = ordersData.pending_orders || 0;
-                
-            } catch (error) {
-                console.error('Error loading dashboard:', error);
-                // Set error state
-                document.getElementById('total-users-stat').textContent = 'Error';
-                document.getElementById('recent-activity').innerHTML = '<p class="text-red-500">⚠️ Error loading dashboard data</p>';
-            }
+    try {
+        // Fetch all necessary data
+        const [insightsRes, ordersRes, trainingRes] = await Promise.all([
+            fetch('/api/admin/insights'),
+            fetch('/api/admin/orders/stats'),
+            fetch('/api/admin/training/stats')
+        ]);
+        
+        // Check if all requests succeeded
+        if (!insightsRes.ok || !ordersRes.ok || !trainingRes.ok) {
+            throw new Error('Failed to fetch dashboard data');
         }
+        
+        const insightsData = await insightsRes.json();
+        const ordersData = await ordersRes.json();
+        const trainingData = await trainingRes.json();
+        
+        // Store for later use
+        dashboardData = {
+            insights: insightsData,
+            orders: ordersData,
+            training: trainingData
+        };
+        
+        // Update statistics display
+        updateStatistics(insightsData, ordersData, trainingData);
+        
+        // Update pending badge
+        document.getElementById('pending-badge').textContent = ordersData.pending_orders || 0;
+        
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+        // Set error state
+        document.getElementById('total-users-stat').textContent = 'Error';
+        document.getElementById('recent-activity').innerHTML = '<p class="text-red-500">⚠️ Error loading dashboard data</p>';
+    }
+}
 
         // AI MANAGEMENT - Check and rebuild index
         async function checkIndexStatus() {

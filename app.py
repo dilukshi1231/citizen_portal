@@ -951,7 +951,33 @@ def admin_login_api():
 def admin_logout():
     session.clear()
     return jsonify({"status": "logged out"})
-
+@app.route("/api/admin/users/stats", methods=["GET"])
+@admin_required
+def get_users_stats():
+    """Get user statistics"""
+    try:
+        # Total users
+        total_users = users_col.count_documents({})
+        
+        # Active users (last 30 days)
+        thirty_days_ago = get_utc_now() - timedelta(days=30)
+        active_users = users_col.count_documents({
+            "updated": {"$gte": thirty_days_ago}
+        })
+        
+        # New users (last 7 days)
+        seven_days_ago = get_utc_now() - timedelta(days=7)
+        new_users = users_col.count_documents({
+            "created": {"$gte": seven_days_ago}
+        })
+        
+        return jsonify({
+            "total_users": total_users,
+            "active_users": active_users,
+            "new_users_week": new_users
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 # ============================================
 # TRAINING PROGRAMS API
 # ============================================
