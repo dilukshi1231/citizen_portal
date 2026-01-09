@@ -2421,7 +2421,11 @@ def get_training_analytics():
     except Exception as e:
         print(f"Error getting training analytics: {e}")
         return jsonify({"error": str(e)}), 500
-
+@app.route("/admin/training")
+@admin_required
+def admin_training_page():
+    """Training programs admin dashboard"""
+    return render_template("admin_training.html")
 @app.route("/api/admin/training/export", methods=["GET"])
 @admin_required
 def export_training_data():

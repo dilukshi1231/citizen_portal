@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Programs - Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .admin-section {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .stat-card {
+            transition: transform 0.2s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+<!-- Navigation -->
+<nav class="bg-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-4">
+        <div class="flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-gray-900">📚 Training Programs Admin</h1>
+            <div class="flex gap-3">
+                <button onclick="loadTrainingStats()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    🔄 Refresh
+                </button>
+                <button onclick="exportTrainingData()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    📥 Export CSV
+                </button>
+                <a href="/admin" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+                    ← Back to Admin
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="max-w-7xl mx-auto p-6">
+
+    <!-- Statistics Overview Cards -->
+    <div class="admin-section bg-white rounded-xl shadow-md p-6 mb-8">
+        <h3 class="text-2xl font-bold mb-4">📊 Training Enrollment Statistics</h3>
+        
+        <!-- Overview Cards -->
+        <div id="training-overview" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl text-white text-center">
+                <div class="text-4xl font-bold" id="total-programs">-</div>
+                <div class="text-sm opacity-90 mt-2">Active Programs</div>
+            </div>
+            <div class="stat-card bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-xl text-white text-center">
+                <div class="text-4xl font-bold" id="total-enrollments">-</div>
+                <div class="text-sm opacity-90 mt-2">Total Enrollments</div>
+            </div>
+            <div class="stat-card bg-gradient-to-br from-yellow-500 to-yellow-600 p-6 rounded-xl text-white text-center">
+                <div class="text-4xl font-bold" id="active-students">-</div>
+                <div class="text-sm opacity-90 mt-2">Active Students</div>
+            </div>
+            <div class="stat-card bg-gradient-to-br from-red-500 to-red-600 p-6 rounded-xl text-white text-center">
+                <div class="text-4xl font-bold" id="programs-full">-</div>
+                <div class="text-sm opacity-90 mt-2">Full Programs</div>
+            </div>
+            <div class="stat-card bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-xl text-white text-center">
+                <div class="text-4xl font-bold" id="completion-rate">-%</div>
+                <div class="text-sm opacity-90 mt-2">Completion Rate</div>
+            </div>
+        </div>
+
+        <!-- Enrollment Trend Chart -->
+        <div class="bg-gray-50 p-6 rounded-xl mb-6">
+            <h4 class="font-bold text-lg mb-4">📈 Enrollment Trend (Last 30 Days)</h4>
+            <canvas id="enrollmentTrendChart"></canvas>
+        </div>
+
+        <!-- Status Breakdown -->
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-gray-50 p-6 rounded-xl">
+                <h4 class="font-bold text-lg mb-4">📊 Completion Status</h4>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">Completed</span>
+                        <span class="text-2xl font-bold text-green-600" id="completed-count">0</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">In Progress</span>
+                        <span class="text-2xl font-bold text-blue-600" id="inprogress-count">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 p-6 rounded-xl">
+                <h4 class="font-bold text-lg mb-4">🎯 Additional Metrics</h4>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">Near Full Programs</span>
+                        <span class="text-2xl font-bold text-orange-600" id="programs-near-full">0</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">Average Progress</span>
+                        <span class="text-2xl font-bold text-indigo-600" id="avg-progress">0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Programs List with Enrollment Details -->
+    <div class="admin-section bg-white rounded-xl shadow-md p-6 mb-8">
+        <h3 class="text-2xl font-bold mb-4">📚 Programs & Enrollment Details</h3>
+        
+        <div id="programs-loading" class="text-center py-8">
+            <div class="loading-spinner"></div>
+            <p class="text-gray-600 mt-2">Loading program data...</p>
+        </div>
+        
+        <div id="programs-list" class="hidden space-y-4"></div>
+    </div>
+
+    <!-- Analytics Charts -->
+    <div class="admin-section bg-white rounded-xl shadow-md p-6">
+        <h3 class="text-2xl font-bold mb-6">📊 Training Analytics</h3>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- Category Distribution -->
+            <div class="bg-gray-50 p-6 rounded-xl">
+                <h4 class="font-bold text-lg mb-4">Categories Distribution</h4>
+                <canvas id="categoryChart"></canvas>
+            </div>
+            
+            <!-- Level Distribution -->
+            <div class="bg-gray-50 p-6 rounded-xl">
+                <h4 class="font-bold text-lg mb-4">Difficulty Levels</h4>
+                <canvas id="levelChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Program Enrollments Modal -->
+<div id="enrollments-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-bold" id="modal-program-title">Program Enrollments</h2>
+                    <p class="text-blue-100 text-sm" id="modal-program-subtitle">View all enrolled students</p>
+                </div>
+                <button onclick="closeEnrollmentsModal()" class="text-white hover:text-gray-200 text-3xl font-bold">
+                    &times;
+                </button>
+            </div>
+        </div>
+        
+        <div class="p-6 overflow-y-auto" style="max-height: calc(90vh - 120px);">
+            <div id="enrollments-content">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global chart variables
+let enrollmentTrendChart = null;
+let categoryChart = null;
+let levelChart = null;
+
+// ============================================
+// LOAD TRAINING STATISTICS
+// ============================================
+async function loadTrainingStats() {
+    try {
+        const statsRes = await fetch('/api/admin/training/stats');
+        const stats = await statsRes.json();
+        
+        // Update overview cards
+        document.getElementById('total-programs').textContent = stats.overview.total_programs;
+        document.getElementById('total-enrollments').textContent = stats.overview.total_enrollments;
+        document.getElementById('active-students').textContent = stats.overview.active_students;
+        document.getElementById('programs-full').textContent = stats.overview.programs_full;
+        document.getElementById('completion-rate').textContent = stats.overview.completion_rate + '%';
+        document.getElementById('programs-near-full').textContent = stats.overview.programs_near_full;
+        document.getElementById('avg-progress').textContent = stats.overview.avg_progress + '%';
+        
+        // Update status breakdown
+        document.getElementById('completed-count').textContent = stats.status_breakdown.completed;
+        document.getElementById('inprogress-count').textContent = stats.status_breakdown.in_progress;
+        
+        // Draw enrollment trend chart
+        drawEnrollmentTrend(stats.enrollment_trend);
+        
+        // Load program details
+        await loadProgramDetails();
+        
+        // Load analytics charts
+        await loadTrainingAnalytics();
+        
+    } catch (error) {
+        console.error('Error loading training stats:', error);
+        alert('Failed to load training statistics: ' + error.message);
+    }
+}
+
+// ============================================
+// ENROLLMENT TREND CHART
+// ============================================
+function drawEnrollmentTrend(trendData) {
+    const ctx = document.getElementById('enrollmentTrendChart');
+    if (!ctx) return;
+    
+    // Destroy existing chart
+    if (enrollmentTrendChart) {
+        enrollmentTrendChart.destroy();
+    }
+    
+    const labels = trendData.map(d => d.date);
+    const data = trendData.map(d => d.count);
+    
+    enrollmentTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Daily Enrollments',
+                data: data,
+                borderColor: 'rgba(59, 130, 246, 1)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: {
+                        size: 14
+                    },
+                    bodyFont: {
+                        size: 13
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ============================================
+// LOAD PROGRAM DETAILS
+// ============================================
+async function loadProgramDetails() {
+    try {
+        document.getElementById('programs-loading').style.display = 'block';
+        document.getElementById('programs-list').style.display = 'none';
+        
+        const res = await fetch('/api/admin/training/programs');
+        const programs = await res.json();
+        
+        const listDiv = document.getElementById('programs-list');
+        listDiv.innerHTML = '';
+        
+        programs.forEach((program, index) => {
+            const stats = program.statistics;
+            const title = program.title.en;
+            const enrollmentPercentage = stats.enrollment_percentage;
+            
+            let fillRateColor = '#10b981';
+            if (enrollmentPercentage >= 100) fillRateColor = '#ef4444';
+            else if (enrollmentPercentage >= 80) fillRateColor = '#f59e0b';
+
+            const card = document.createElement('div');
+            card.className = 'bg-gray-50 p-6 rounded-xl border-l-4 hover:shadow-lg transition-shadow';
+            card.style.borderColor = fillRateColor;
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded">#${index + 1}</span>
+                            <h5 class="text-xl font-bold text-gray-900">${title}</h5>
+                        </div>
+                        <div class="flex gap-4 text-sm text-gray-600 mb-3">
+                            <span>📅 ${program.duration}</span>
+                            <span>📊 ${program.level}</span>
+                            <span>👨‍🏫 ${program.instructor}</span>
+                            ${program.free ? '<span class="text-green-600 font-semibold">✅ FREE</span>' : '<span class="text-orange-600">💰 ' + program.fee + '</span>'}
+                        </div>
+                    </div>
+                    
+                    <button onclick="viewEnrollments('${program.id}')" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        👥 View Students
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                    <div class="text-center">
+                        <div class="text-sm text-gray-600 mb-1">Total Enrolled</div>
+                        <div class="text-2xl font-bold text-blue-600">${stats.total_enrolled}</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-sm text-gray-600 mb-1">Completed</div>
+                        <div class="text-2xl font-bold text-green-600">${stats.completed}</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-sm text-gray-600 mb-1">Avg Progress</div>
+                        <div class="text-2xl font-bold text-yellow-600">${stats.avg_progress}%</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-sm text-gray-600 mb-1">Completion Rate</div>
+                        <div class="text-2xl font-bold text-teal-600">${stats.completion_rate}%</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-sm text-gray-600 mb-1">New (7 days)</div>
+                        <div class="text-2xl font-bold text-purple-600">${stats.recent_enrollments_7d}</div>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-gray-700">Enrollment: ${program.current_enrollments}/${program.max_participants}</span>
+                        <span class="text-sm font-bold" style="color: ${fillRateColor};">
+                            ${enrollmentPercentage.toFixed(1)}%
+                        </span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                        <div class="h-3 rounded-full transition-all duration-500" 
+                             style="width: ${Math.min(enrollmentPercentage, 100)}%; background-color: ${fillRateColor};">
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        ${program.max_participants - program.current_enrollments} spots remaining
+                    </div>
+                </div>
+            `;
+            
+            listDiv.appendChild(card);
+        });
+        
+        document.getElementById('programs-loading').style.display = 'none';
+        document.getElementById('programs-list').style.display = 'block';
+        
+    } catch (error) {
+        console.error('Error loading program details:', error);
+        document.getElementById('programs-loading').innerHTML = '<p class="text-red-600 text-center">❌ Failed to load program details</p>';
+    }
+}
+
+// ============================================
+// LOAD ANALYTICS CHARTS
+// ============================================
+async function loadTrainingAnalytics() {
+    try {
+        const res = await fetch('/api/admin/training/analytics');
+        const analytics = await res.json();
+        
+        // Category Chart
+        const categoryCtx = document.getElementById('categoryChart');
+        if (categoryChart) categoryChart.destroy();
+        
+        categoryChart = new Chart(categoryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: analytics.category_distribution.map(c => c._id),
+                datasets: [{
+                    data: analytics.category_distribution.map(c => c.total_enrollments),
+                    backgroundColor: [
+                        'rgba(239, 68, 68, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(34, 197, 94, 0.8)',
+                        'rgba(251, 146, 60, 0.8)',
+                        'rgba(168, 85, 247, 0.8)',
+                        'rgba(236, 72, 153, 0.8)'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Level Chart
+        const levelCtx = document.getElementById('levelChart');
+        if (levelChart) levelChart.destroy();
+        
+        levelChart = new Chart(levelCtx, {
+            type: 'bar',
+            data: {
+                labels: analytics.level_distribution.map(l => l._id),
+                datasets: [{
+                    label: 'Enrollments',
+                    data: analytics.level_distribution.map(l => l.total_enrollments),
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+    }
+}
+
+// ============================================
+// VIEW PROGRAM ENROLLMENTS
+// ============================================
+async function viewEnrollments(programId) {
+    try {
+        const modal = document.getElementById('enrollments-modal');
+        const content = document.getElementById('enrollments-content');
+        
+        modal.classList.remove('hidden');
+        content.innerHTML = '<div class="loading-spinner"></div>';
+        
+        const res = await fetch(`/api/admin/training/program/${programId}/enrollments`);
+        const data = await res.json();
+        
+        document.getElementById('modal-program-title').textContent = data.program.title.en;
+        document.getElementById('modal-program-subtitle').textContent = `${data.total_count} enrolled students`;
+        
+        if (data.enrollments.length === 0) {
+            content.innerHTML = '<p class="text-center text-gray-500 py-8">No enrollments yet</p>';
+            return;
+        }
+        
+        let html = '<div class="overflow-x-auto"><table class="w-full"><thead class="bg-gray-100"><tr>';
+        html += '<th class="px-4 py-3 text-left text-sm font-semibold">Student</th>';
+        html += '<th class="px-4 py-3 text-left text-sm font-semibold">Email</th>';
+        html += '<th class="px-4 py-3 text-left text-sm font-semibold">Age</th>';
+        html += '<th class="px-4 py-3 text-left text-sm font-semibold">Job</th>';
+        html += '<th class="px-4 py-3 text-left text-sm font-semibold">Enrolled</th>';
+        html += '<th class="px-4 py-3 text-left text-sm font-semibold">Progress</th>';
+        html += '<th class="px-4 py-3 text-left text-sm font-semibold">Status</th>';
+        html += '</tr></thead><tbody>';
+        
+        data.enrollments.forEach((enrollment, index) => {
+            const user = enrollment.user || {};
+            const bgClass = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+            
+            html += `<tr class="${bgClass} hover:bg-blue-50">`;
+            html += `<td class="px-4 py-3">${user.full_name || 'N/A'}</td>`;
+            html += `<td class="px-4 py-3 text-sm">${user.email || 'N/A'}</td>`;
+            html += `<td class="px-4 py-3">${user.age || 'N/A'}</td>`;
+            html += `<td class="px-4 py-3 text-sm">${user.job || 'N/A'}</td>`;
+            html += `<td class="px-4 py-3 text-sm">${enrollment.enrolled_date_formatted || 'N/A'}</td>`;
+            html += `<td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                    <div class="flex-1 bg-gray-200 rounded-full h-2">
+                        <div class="bg-blue-600 h-2 rounded-full" style="width: ${enrollment.progress || 0}%"></div>
+                    </div>
+                    <span class="text-sm font-semibold">${enrollment.progress || 0}%</span>
+                </div>
+            </td>`;
+            
+            const statusColor = enrollment.completion_status === 'completed' ? 'green' : 'blue';
+            html += `<td class="px-4 py-3">
+                <span class="px-2 py-1 bg-${statusColor}-100 text-${statusColor}-700 rounded-full text-xs font-semibold">
+                    ${enrollment.completion_status || enrollment.status || 'enrolled'}
+                </span>
+            </td>`;
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table></div>';
+        content.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error loading enrollments:', error);
+        document.getElementById('enrollments-content').innerHTML = 
+            '<p class="text-red-600 text-center py-8">❌ Failed to load enrollments</p>';
+    }
+}
+
+function closeEnrollmentsModal() {
+    document.getElementById('enrollments-modal').classList.add('hidden');
+}
+
+// ============================================
+// EXPORT TRAINING DATA
+// ============================================
+async function exportTrainingData() {
+    try {
+        window.location.href = '/api/admin/training/export';
+    } catch (error) {
+        alert('Export failed: ' + error.message);
+    }
+}
+
+// ============================================
+// INITIALIZE ON PAGE LOAD
+// ============================================
+document.addEventListener('DOMContentLoaded', () => {
+    loadTrainingStats();
+});
+
+// Close modal when clicking outside
+document.getElementById('enrollments-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'enrollments-modal') {
+        closeEnrollmentsModal();
+    }
+});
+</script>
+
+</body>
+</html>
