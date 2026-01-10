@@ -1,0 +1,27 @@
+# Core Flask (Lightweight for Vercel)
+Flask==3.0.0
+flask-cors==4.0.0
+Werkzeug==3.0.1
+
+# Database
+pymongo[srv]==4.6.0
+dnspython==2.4.2
+
+# AI/ML - Minimal versions for serverless
+sentence-transformers==2.2.2
+numpy==1.24.3
+scikit-learn==1.3.2
+pandas==2.0.3
+
+# Groq AI (Lightweight)
+groq==0.4.1
+
+# Security
+bcrypt==4.1.1
+python-dotenv==1.0.0
+
+# Optional
+requests==2.31.0
+
+# Note: FAISS removed for Vercel compatibility
+# faiss-cpu is too large for Vercel's 50MB limit
