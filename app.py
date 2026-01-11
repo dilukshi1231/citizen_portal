@@ -3256,6 +3256,8 @@ def questions_by_age():
 # ============================================
 # INITIALIZATION & STARTUP
 # ============================================
+# Replace the bottom section of app.py (after line 2300+) with this:
+
 if __name__ == "__main__":
     # Ensure admin exists
     if admins_col.count_documents({}) == 0:
@@ -3264,18 +3266,14 @@ if __name__ == "__main__":
         admins_col.insert_one({"username": "admin", "password": hashed})
         print("✅ Created admin user")
     
+    # Check if running in production
+    is_production = os.getenv("DEBUG", "False").lower() == "false"
+    
     print("=" * 70)
     print("🚀 ENHANCED CITIZEN SERVICES PORTAL")
     print("=" * 70)
-    print(f"📍 Public Portal: http://127.0.0.1:5000/")
-    print(f"🤖 AI Chatbot: http://127.0.0.1:5000/chatbot")
-    print(f"📊 Dashboard: http://127.0.0.1:5000/dashboard")
-    print(f"👨‍💼 Admin Panel: http://127.0.0.1:5000/admin")
-    print(f"🔐 Admin Login: http://127.0.0.1:5000/admin/login")
-    print(f"👤 User Login: http://127.0.0.1:5000/user/login")
-    print(f"📝 User Register: http://127.0.0.1:5000/user/register")
-    print(f"🎓 Training: http://127.0.0.1:5000/training")
-    print(f"🛒 Store: http://127.0.0.1:5000/store")
+    print(f"🌍 Environment: {'PRODUCTION' if is_production else 'DEVELOPMENT'}")
+    print(f"🔒 Debug Mode: {'OFF' if is_production else 'ON'}")
     print(f"🔍 Vector Search: {'✅ Enabled' if INDEX_PATH.exists() else '⚠️ Run build_ai_index.py'}")
     print(f"🧠 FAISS Available: {'✅ Yes' if FAISS_AVAILABLE else '⚠️ Using fallback'}")
     print(f"🤖 Groq AI: {'✅ Configured' if GROQ_API_KEY else '❌ Missing API key'}")
@@ -3286,4 +3284,20 @@ if __name__ == "__main__":
     print("✅ Privacy Controls: Enabled")
     print("=" * 70)
     
-    app.run(debug=True, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+    if is_production:
+        # Production: Let Gunicorn handle the server
+        print("🚀 Running in production mode (Gunicorn)")
+        print("=" * 70)
+    else:
+        # Development: Use Flask's built-in server
+        print("🔧 Running in development mode")
+        print(f"📍 Public Portal: http://127.0.0.1:5000/")
+        print(f"🤖 AI Chatbot: http://127.0.0.1:5000/chatbot")
+        print(f"📊 Dashboard: http://127.0.0.1:5000/dashboard")
+        print(f"👨‍💼 Admin Panel: http://127.0.0.1:5000/admin")
+        print("=" * 70)
+        app.run(
+            debug=True, 
+            host="0.0.0.0", 
+            port=int(os.getenv("PORT", 5000))
+        )

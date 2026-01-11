@@ -4,6 +4,11 @@ flask-cors
 flask-bcrypt
 flask-login
 
+#new
+Werkzeug
+gunicorn
+
+
 # Database
 pymongo[srv]
 dnspython
@@ -23,3 +28,6 @@ bcrypt
 python-dotenv
 # Optional but recommended
 requests
+transformers
+torch
+tokenizers
