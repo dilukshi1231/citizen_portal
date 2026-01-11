@@ -1,32 +1,19 @@
-# Core Flask
 Flask
 flask-cors
 flask-bcrypt
 flask-login
-
-#new
 Werkzeug
 gunicorn
-
-
-# Database
 pymongo[srv]
 dnspython
-
-# AI/ML - Core
 sentence-transformers
 faiss-cpu
 numpy
 scikit-learn
 pandas
-
-# Groq AI (Free LLM)
 groq
-
-# Security
 bcrypt
 python-dotenv
-# Optional but recommended
 requests
 transformers
 torch
