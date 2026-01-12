@@ -18,6 +18,8 @@ import uuid
 from io import StringIO
 from flask.json.provider import DefaultJSONProvider
 from bson import ObjectId
+from ad_targeting_algorithm import AdvertisementTargeting
+
 # Try FAISS import
 try:
     import faiss
@@ -33,6 +35,7 @@ try:
 except ImportError:
     ML_AVAILABLE = False
     rec_engine = None
+ad_targeting = AdvertisementTargeting()
 
 load_dotenv()
 
@@ -318,6 +321,112 @@ def dashboard_page():
         return redirect("/user/login")
     return render_template("chatbot_dashboard.html")
 
+@app.route('/api/ads/get_ads', methods=['POST'])
+def get_user_ads():
+    """Get targeted advertisements for a user"""
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        page_type = data.get('page_type', 'home')
+        limit = data.get('limit', 3)
+        
+        # Fetch user profile from database
+        user = db.users.find_one({"_id": ObjectId(user_id)})
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Get targeted ads
+        ads = ad_targeting.trigger_ad_for_page(user, page_type, limit)
+        
+        # Log impressions for analytics
+        for ad in ads:
+            db.ad_impressions.insert_one({
+                "user_id": user_id,
+                "ad_id": ad["id"],
+                "timestamp": datetime.utcnow(),
+                "page_type": page_type,
+                "match_score": ad["match_score"],
+                "targeting_reason": ad["targeting_reason"]
+            })
+        
+        return jsonify({
+            "success": True,
+            "ads": ads,
+            "count": len(ads)
+        })
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+@app.route('/api/ads/click/<ad_id>', methods=['POST'])
+def track_ad_click(ad_id):
+    """Track ad clicks for conversion analytics"""
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        
+        # Log the click
+        db.ad_clicks.insert_one({
+            "user_id": user_id,
+            "ad_id": ad_id,
+            "timestamp": datetime.utcnow(),
+            "referrer": request.referrer
+        })
+        
+        # Update click count for the ad
+        db.ad_performance.update_one(
+            {"ad_id": ad_id},
+            {
+                "$inc": {"clicks": 1},
+                "$set": {"last_clicked": datetime.utcnow()}
+            },
+            upsert=True
+        )
+        
+        return jsonify({"status": "success"})
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+@app.route('/api/ads/analytics', methods=['GET'])
+def get_ad_analytics():
+    """Get advertisement performance analytics"""
+    try:
+        # Get impression counts
+        impressions = list(db.ad_impressions.aggregate([
+            {
+                "$group": {
+                    "_id": "$ad_id",
+                    "count": {"$sum": 1},
+                    "avg_match_score": {"$avg": "$match_score"}
+                }
+            }
+        ]))
+        
+        # Get click counts
+        clicks = list(db.ad_clicks.aggregate([
+            {
+                "$group": {
+                    "_id": "$ad_id",
+                    "count": {"$sum": 1}
+                }
+            }
+        ]))
+        
+        # Calculate CTR (Click-Through Rate)
+        analytics = {}
+        for imp in impressions:
+            ad_id = imp["_id"]
+            click_count = next((c["count"] for c in clicks if c["_id"] == ad_id), 0)
+            analytics[ad_id] = {
+                "impressions": imp["count"],
+                "clicks": click_count,
+                "ctr": (click_count / imp["count"] * 100) if imp["count"] > 0 else 0,
+                "avg_match_score": round(imp["avg_match_score"], 2)
+            }
+        
+        return jsonify({"analytics": analytics})
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500   
 @app.route("/training")
 def training_page():
     """Training programs page"""
@@ -3252,7 +3361,421 @@ def questions_by_age():
     except Exception as e:
         print(f"Error in questions_by_age: {e}")
         return jsonify({"error": str(e)}), 500
+"""
+PayHere Payment Gateway Integration for GovConnect
+Add these routes and configurations to your app.py
 
+Installation:
+pip install hashlib hmac
+
+Environment Variables (.env):
+PAYHERE_MERCHANT_ID=your_merchant_id
+PAYHERE_MERCHANT_SECRET=your_merchant_secret
+PAYHERE_MODE=sandbox  # or 'live' for production
+DOMAIN=http://govconnect.local:5000  # Change before going live
+"""
+
+import hashlib
+import hmac
+from flask import request, jsonify, redirect
+from decimal import Decimal
+
+# PayHere Configuration
+PAYHERE_CONFIG = {
+    'merchant_id': os.getenv('PAYHERE_MERCHANT_ID', '1228343'),  # Sandbox ID
+    'merchant_secret': os.getenv('PAYHERE_MERCHANT_SECRET', 'YOUR_SECRET_HERE'),
+    'mode': os.getenv('PAYHERE_MODE', 'sandbox'),  # 'sandbox' or 'live'
+    'currency': 'LKR',
+    'sandbox_url': 'https://sandbox.payhere.lk/pay/checkout',
+    'live_url': 'https://www.payhere.lk/pay/checkout'
+}
+
+# Domain configuration (IMPORTANT: Change this in production)
+DOMAIN = os.getenv('DOMAIN', 'http://govconnect.local:5000')
+
+
+def generate_payhere_hash(merchant_id, order_id, amount, currency, merchant_secret):
+    """
+    Generate MD5 hash for PayHere payment verification
+    CRITICAL: Hash must match PayHere's exact format
+    """
+    import hashlib
+    
+    # Format amount to 2 decimal places with NO commas
+    amount_formatted = "{:.2f}".format(float(amount))
+    
+    # Step 1: Hash the merchant secret
+    merchant_secret_hash = hashlib.md5(merchant_secret.encode('utf-8')).hexdigest().upper()
+    
+    # Step 2: Concatenate in exact order (NO spaces or extra characters)
+    hash_string = f"{merchant_id}{order_id}{amount_formatted}{currency}{merchant_secret_hash}"
+    
+    # Step 3: Generate final MD5 hash
+    final_hash = hashlib.md5(hash_string.encode('utf-8')).hexdigest().upper()
+    
+    # Debug logging (remove in production)
+    print("=" * 70)
+    print("PayHere Hash Generation Debug:")
+    print(f"Merchant ID: {merchant_id}")
+    print(f"Order ID: {order_id}")
+    print(f"Amount: {amount_formatted}")
+    print(f"Currency: {currency}")
+    print(f"Secret Hash: {merchant_secret_hash}")
+    print(f"Hash String: {hash_string}")
+    print(f"Final Hash: {final_hash}")
+    print("=" * 70)
+    
+    return final_hash
+
+
+@app.route("/api/store/payment/initiate", methods=["POST"])
+def initiate_payhere_payment():
+    """Initiate PayHere payment with strict validation"""
+    try:
+        data = request.json or {}
+        
+        # Extract and validate
+        order_id = str(data.get('order_id', ''))
+        amount = float(data.get('amount', 0))
+        customer_info = data.get('customer_info', {})
+        
+        # Strict validation
+        if not order_id:
+            return jsonify({"error": "order_id is required"}), 400
+        if amount <= 0:
+            return jsonify({"error": "amount must be greater than 0"}), 400
+        if not customer_info.get('email'):
+            return jsonify({"error": "customer email is required"}), 400
+        
+        # Get config
+        merchant_id = PAYHERE_CONFIG['merchant_id']
+        merchant_secret = PAYHERE_CONFIG['merchant_secret']
+        currency = PAYHERE_CONFIG['currency']
+        
+        # Generate hash
+        payhere_hash = generate_payhere_hash(
+            merchant_id,
+            order_id,
+            amount,
+            currency,
+            merchant_secret
+        )
+        
+        # Format customer data with strict field limits and sanitization
+        first_name = str(customer_info.get('first_name', 'Customer'))[:50].strip()
+        last_name = str(customer_info.get('last_name', 'User'))[:50].strip()
+        email = str(customer_info.get('email', ''))[:100].strip()
+        phone = str(customer_info.get('phone', '0771234567'))[:20].strip()
+        address = str(customer_info.get('address', 'Colombo'))[:255].strip()
+        city = str(customer_info.get('city', 'Colombo'))[:50].strip()
+        
+        # Create order if doesn't exist
+        order = orders_col.find_one({"order_id": order_id})
+        if not order:
+            order = {
+                "order_id": order_id,
+                "user_id": data.get('user_id') or session.get('user_id'),
+                "items": data.get('items', []),
+                "total_amount": amount,
+                "status": "pending_payment",
+                "customer_info": customer_info,
+                "created": get_utc_now(),
+                "updated": get_utc_now()
+            }
+            orders_col.insert_one(order)
+        
+        # Build payment data (CRITICAL: Follow PayHere's exact specifications)
+        payment_data = {
+            # Merchant Details
+            'merchant_id': str(merchant_id),
+            'return_url': f"{DOMAIN}/payment/success?order_id={order_id}",
+            'cancel_url': f"{DOMAIN}/payment/cancel?order_id={order_id}",
+            'notify_url': f"{DOMAIN}/api/store/payment/notify",
+            
+            # Order Details
+            'order_id': order_id,
+            'items': f"Order {order_id}",  # Simple description
+            'currency': currency,
+            'amount': "{:.2f}".format(amount),
+            
+            # Customer Details (all required)
+            'first_name': first_name,
+            'last_name': last_name,
+            'email': email,
+            'phone': phone,
+            'address': address,
+            'city': city,
+            'country': 'Sri Lanka',
+            
+            # Security Hash
+            'hash': payhere_hash
+        }
+        
+        # Store payment record
+        payments_col.insert_one({
+            "payment_id": f"PAY_{order_id}",
+            "order_id": order_id,
+            "user_id": data.get('user_id') or session.get('user_id'),
+            "amount": amount,
+            "currency": currency,
+            "status": "initiated",
+            "gateway": "payhere",
+            "hash": payhere_hash,
+            "payment_data": payment_data,  # Store for debugging
+            "created": get_utc_now()
+        })
+        
+        # Log the complete request
+        print("\n" + "=" * 70)
+        print("📤 PayHere Payment Request:")
+        print(f"   Merchant ID: {merchant_id}")
+        print(f"   Order ID: {order_id}")
+        print(f"   Amount: LKR {amount:.2f}")
+        print(f"   Customer: {first_name} {last_name}")
+        print(f"   Email: {email}")
+        print(f"   Hash: {payhere_hash}")
+        print(f"   URL: {PAYHERE_CONFIG['sandbox_url']}")
+        print("=" * 70 + "\n")
+        
+        payment_url = PAYHERE_CONFIG['sandbox_url'] if PAYHERE_CONFIG['mode'] == 'sandbox' else PAYHERE_CONFIG['live_url']
+        
+        return jsonify({
+            "status": "success",
+            "payment_url": payment_url,
+            "payment_data": payment_data,
+            "order_id": order_id,
+            "mode": PAYHERE_CONFIG['mode'],
+            "debug_info": {
+                "merchant_id": merchant_id,
+                "hash": payhere_hash,
+                "amount": "{:.2f}".format(amount)
+            }
+        })
+    
+    except Exception as e:
+        print(f"❌ Payment initiation error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "error": "Payment initiation failed",
+            "message": str(e)
+        }), 500
+@app.route("/test-payhere", methods=["GET"])
+def test_payhere():
+    """Test PayHere integration"""
+    
+    # Generate a test payment
+    test_order_id = f"TEST_{int(datetime.now().timestamp())}"
+    test_amount = 1000.00
+    
+    merchant_id = PAYHERE_CONFIG['merchant_id']
+    merchant_secret = PAYHERE_CONFIG['merchant_secret']
+    currency = PAYHERE_CONFIG['currency']
+    
+    # Generate hash
+    hash_value = generate_payhere_hash(
+        merchant_id,
+        test_order_id,
+        test_amount,
+        currency,
+        merchant_secret
+    )
+    
+    # Create HTML form that auto-submits
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>PayHere Test</title>
+    </head>
+    <body>
+        <h2>Testing PayHere Integration...</h2>
+        <form method="post" action="{PAYHERE_CONFIG['sandbox_url']}" id="payhere_form">
+            <input type="hidden" name="merchant_id" value="{merchant_id}">
+            <input type="hidden" name="return_url" value="{DOMAIN}/payment/success">
+            <input type="hidden" name="cancel_url" value="{DOMAIN}/payment/cancel">
+            <input type="hidden" name="notify_url" value="{DOMAIN}/api/store/payment/notify">
+            <input type="hidden" name="order_id" value="{test_order_id}">
+            <input type="hidden" name="items" value="Test Product">
+            <input type="hidden" name="currency" value="{currency}">
+            <input type="hidden" name="amount" value="{test_amount:.2f}">
+            <input type="hidden" name="first_name" value="Test">
+            <input type="hidden" name="last_name" value="Customer">
+            <input type="hidden" name="email" value="test@example.com">
+            <input type="hidden" name="phone" value="0771234567">
+            <input type="hidden" name="address" value="Test Address">
+            <input type="hidden" name="city" value="Colombo">
+            <input type="hidden" name="country" value="Sri Lanka">
+            <input type="hidden" name="hash" value="{hash_value}">
+            <button type="submit">Click here if not redirected</button>
+        </form>
+        <script>
+            document.getElementById('payhere_form').submit();
+        </script>
+    </body>
+    </html>
+    """
+    
+    return html
+@app.route("/api/store/payment/notify", methods=["POST"])
+def payhere_notify():
+    """
+    PayHere IPN (Instant Payment Notification) handler
+    This endpoint receives payment status updates from PayHere
+    
+    IMPORTANT: This must be publicly accessible for PayHere to send notifications
+    """
+    try:
+        # Get POST data from PayHere
+        data = request.form.to_dict()
+        
+        print("=" * 70)
+        print("PayHere Notification Received:")
+        print(json.dumps(data, indent=2))
+        print("=" * 70)
+        
+        # Extract key fields
+        merchant_id = data.get('merchant_id')
+        order_id = data.get('order_id')
+        payhere_amount = data.get('payhere_amount')
+        payhere_currency = data.get('payhere_currency')
+        status_code = data.get('status_code')
+        md5sig = data.get('md5sig')
+        
+        # Verify the hash
+        merchant_secret = PAYHERE_CONFIG['merchant_secret']
+        local_hash = generate_payhere_hash(
+            merchant_id,
+            order_id,
+            payhere_amount,
+            payhere_currency,
+            merchant_secret
+        )
+        
+        if local_hash != md5sig:
+            print("âŒ Hash verification failed!")
+            print(f"Expected: {local_hash}")
+            print(f"Received: {md5sig}")
+            return "Hash verification failed", 400
+        
+        print("âœ… Hash verified successfully")
+        
+        # Update order and payment status based on status_code
+        # Status codes: 2 = Success, 0 = Pending, -1 = Canceled, -2 = Failed, -3 = Chargedback
+        
+        if status_code == "2":
+            # Payment successful
+            orders_col.update_one(
+                {"order_id": order_id},
+                {
+                    "$set": {
+                        "status": "paid",
+                        "payment_status": "completed",
+                        "payment_method": "payhere",
+                        "payment_date": get_utc_now(),
+                        "updated": get_utc_now()
+                    }
+                }
+            )
+            
+            payments_col.update_one(
+                {"order_id": order_id},
+                {
+                    "$set": {
+                        "status": "completed",
+                        "payhere_payment_id": data.get('payment_id'),
+                        "transaction_id": data.get('payment_id'),
+                        "status_code": status_code,
+                        "completed_at": get_utc_now(),
+                        "raw_response": data
+                    }
+                }
+            )
+            
+            print(f"âœ… Order {order_id} marked as paid")
+            
+        elif status_code == "0":
+            # Payment pending
+            orders_col.update_one(
+                {"order_id": order_id},
+                {"$set": {"status": "pending_payment", "updated": get_utc_now()}}
+            )
+            
+            payments_col.update_one(
+                {"order_id": order_id},
+                {"$set": {"status": "pending", "status_code": status_code}}
+            )
+            
+        else:
+            # Payment failed/canceled
+            orders_col.update_one(
+                {"order_id": order_id},
+                {"$set": {"status": "payment_failed", "updated": get_utc_now()}}
+            )
+            
+            payments_col.update_one(
+                {"order_id": order_id},
+                {
+                    "$set": {
+                        "status": "failed",
+                        "status_code": status_code,
+                        "failure_reason": data.get('status_message', 'Unknown'),
+                        "raw_response": data
+                    }
+                }
+            )
+        
+        # Log the notification
+        db["payment_notifications"].insert_one({
+            "order_id": order_id,
+            "status_code": status_code,
+            "data": data,
+            "timestamp": get_utc_now()
+        })
+        
+        return "OK", 200
+    
+    except Exception as e:
+        print(f"âŒ PayHere notification error: {e}")
+        import traceback
+        traceback.print_exc()
+        return "Error", 500
+
+
+@app.route("/payment/success")
+def payment_success():
+    """Payment success redirect page"""
+    order_id = request.args.get('order_id')
+    return render_template('payment_success.html', order_id=order_id)
+
+
+@app.route("/payment/cancel")
+def payment_cancel():
+    """Payment cancel redirect page"""
+    order_id = request.args.get('order_id')
+    return render_template('payment_cancel.html', order_id=order_id)
+
+
+@app.route("/api/store/payment/status/<order_id>", methods=["GET"])
+def check_payment_status(order_id):
+    """Check payment status for an order"""
+    try:
+        order = orders_col.find_one({"order_id": order_id}, {"_id": 0})
+        payment = payments_col.find_one({"order_id": order_id}, {"_id": 0})
+        
+        if not order:
+            return jsonify({"error": "Order not found"}), 404
+        
+        return jsonify({
+            "order_id": order_id,
+            "order_status": order.get('status'),
+            "payment_status": payment.get('status') if payment else None,
+            "amount": order.get('total_amount'),
+            "payment_date": payment.get('completed_at').isoformat() if payment and payment.get('completed_at') else None
+        })
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 # ============================================
 # INITIALIZATION & STARTUP
 # ============================================

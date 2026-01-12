@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!-- templates/payment_cancel.html -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Cancelled - GovConnect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-red-50 to-orange-50 min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 text-center">
+            <!-- Cancel Icon -->
+            <div class="w-24 h-24 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
+                <svg class="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </div>
+            
+            <h1 class="text-3xl font-bold text-gray-900 mb-4">Payment Cancelled</h1>
+            <p class="text-gray-600 mb-6">Your payment was not completed. No charges have been made.</p>
+            
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <p class="text-sm text-yellow-800">
+                    âš ï¸ Your order has been cancelled. Items are still in your cart if you wish to try again.
+                </p>
+            </div>
+            
+            <div class="space-y-3">
+                <a href="/store" class="block w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition">
+                    Return to Store
+                </a>
+                <button onclick="history.back()" class="block w-full py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition">
+                    Go Back
+                </button>
+            </div>
+        </div>
+        
+        <p class="text-center text-sm text-gray-500 mt-6">
+            Having issues? Contact support at support@govconnect.lk
+        </p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,123 @@
+/* ============================================
+   ADVERTISEMENT STYLING
+   ============================================ */
+
+.ad-section {
+    background: #ffffff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.ad-section h3 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 1rem;
+}
+
+/* Ad Card Styles */
+.ad-card {
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.ad-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, #3b82f6, #8b5cf6);
+}
+
+.ad-card:hover {
+    transform: translateY(-2px);
+    border-color: #3b82f6;
+    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.2);
+}
+
+.ad-card img {
+    transition: transform 0.3s ease;
+}
+
+.ad-card:hover img {
+    transform: scale(1.05);
+}
+
+/* Priority Badges */
+.ad-card .bg-red-500 {
+    background-color: #ef4444;
+}
+
+.ad-card .bg-yellow-500 {
+    background-color: #f59e0b;
+}
+
+.ad-card .bg-green-500 {
+    background-color: #10b981;
+}
+
+/* Loading Animation */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .ad-section {
+        padding: 1rem;
+    }
+    
+    .ad-card {
+        padding: 0.75rem !important;
+    }
+    
+    .ad-card img {
+        width: 60px !important;
+        height: 60px !important;
+    }
+    
+    .ad-card h3 {
+        font-size: 1rem;
+    }
+    
+    .ad-card p {
+        font-size: 0.875rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .ad-card .flex {
+        flex-direction: column;
+    }
+    
+    .ad-card img {
+        width: 100% !important;
+        height: auto !important;
+        margin-bottom: 1rem;
+    }
+}
+
+/* No Ads Message */
+.ad-container-empty {
+    text-align: center;
+    padding: 2rem;
+    color: #9ca3af;
+}
+
+/* Error State */
+.ad-container-error {
+    text-align: center;
+    padding: 2rem;
+    color: #ef4444;
+}
