@@ -386,6 +386,160 @@ def track_ad_click(ad_id):
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+@app.route("/api/notifications/trigger", methods=["POST"])
+def trigger_smart_notifications():
+    """
+    Trigger smart notifications based on user profile and behavior
+    Called automatically when user visits home page or performs searches
+    """
+    try:
+        from notification_engine import NotificationEngine
+        
+        # Get user data
+        user_id = session.get("user_id")
+        if not user_id:
+            # For anonymous users, use session data
+            user_id = session.get("anonymous_id") or f"anon_{datetime.now().timestamp()}"
+            session["anonymous_id"] = user_id
+        
+        # Gather session context
+        session_data = {
+            "age": session.get("user_age"),
+            "job": session.get("user_job"),
+            "language": session.get("user_language", "en")
+        }
+        
+        # Initialize notification engine
+        engine = NotificationEngine()
+        
+        # Analyze and trigger notifications
+        notifications = engine.analyze_user_and_trigger_ads(user_id, session_data)
+        
+        return jsonify({
+            "status": "success",
+            "notifications": notifications,
+            "count": len(notifications)
+        })
+    
+    except Exception as e:
+        print(f"Notification trigger error: {e}")
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "notifications": []
+        }), 500
+
+@app.route("/api/notifications/unread", methods=["GET"])
+def get_unread_notifications():
+    """Get unread notifications for current user"""
+    try:
+        from notification_engine import NotificationEngine
+        
+        user_id = session.get("user_id") or session.get("anonymous_id")
+        
+        if not user_id:
+            return jsonify({
+                "notifications": [],
+                "count": 0
+            })
+        
+        engine = NotificationEngine()
+        notifications = engine.get_unread_notifications(user_id, limit=10)
+        
+        return jsonify({
+            "status": "success",
+            "notifications": notifications,
+            "count": len(notifications)
+        })
+    
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "notifications": [],
+            "count": 0
+        }), 500
+
+@app.route("/api/notifications/<notification_id>/read", methods=["POST"])
+def mark_notification_read(notification_id):
+    """Mark notification as read"""
+    try:
+        from notification_engine import NotificationEngine
+        
+        engine = NotificationEngine()
+        engine.mark_as_read(notification_id)
+        
+        return jsonify({"status": "success"})
+    
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+@app.route("/api/notifications/<notification_id>/dismiss", methods=["POST"])
+def dismiss_notification(notification_id):
+    """Dismiss notification"""
+    try:
+        from notification_engine import NotificationEngine
+        
+        engine = NotificationEngine()
+        engine.dismiss_notification(notification_id)
+        
+        return jsonify({"status": "success"})
+    
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
+@app.route("/api/user/track-behavior", methods=["POST"])
+def track_user_behavior():
+    """
+    Track user behavior for smart notifications
+    Call this when user searches, clicks, or interacts
+    """
+    try:
+        data = request.json or {}
+        
+        user_id = session.get("user_id") or session.get("anonymous_id")
+        if not user_id:
+            return jsonify({"status": "skipped"}), 200
+        
+        # Log the behavior
+        behavior_log = {
+            "user_id": user_id,
+            "action": data.get("action"),  # search, click, view, etc.
+            "target": data.get("target"),  # what they interacted with
+            "context": data.get("context", {}),
+            "timestamp": get_utc_now()
+        }
+        
+        eng_col.insert_one(behavior_log)
+        
+        # Check if we should trigger new notifications
+        # (e.g., after 3 searches, or specific patterns)
+        recent_actions = eng_col.count_documents({
+            "user_id": user_id,
+            "timestamp": {"$gte": get_utc_now() - timedelta(minutes=10)}
+        })
+        
+        if recent_actions >= 3:
+            # Trigger notification analysis
+            from notification_engine import NotificationEngine
+            engine = NotificationEngine()
+            
+            session_data = {
+                "age": session.get("user_age"),
+                "job": session.get("user_job"),
+                "language": session.get("user_language", "en")
+            }
+            
+            new_notifications = engine.analyze_user_and_trigger_ads(user_id, session_data)
+            
+            return jsonify({
+                "status": "success",
+                "new_notifications": len(new_notifications)
+            })
+        
+        return jsonify({"status": "tracked"})
+    
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500   
 @app.route('/api/ads/analytics', methods=['GET'])
 def get_ad_analytics():
     """Get advertisement performance analytics"""
