@@ -721,54 +721,69 @@ async function processPayHerePayment(form) {
     submitBtn.textContent = '⏳ Processing...';
     
     try {
-        // Generate unique order ID
-        const timestamp = new Date().getTime();
-        const orderId = `ORD${timestamp}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-        
-        // Calculate total
+        // Generate order ID
+        const orderId = `ORD${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
         const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         
-        // Prepare payment request
-        const paymentRequest = {
-            order_id: orderId,
-            amount: total,
-            items: cart,
-            items_description: cart.map(i => `${i.name} (${i.quantity})`).join(', '),
-            customer_info: {
-                first_name: formData.get('first_name'),
-                last_name: formData.get('last_name'),
-                email: formData.get('email'),
-                phone: formData.get('phone'),
-                address: formData.get('address'),
-                city: formData.get('city'),
-                country: formData.get('country')
-            }
-        };
-        
-        // Initiate PayHere payment
-        const response = await fetch('/api/store/payment/initiate', {
+        // Create order
+        const orderResponse = await fetch('/api/store/order', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(paymentRequest)
+            body: JSON.stringify({
+                order_id: orderId,
+                items: cart,
+                total_amount: total,
+                shipping_address: {
+                    first_name: formData.get('first_name'),
+                    last_name: formData.get('last_name'),
+                    email: formData.get('email'),
+                    phone: formData.get('phone'),
+                    address: formData.get('address'),
+                    city: formData.get('city'),
+                    country: formData.get('country')
+                },
+                payment_method: 'card'
+            })
         });
         
-        const result = await response.json();
+        if (!orderResponse.ok) {
+            throw new Error('Failed to create order');
+        }
         
-        if (response.ok && result.status === 'success') {
+        // Simulate payment processing (2 seconds)
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Process payment
+        const paymentResponse = await fetch('/api/store/payment', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                order_id: orderId,
+                amount: total,
+                items: cart,
+                method: 'card',
+                transaction_id: `TXN${Date.now()}`
+            })
+        });
+        
+        const paymentResult = await paymentResponse.json();
+        
+        if (paymentResponse.ok && paymentResult.status === 'ok') {
             closeCheckoutForm();
-            showPayHereForm(result.payment_data, result.payment_url);
+            cart = [];
+            updateCart();
+            showSuccessModal(orderId, total);
         } else {
-            throw new Error(result.error || 'Payment initiation failed');
+            throw new Error('Payment processing failed');
         }
         
     } catch (error) {
         console.error('Payment error:', error);
-        showNotification('Payment initiation failed: ' + error.message, 'error');
+        showNotification('Payment failed: ' + error.message, 'error');
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
     }
 }
-
 function showPayHereForm(paymentData, paymentUrl) {
     // Create hidden form for PayHere
     const form = document.createElement('form');
