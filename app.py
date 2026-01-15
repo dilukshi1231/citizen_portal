@@ -19,6 +19,7 @@ from io import StringIO
 from flask.json.provider import DefaultJSONProvider
 from bson import ObjectId
 from ad_targeting_algorithm import AdvertisementTargeting
+DOMAIN = os.getenv("DOMAIN", "http://localhost:5000")
 
 # Try FAISS import
 try:
@@ -322,16 +323,19 @@ def dashboard_page():
     return render_template("chatbot_dashboard.html")
 
 # PayHere Configuration (from environment variables)
+#PAYHERE_MERCHANT_ID = os.getenv("PAYHERE_MERCHANT_ID", "1233555")
+#PAYHERE_MERCHANT_SECRET = os.getenv("PAYHERE_MERCHANT_SECRET", "MzkwNDE1MzcwMTEwMDAwNjYxNTYzNDcxMzgyNTAyMjkzMTI4NDAwMQ==")
 PAYHERE_MERCHANT_ID = os.getenv("PAYHERE_MERCHANT_ID", "1233555")
 PAYHERE_MERCHANT_SECRET = os.getenv("PAYHERE_MERCHANT_SECRET", "MzkwNDE1MzcwMTEwMDAwNjYxNTYzNDcxMzgyNTAyMjkzMTI4NDAwMQ==")
-PAYHERE_MODE = os.getenv("PAYHERE_MODE", "sandbox")
-PAYHERE_RETURN_URL = os.getenv("PAYHERE_RETURN_URL", "http://localhost:5000/payment/return")
-PAYHERE_CANCEL_URL = os.getenv("PAYHERE_CANCEL_URL", "http://localhost:5000/payment/cancel")
-PAYHERE_NOTIFY_URL = os.getenv("PAYHERE_NOTIFY_URL", "http://localhost:5000/payment/notify")
+PAYHERE_CURRENCY = "LKR"
 
+PAYHERE_MODE = os.getenv("PAYHERE_MODE", "sandbox")
+PAYHERE_RETURN_URL = f"{DOMAIN}/payment/return"
+PAYHERE_CANCEL_URL = f"{DOMAIN}/payment/cancel"
+PAYHERE_NOTIFY_URL = f"{DOMAIN}/payment/notify"
 # PayHere URLs
 PAYHERE_SANDBOX_URL = "https://sandbox.payhere.lk/pay/checkout"
-PAYHERE_LIVE_URL = "https://www.payhere.lk/pay/checkout"
+#PAYHERE_LIVE_URL = "https://www.payhere.lk/pay/checkout"
 
 def generate_payhere_hash(merchant_id, order_id, amount, currency):
     """Generate PayHere payment hash for security"""
@@ -3649,13 +3653,11 @@ PAYHERE_CONFIG = {
 }
 
 # Domain configuration (IMPORTANT: Change this in production)
-DOMAIN = os.getenv('DOMAIN', 'http://govconnect.local:5000')
 
 
 def generate_payhere_hash(merchant_id, order_id, amount, currency, merchant_secret):
     """
     Generate MD5 hash for PayHere payment verification
-    CRITICAL: Hash must match PayHere's exact format
     """
     import hashlib
     
@@ -3665,79 +3667,59 @@ def generate_payhere_hash(merchant_id, order_id, amount, currency, merchant_secr
     # Step 1: Hash the merchant secret
     merchant_secret_hash = hashlib.md5(merchant_secret.encode('utf-8')).hexdigest().upper()
     
-    # Step 2: Concatenate in exact order (NO spaces or extra characters)
+    # Step 2: Concatenate in exact order
     hash_string = f"{merchant_id}{order_id}{amount_formatted}{currency}{merchant_secret_hash}"
     
     # Step 3: Generate final MD5 hash
     final_hash = hashlib.md5(hash_string.encode('utf-8')).hexdigest().upper()
     
-    # Debug logging (remove in production)
-    print("=" * 70)
-    print("PayHere Hash Generation Debug:")
-    print(f"Merchant ID: {merchant_id}")
-    print(f"Order ID: {order_id}")
-    print(f"Amount: {amount_formatted}")
-    print(f"Currency: {currency}")
-    print(f"Secret Hash: {merchant_secret_hash}")
-    print(f"Hash String: {hash_string}")
-    print(f"Final Hash: {final_hash}")
-    print("=" * 70)
-    
     return final_hash
-
 
 @app.route("/api/store/payment/initiate", methods=["POST"])
 def initiate_payment():
-    """Initiate PayHere payment"""
+    """Initiate PayHere payment - ALWAYS USES SANDBOX"""
     try:
         payload = request.json or {}
         
-        # Extract data
         order_id = payload.get("order_id")
         amount = float(payload.get("amount", 0))
-        items = payload.get("items", [])
-        customer_info = payload.get("customer_info", {})
         items_description = payload.get("items_description", "")
+        customer_info = payload.get("customer_info", {})
         
-        # Validate required fields
         if not order_id or amount <= 0:
             return jsonify({"status": "error", "error": "Invalid order data"}), 400
-        
-        if not customer_info.get("first_name") or not customer_info.get("email"):
-            return jsonify({"status": "error", "error": "Customer information required"}), 400
         
         # Create order in database
         order = {
             "order_id": order_id,
             "user_id": session.get("user_id") or "guest",
-            "items": items,
-            "total": amount,
-            "currency": "LKR",
+            "items": payload.get("items", []),
+            "total_amount": amount,
             "status": "pending_payment",
-            "payment_status": "pending",
             "customer_info": customer_info,
-            "created": get_utc_now(),
-            "updated": get_utc_now()
+            "created": datetime.utcnow()
         }
-        
         orders_col.insert_one(order)
         
         # Generate PayHere hash
-        merchant_id = PAYHERE_MERCHANT_ID
-        currency = "LKR"
         amount_formatted = f"{amount:.2f}"
+        payment_hash = generate_payhere_hash(
+            PAYHERE_MERCHANT_ID,
+            order_id,
+            amount,
+            PAYHERE_CURRENCY,
+            PAYHERE_MERCHANT_SECRET
+        )
         
-        payment_hash = generate_payhere_hash(merchant_id, order_id, amount_formatted, currency)
-        
-        # Prepare PayHere payment data
+        # Prepare PayHere data
         payment_data = {
-            "merchant_id": merchant_id,
+            "merchant_id": PAYHERE_MERCHANT_ID,
             "return_url": PAYHERE_RETURN_URL,
             "cancel_url": PAYHERE_CANCEL_URL,
             "notify_url": PAYHERE_NOTIFY_URL,
             "order_id": order_id,
-            "items": items_description[:255],  # PayHere has 255 char limit
-            "currency": currency,
+            "items": items_description,
+            "currency": PAYHERE_CURRENCY,
             "amount": amount_formatted,
             "first_name": customer_info.get("first_name", "")[:50],
             "last_name": customer_info.get("last_name", "")[:50],
@@ -3745,75 +3727,104 @@ def initiate_payment():
             "phone": customer_info.get("phone", "")[:20],
             "address": customer_info.get("address", "")[:255],
             "city": customer_info.get("city", "")[:50],
-            "country": customer_info.get("country", "Sri Lanka")[:50],
+            "country": "Sri Lanka",
             "hash": payment_hash
         }
-        
-        # Determine PayHere URL based on mode
-        payment_url = PAYHERE_SANDBOX_URL if PAYHERE_MODE == "sandbox" else PAYHERE_LIVE_URL
         
         return jsonify({
             "status": "success",
             "payment_data": payment_data,
-            "payment_url": payment_url,
-            "order_id": order_id
+            "payment_url": PAYHERE_SANDBOX_URL,  # Always sandbox
+            "order_id": order_id,
+            "mode": "sandbox"  # Indicate it's sandbox mode
         })
         
     except Exception as e:
         print(f"Payment initiation error: {e}")
         return jsonify({"status": "error", "error": str(e)}), 500
+    
 @app.route("/test-payhere", methods=["GET"])
 def test_payhere():
-    """Test PayHere integration"""
+    """Test PayHere integration - SANDBOX ONLY"""
     
-    # Generate a test payment
     test_order_id = f"TEST_{int(datetime.now().timestamp())}"
     test_amount = 1000.00
     
-    merchant_id = PAYHERE_CONFIG['merchant_id']
-    merchant_secret = PAYHERE_CONFIG['merchant_secret']
-    currency = PAYHERE_CONFIG['currency']
-    
     # Generate hash
     hash_value = generate_payhere_hash(
-        merchant_id,
+        PAYHERE_MERCHANT_ID,
         test_order_id,
         test_amount,
-        currency,
-        merchant_secret
+        PAYHERE_CURRENCY,
+        PAYHERE_MERCHANT_SECRET
     )
     
-    # Create HTML form that auto-submits
+    # Create HTML form that auto-submits to SANDBOX
     html = f"""
     <!DOCTYPE html>
     <html>
     <head>
-        <title>PayHere Test</title>
+        <title>PayHere Test - SANDBOX MODE</title>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+            }}
+            .container {{
+                background: white;
+                padding: 40px;
+                border-radius: 10px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                text-align: center;
+            }}
+            .sandbox-badge {{
+                background: #ffc107;
+                color: #000;
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-weight: bold;
+                margin-bottom: 20px;
+                display: inline-block;
+            }}
+        </style>
     </head>
     <body>
-        <h2>Testing PayHere Integration...</h2>
-        <form method="post" action="{PAYHERE_CONFIG['sandbox_url']}" id="payhere_form">
-            <input type="hidden" name="merchant_id" value="{merchant_id}">
-            <input type="hidden" name="return_url" value="{DOMAIN}/payment/success">
-            <input type="hidden" name="cancel_url" value="{DOMAIN}/payment/cancel">
-            <input type="hidden" name="notify_url" value="{DOMAIN}/api/store/payment/notify">
-            <input type="hidden" name="order_id" value="{test_order_id}">
-            <input type="hidden" name="items" value="Test Product">
-            <input type="hidden" name="currency" value="{currency}">
-            <input type="hidden" name="amount" value="{test_amount:.2f}">
-            <input type="hidden" name="first_name" value="Test">
-            <input type="hidden" name="last_name" value="Customer">
-            <input type="hidden" name="email" value="test@example.com">
-            <input type="hidden" name="phone" value="0771234567">
-            <input type="hidden" name="address" value="Test Address">
-            <input type="hidden" name="city" value="Colombo">
-            <input type="hidden" name="country" value="Sri Lanka">
-            <input type="hidden" name="hash" value="{hash_value}">
-            <button type="submit">Click here if not redirected</button>
-        </form>
-        <script>
-            document.getElementById('payhere_form').submit();
-        </script>
+        <div class="container">
+            <div class="sandbox-badge">🧪 SANDBOX MODE</div>
+            <h2>Testing PayHere Integration...</h2>
+            <p>Redirecting to PayHere Sandbox...</p>
+            <form method="post" action="{PAYHERE_SANDBOX_URL}" id="payhere_form">
+                <input type="hidden" name="merchant_id" value="{PAYHERE_MERCHANT_ID}">
+                <input type="hidden" name="return_url" value="{PAYHERE_RETURN_URL}">
+                <input type="hidden" name="cancel_url" value="{PAYHERE_CANCEL_URL}">
+                <input type="hidden" name="notify_url" value="{PAYHERE_NOTIFY_URL}">
+                <input type="hidden" name="order_id" value="{test_order_id}">
+                <input type="hidden" name="items" value="Test Product">
+                <input type="hidden" name="currency" value="{PAYHERE_CURRENCY}">
+                <input type="hidden" name="amount" value="{test_amount:.2f}">
+                <input type="hidden" name="first_name" value="Test">
+                <input type="hidden" name="last_name" value="Customer">
+                <input type="hidden" name="email" value="test@example.com">
+                <input type="hidden" name="phone" value="0771234567">
+                <input type="hidden" name="address" value="Test Address">
+                <input type="hidden" name="city" value="Colombo">
+                <input type="hidden" name="country" value="Sri Lanka">
+                <input type="hidden" name="hash" value="{hash_value}">
+                <button type="submit" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    Click here if not redirected
+                </button>
+            </form>
+            <script>
+                setTimeout(() => {{
+                    document.getElementById('payhere_form').submit();
+                }}, 1000);
+            </script>
+        </div>
     </body>
     </html>
     """
@@ -3904,15 +3915,16 @@ def payment_notify():
 
 @app.route("/api/store/payment/test", methods=["GET"])
 def test_payment_setup():
-    """Test endpoint to verify PayHere configuration"""
+    """Test endpoint to verify PayHere configuration - SANDBOX ONLY"""
     return jsonify({
         "payhere_configured": True,
-        "mode": PAYHERE_MODE,
+        "mode": "SANDBOX (Production mode disabled)",
         "merchant_id": PAYHERE_MERCHANT_ID,
-        "payment_url": PAYHERE_SANDBOX_URL if PAYHERE_MODE == "sandbox" else PAYHERE_LIVE_URL,
+        "payment_url": PAYHERE_SANDBOX_URL,
         "return_url": PAYHERE_RETURN_URL,
         "cancel_url": PAYHERE_CANCEL_URL,
-        "notify_url": PAYHERE_NOTIFY_URL
+        "notify_url": PAYHERE_NOTIFY_URL,
+        "warning": "This system is configured for SANDBOX mode only"
     })
 @app.route("/api/store/payment/notify", methods=["POST"])
 def payhere_notify():

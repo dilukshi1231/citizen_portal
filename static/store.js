@@ -237,73 +237,86 @@ function removeFromCart(productId) {
     updateCart();
 }
 
-// Checkout process
 async function checkout() {
     if (cart.length === 0) {
         showNotification('Your cart is empty', 'error');
         return;
     }
     
-    // Check if user is logged in (you can get this from session/cookie)
-    const userId = getUserId(); // Implement this based on your auth system
+    showCheckoutForm();
+}
+
+async function processPayHerePayment(form) {
+    const formData = new FormData(form);
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
     
-    if (!userId) {
-        showNotification('Please log in to checkout', 'error');
-        window.location.href = '/user/login';
-        return;
-    }
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ Processing...';
     
     try {
-        // Create order
-        const orderData = {
-            user_id: userId,
-            items: cart,
-            total_amount: cart.reduce((total, item) => total + (item.price * item.quantity), 0),
-            payment_method: 'card',
-            shipping_address: {} // Can collect from user
-        };
+        // 1. Generate unique order ID
+        const orderId = `ORD${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+        const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         
-        const orderRes = await fetch('/api/store/order', {
+        // 2. Prepare items description
+        const itemsDescription = cart.map(item => 
+            `${item.name} x${item.quantity}`
+        ).join(', ').substring(0, 255);
+        
+        // 3. Call backend to initiate payment
+        const response = await fetch('/api/store/payment/initiate', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(orderData)
+            body: JSON.stringify({
+                order_id: orderId,
+                amount: total,
+                items: cart,
+                items_description: itemsDescription,
+                customer_info: {
+                    first_name: formData.get('first_name'),
+                    last_name: formData.get('last_name'),
+                    email: formData.get('email'),
+                    phone: formData.get('phone'),
+                    address: formData.get('address'),
+                    city: formData.get('city'),
+                    country: formData.get('country')
+                }
+            })
         });
         
-        const orderResult = await orderRes.json();
+        const result = await response.json();
         
-        if (orderResult.status === 'ok') {
-            // Process payment
-            const paymentData = {
-                order_id: orderResult.order_id,
-                user_id: userId,
-                amount: orderData.total_amount,
-                method: 'card',
-                items: cart,
-                transaction_id: 'TXN' + Date.now() // Simulate payment gateway
-            };
+        if (result.status === 'success') {
+            // 4. Create hidden form to submit to PayHere
+            const paymentForm = document.createElement('form');
+            paymentForm.method = 'POST';
+            paymentForm.action = result.payment_url;
+            paymentForm.style.display = 'none';
             
-            const paymentRes = await fetch('/api/store/payment', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(paymentData)
-            });
-            
-            const paymentResult = await paymentRes.json();
-            
-            if (paymentResult.status === 'ok') {
-                showNotification('Order placed successfully! Thank you for your purchase.', 'success');
-                cart = [];
-                updateCart();
-                closeCart();
-            } else {
-                showNotification('Payment failed. Please try again.', 'error');
+            // Add all payment data as hidden inputs
+            for (const [key, value] of Object.entries(result.payment_data)) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                paymentForm.appendChild(input);
             }
+            
+            document.body.appendChild(paymentForm);
+            
+            // 5. Submit form (redirects to PayHere)
+            paymentForm.submit();
+            
         } else {
-            showNotification('Order creation failed. Please try again.', 'error');
+            throw new Error(result.error || 'Payment initiation failed');
         }
+        
     } catch (error) {
-        console.error('Checkout error:', error);
-        showNotification('Checkout failed. Please try again.', 'error');
+        console.error('Payment error:', error);
+        showNotification('Payment failed: ' + error.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
     }
 }
 

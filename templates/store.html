@@ -712,6 +712,8 @@ function closeCheckoutForm() {
     if (modal) modal.remove();
 }
 
+// Replace the processPayHerePayment function in store.html (around line 560)
+
 async function processPayHerePayment(form) {
     const formData = new FormData(form);
     const submitBtn = form.querySelector('button[type="submit"]');
@@ -721,19 +723,25 @@ async function processPayHerePayment(form) {
     submitBtn.textContent = '⏳ Processing...';
     
     try {
-        // Generate order ID
+        // 1. Generate unique order ID
         const orderId = `ORD${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
         const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         
-        // Create order
-        const orderResponse = await fetch('/api/store/order', {
+        // 2. Prepare items description (PayHere requirement)
+        const itemsDescription = cart.map(item => 
+            `${item.name} x${item.quantity}`
+        ).join(', ').substring(0, 255);
+        
+        // 3. Call backend to initiate payment
+        const response = await fetch('/api/store/payment/initiate', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 order_id: orderId,
+                amount: total,
                 items: cart,
-                total_amount: total,
-                shipping_address: {
+                items_description: itemsDescription,
+                customer_info: {
                     first_name: formData.get('first_name'),
                     last_name: formData.get('last_name'),
                     email: formData.get('email'),
@@ -741,40 +749,43 @@ async function processPayHerePayment(form) {
                     address: formData.get('address'),
                     city: formData.get('city'),
                     country: formData.get('country')
-                },
-                payment_method: 'card'
+                }
             })
         });
         
-        if (!orderResponse.ok) {
-            throw new Error('Failed to create order');
-        }
+        const result = await response.json();
         
-        // Simulate payment processing (2 seconds)
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Process payment
-        const paymentResponse = await fetch('/api/store/payment', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                order_id: orderId,
-                amount: total,
-                items: cart,
-                method: 'card',
-                transaction_id: `TXN${Date.now()}`
-            })
-        });
-        
-        const paymentResult = await paymentResponse.json();
-        
-        if (paymentResponse.ok && paymentResult.status === 'ok') {
+        if (result.status === 'success') {
+            // 4. Create hidden form to submit to PayHere
+            const paymentForm = document.createElement('form');
+            paymentForm.method = 'POST';
+            paymentForm.action = result.payment_url;
+            paymentForm.style.display = 'none';
+            
+            // Add all payment data as hidden inputs
+            for (const [key, value] of Object.entries(result.payment_data)) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                paymentForm.appendChild(input);
+            }
+            
+            document.body.appendChild(paymentForm);
+            
+            // 5. Close checkout modal
             closeCheckoutForm();
-            cart = [];
-            updateCart();
-            showSuccessModal(orderId, total);
+            
+            // 6. Show redirect message
+            showNotification('Redirecting to PayHere secure payment gateway...', 'info', 2000);
+            
+            // 7. Submit form (redirects to PayHere)
+            setTimeout(() => {
+                paymentForm.submit();
+            }, 500);
+            
         } else {
-            throw new Error('Payment processing failed');
+            throw new Error(result.error || 'Payment initiation failed');
         }
         
     } catch (error) {
