@@ -42,6 +42,21 @@ load_dotenv()
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.secret_key = os.getenv("FLASK_SECRET", "dev-secret")
 CORS(app)
+PAYHERE_MERCHANT_ID = os.getenv("PAYHERE_MERCHANT_ID", "1233555")
+PAYHERE_MERCHANT_SECRET = os.getenv("PAYHERE_MERCHANT_SECRET", "MzkwNDE1MzcwMTEwMDAwNjYxNTYzNDcxMzgyNTAyMjkzMTI4NDAwMQ==")
+PAYHERE_MODE = os.getenv("PAYHERE_MODE", "sandbox")
+DOMAIN = os.getenv("DOMAIN", "http://localhost:5000")
+# PayHere URLs
+PAYHERE_SANDBOX_URL = "https://sandbox.payhere.lk/pay/checkout"
+PAYHERE_LIVE_URL = "https://www.payhere.lk/pay/checkout"
+
+# Sample product
+PRODUCT = {
+    'id': 'PROD001',
+    'name': 'Test Product',
+    'price': 1000.00,
+    'currency': 'LKR'
+}
 def serialize_mongo_doc(doc):
     """
     Convert MongoDB document to JSON-serializable format
@@ -333,12 +348,7 @@ PAYHERE_NOTIFY_URL = os.getenv("PAYHERE_NOTIFY_URL", "http://localhost:5000/paym
 PAYHERE_SANDBOX_URL = "https://sandbox.payhere.lk/pay/checkout"
 PAYHERE_LIVE_URL = "https://www.payhere.lk/pay/checkout"
 
-def generate_payhere_hash(merchant_id, order_id, amount, currency):
-    """Generate PayHere payment hash for security"""
-    # Format: MD5(merchant_id + order_id + amount + currency + MD5(merchant_secret))
-    merchant_secret_hash = hashlib.md5(PAYHERE_MERCHANT_SECRET.encode()).hexdigest().upper()
-    hash_string = f"{merchant_id}{order_id}{amount}{currency}{merchant_secret_hash}"
-    return hashlib.md5(hash_string.encode()).hexdigest().upper()
+
 @app.route('/api/ads/get_ads', methods=['POST'])
 def get_user_ads():
     """Get targeted advertisements for a user"""
@@ -2416,6 +2426,12 @@ def get_dashboard_analytics():
         "popular_products": popular_products
     })
 
+@app.route('/')
+def index():
+    return render_template_string(
+        HTML_TEMPLATE,
+        product=PRODUCT
+    )
 # ============================================
 # ADMIN CRUD & INSIGHTS
 # ============================================
@@ -3635,7 +3651,7 @@ DOMAIN=http://govconnect.local:5000  # Change before going live
 
 import hashlib
 import hmac
-from flask import request, jsonify, redirect
+from flask import  Flask,request, jsonify, redirect
 from decimal import Decimal
 
 # PayHere Configuration
@@ -3655,25 +3671,22 @@ DOMAIN = os.getenv('DOMAIN', 'http://govconnect.local:5000')
 def generate_payhere_hash(merchant_id, order_id, amount, currency, merchant_secret):
     """
     Generate MD5 hash for PayHere payment verification
-    CRITICAL: Hash must match PayHere's exact format
+    Format: MD5(merchant_id + order_id + amount + currency + MD5(merchant_secret).upper()).upper()
     """
-    import hashlib
-    
-    # Format amount to 2 decimal places with NO commas
+    # Format amount to 2 decimal places
     amount_formatted = "{:.2f}".format(float(amount))
     
     # Step 1: Hash the merchant secret
     merchant_secret_hash = hashlib.md5(merchant_secret.encode('utf-8')).hexdigest().upper()
     
-    # Step 2: Concatenate in exact order (NO spaces or extra characters)
+    # Step 2: Concatenate in exact order
     hash_string = f"{merchant_id}{order_id}{amount_formatted}{currency}{merchant_secret_hash}"
     
     # Step 3: Generate final MD5 hash
     final_hash = hashlib.md5(hash_string.encode('utf-8')).hexdigest().upper()
     
-    # Debug logging (remove in production)
     print("=" * 70)
-    print("PayHere Hash Generation Debug:")
+    print("PayHere Hash Generation:")
     print(f"Merchant ID: {merchant_id}")
     print(f"Order ID: {order_id}")
     print(f"Amount: {amount_formatted}")
@@ -3685,8 +3698,332 @@ def generate_payhere_hash(merchant_id, order_id, amount, currency, merchant_secr
     
     return final_hash
 
+HTML_TEMPLATE = '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayHere Sandbox Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .badge {
+            display: inline-block;
+            background: #ffd700;
+            color: #333;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+        .product-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        .product-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .product-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .label {
+            color: #666;
+            font-size: 14px;
+        }
+        .value {
+            color: #333;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .price {
+            color: #667eea;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        
+        /* Customer Form */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .pay-button {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .pay-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        .pay-button:active {
+            transform: translateY(0);
+        }
+        .pay-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-top: 25px;
+            border-radius: 8px;
+        }
+        .info-box p {
+            color: #1976D2;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+        .info-box p:last-child {
+            margin-bottom: 0;
+        }
+        .info-box strong {
+            font-weight: 600;
+        }
+        .status {
+            display: none;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PayHere Payment Test</h1>
+        <span class="badge">SANDBOX MODE</span>
+        
+        <div class="product-card">
+            <div class="product-name">{{ product.name }}</div>
+            <div class="product-details">
+                <span class="label">Product ID:</span>
+                <span class="value">{{ product.id }}</span>
+            </div>
+            <div class="product-details">
+                <span class="label">Price:</span>
+                <span class="price">{{ product.currency }} {{ product.price }}</span>
+            </div>
+        </div>
 
-@app.route("/api/store/payment/initiate", methods=["POST"])
+        <form id="customer-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>First Name *</label>
+                    <input type="text" id="first_name" required value="Test">
+                </div>
+                <div class="form-group">
+                    <label>Last Name *</label>
+                    <input type="text" id="last_name" required value="Customer">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Email *</label>
+                <input type="email" id="email" required value="test@example.com">
+            </div>
+            
+            <div class="form-group">
+                <label>Phone *</label>
+                <input type="tel" id="phone" required value="0771234567">
+            </div>
+            
+            <div class="form-group">
+                <label>Address *</label>
+                <input type="text" id="address" required value="123 Test Street">
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>City *</label>
+                    <input type="text" id="city" required value="Colombo">
+                </div>
+                <div class="form-group">
+                    <label>Country</label>
+                    <input type="text" id="country" value="Sri Lanka" readonly>
+                </div>
+            </div>
+
+            <button type="submit" class="pay-button" id="pay-btn">
+                Proceed to Payment
+            </button>
+        </form>
+
+        <div class="info-box">
+            <p><strong>Test Card Details (Sandbox):</strong></p>
+            <p><strong>Card Number:</strong> 5303732372101006</p>
+            <p><strong>Expiry:</strong> 12/25</p>
+            <p><strong>CVV:</strong> 123</p>
+            <p><strong>Name:</strong> Any Name</p>
+        </div>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('customer-form');
+        const payBtn = document.getElementById('pay-btn');
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Disable button
+            payBtn.disabled = true;
+            payBtn.textContent = 'Processing...';
+            
+            try {
+                // Generate unique order ID
+                const orderId = 'ORDER_' + Date.now();
+                
+                // Collect customer data
+                const customerData = {
+                    first_name: document.getElementById('first_name').value,
+                    last_name: document.getElementById('last_name').value,
+                    email: document.getElementById('email').value,
+                    phone: document.getElementById('phone').value,
+                    address: document.getElementById('address').value,
+                    city: document.getElementById('city').value,
+                    country: document.getElementById('country').value
+                };
+                
+                // Initiate payment
+                const response = await fetch('/api/payment/initiate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        order_id: orderId,
+                        amount: {{ product.price }},
+                        currency: '{{ product.currency }}',
+                        items_description: '{{ product.name }}',
+                        customer_info: customerData
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    // Create form and submit to PayHere
+                    const payhereForm = document.createElement('form');
+                    payhereForm.method = 'POST';
+                    payhereForm.action = data.payment_url;
+                    
+                    // Add all payment data as hidden fields
+                    for (const [key, value] of Object.entries(data.payment_data)) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = key;
+                        input.value = value;
+                        payhereForm.appendChild(input);
+                    }
+                    
+                    document.body.appendChild(payhereForm);
+                    payhereForm.submit();
+                } else {
+                    throw new Error(data.error || 'Payment initiation failed');
+                }
+                
+            } catch (error) {
+                console.error('Payment error:', error);
+                showStatus('error', 'Payment initialization failed: ' + error.message);
+                payBtn.disabled = false;
+                payBtn.textContent = 'Proceed to Payment';
+            }
+        });
+
+        function showStatus(type, message) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = 'status ' + type;
+            statusEl.textContent = message;
+            statusEl.style.display = 'block';
+            
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
+'''
+@app.route('/api/payment/initiate', methods=['POST'])
 def initiate_payment():
     """Initiate PayHere payment"""
     try:
@@ -3695,48 +4032,37 @@ def initiate_payment():
         # Extract data
         order_id = payload.get("order_id")
         amount = float(payload.get("amount", 0))
-        items = payload.get("items", [])
+        currency = payload.get("currency", "LKR")
+        items_description = payload.get("items_description", "Test Product")
         customer_info = payload.get("customer_info", {})
-        items_description = payload.get("items_description", "")
         
-        # Validate required fields
+        # Validate
         if not order_id or amount <= 0:
             return jsonify({"status": "error", "error": "Invalid order data"}), 400
         
         if not customer_info.get("first_name") or not customer_info.get("email"):
             return jsonify({"status": "error", "error": "Customer information required"}), 400
         
-        # Create order in database
-        order = {
-            "order_id": order_id,
-            "user_id": session.get("user_id") or "guest",
-            "items": items,
-            "total": amount,
-            "currency": "LKR",
-            "status": "pending_payment",
-            "payment_status": "pending",
-            "customer_info": customer_info,
-            "created": get_utc_now(),
-            "updated": get_utc_now()
-        }
-        
-        orders_col.insert_one(order)
-        
         # Generate PayHere hash
         merchant_id = PAYHERE_MERCHANT_ID
-        currency = "LKR"
         amount_formatted = f"{amount:.2f}"
         
-        payment_hash = generate_payhere_hash(merchant_id, order_id, amount_formatted, currency)
+        payment_hash = generate_payhere_hash(
+            merchant_id, 
+            order_id, 
+            amount_formatted, 
+            currency,
+            PAYHERE_MERCHANT_SECRET
+        )
         
         # Prepare PayHere payment data
         payment_data = {
             "merchant_id": merchant_id,
-            "return_url": PAYHERE_RETURN_URL,
-            "cancel_url": PAYHERE_CANCEL_URL,
-            "notify_url": PAYHERE_NOTIFY_URL,
+            "return_url": f"{DOMAIN}/payment/success",
+            "cancel_url": f"{DOMAIN}/payment/cancel",
+            "notify_url": f"{DOMAIN}/api/payment/notify",
             "order_id": order_id,
-            "items": items_description[:255],  # PayHere has 255 char limit
+            "items": items_description[:255],
             "currency": currency,
             "amount": amount_formatted,
             "first_name": customer_info.get("first_name", "")[:50],
@@ -3749,8 +4075,10 @@ def initiate_payment():
             "hash": payment_hash
         }
         
-        # Determine PayHere URL based on mode
+        # Determine PayHere URL
         payment_url = PAYHERE_SANDBOX_URL if PAYHERE_MODE == "sandbox" else PAYHERE_LIVE_URL
+        
+        print(f"✅ Payment initiated for Order: {order_id}, Amount: {amount_formatted} {currency}")
         
         return jsonify({
             "status": "success",
@@ -3760,8 +4088,59 @@ def initiate_payment():
         })
         
     except Exception as e:
-        print(f"Payment initiation error: {e}")
+        print(f"❌ Payment initiation error: {e}")
         return jsonify({"status": "error", "error": str(e)}), 500
+@app.route('/api/payment/notify', methods=['POST'])
+def payment_notify():
+    """Handle PayHere IPN (Instant Payment Notification)"""
+    try:
+        # Get POST data from PayHere
+        data = request.form.to_dict()
+        
+        print("=" * 70)
+        print("📩 PayHere Notification Received:")
+        for key, value in data.items():
+            print(f"{key}: {value}")
+        print("=" * 70)
+        
+        # Extract fields
+        merchant_id = data.get('merchant_id')
+        order_id = data.get('order_id')
+        payment_id = data.get('payment_id')
+        payhere_amount = data.get('payhere_amount')
+        payhere_currency = data.get('payhere_currency')
+        status_code = data.get('status_code')
+        md5sig = data.get('md5sig')
+        
+        # Verify hash
+        merchant_secret_hash = hashlib.md5(PAYHERE_MERCHANT_SECRET.encode()).hexdigest().upper()
+        local_md5sig = hashlib.md5(
+            f"{merchant_id}{order_id}{payhere_amount}{payhere_currency}{status_code}{merchant_secret_hash}".encode()
+        ).hexdigest().upper()
+        
+        if local_md5sig != md5sig:
+            print("❌ Hash verification failed!")
+            print(f"Expected: {local_md5sig}")
+            print(f"Received: {md5sig}")
+            return "FAILED", 400
+        
+        print("✅ Hash verified successfully")
+        
+        # Status codes: 2 = Success, 0 = Pending, -1 = Canceled, -2 = Failed, -3 = Chargedback
+        if status_code == "2":
+            print(f"✅ Payment SUCCESS for Order: {order_id}, Payment ID: {payment_id}")
+        elif status_code == "0":
+            print(f"⏳ Payment PENDING for Order: {order_id}")
+        else:
+            print(f"❌ Payment FAILED/CANCELLED for Order: {order_id}, Status: {status_code}")
+        
+        return "OK", 200
+        
+    except Exception as e:
+        print(f"❌ Payment notify error: {e}")
+        return "FAILED", 500
+
+
 @app.route("/test-payhere", methods=["GET"])
 def test_payhere():
     """Test PayHere integration"""
@@ -3819,88 +4198,6 @@ def test_payhere():
     """
     
     return html
-@app.route("/payment/notify", methods=["POST"])
-def payment_notify():
-    """Handle PayHere IPN (Instant Payment Notification) callback"""
-    try:
-        # PayHere sends POST data
-        merchant_id = request.form.get("merchant_id")
-        order_id = request.form.get("order_id")
-        payment_id = request.form.get("payment_id")
-        payhere_amount = request.form.get("payhere_amount")
-        payhere_currency = request.form.get("payhere_currency")
-        status_code = request.form.get("status_code")
-        md5sig = request.form.get("md5sig")
-        
-        # Verify hash for security
-        merchant_secret_hash = hashlib.md5(PAYHERE_MERCHANT_SECRET.encode()).hexdigest().upper()
-        local_md5sig = hashlib.md5(
-            f"{merchant_id}{order_id}{payhere_amount}{payhere_currency}{status_code}{merchant_secret_hash}".encode()
-        ).hexdigest().upper()
-        
-        if local_md5sig != md5sig:
-            print("PayHere notification: Hash verification failed")
-            return "FAILED", 400
-        
-        # Status codes: 2 = success, 0 = pending, -1 = cancelled, -2 = failed, -3 = chargedback
-        payment_status = "pending"
-        order_status = "pending"
-        
-        if status_code == "2":
-            payment_status = "completed"
-            order_status = "paid"
-        elif status_code == "0":
-            payment_status = "pending"
-            order_status = "processing"
-        elif status_code in ["-1", "-2", "-3"]:
-            payment_status = "failed"
-            order_status = "cancelled"
-        
-        # Update order
-        orders_col.update_one(
-            {"order_id": order_id},
-            {"$set": {
-                "status": order_status,
-                "payment_status": payment_status,
-                "payment_id": payment_id,
-                "updated": get_utc_now()
-            }}
-        )
-        
-        # Record payment
-        payment = {
-            "payment_id": payment_id,
-            "order_id": order_id,
-            "user_id": session.get("user_id") or "guest",
-            "amount": float(payhere_amount),
-            "currency": payhere_currency,
-            "method": "payhere",
-            "status": payment_status,
-            "status_code": status_code,
-            "merchant_id": merchant_id,
-            "created": get_utc_now()
-        }
-        
-        payments_col.insert_one(payment)
-        
-        # Log engagement for successful payment
-        if status_code == "2":
-            order = orders_col.find_one({"order_id": order_id})
-            if order:
-                eng_col.insert_one({
-                    "user_id": order.get("user_id", "guest"),
-                    "type": "purchase",
-                    "product_ids": [item.get("product_id") for item in order.get("items", [])],
-                    "amount": float(payhere_amount),
-                    "timestamp": get_utc_now()
-                })
-        
-        print(f"PayHere notification processed: Order {order_id}, Status {status_code}")
-        return "OK", 200
-        
-    except Exception as e:
-        print(f"Payment notify error: {e}")
-        return "FAILED", 500
 
 @app.route("/api/store/payment/test", methods=["GET"])
 def test_payment_setup():
@@ -4039,102 +4336,143 @@ def payhere_notify():
         return "Error", 500
 
 
-@app.route("/payment/success")
+@app.route('/payment/success')
 def payment_success():
-    """Payment success redirect page"""
-    order_id = request.args.get('order_id')
-    return render_template('payment_success.html', order_id=order_id)
+    """Payment success page"""
+    order_id = request.args.get('order_id', 'N/A')
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Payment Successful</title>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            }}
+            .container {{
+                background: white;
+                padding: 40px;
+                border-radius: 10px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                text-align: center;
+                max-width: 500px;
+            }}
+            .success-icon {{
+                font-size: 60px;
+                color: #28a745;
+                margin-bottom: 20px;
+            }}
+            h1 {{
+                color: #333;
+                margin-bottom: 10px;
+            }}
+            p {{
+                color: #666;
+                margin-bottom: 30px;
+            }}
+            .btn {{
+                background: #667eea;
+                color: white;
+                padding: 12px 30px;
+                border: none;
+                border-radius: 5px;
+                text-decoration: none;
+                display: inline-block;
+                cursor: pointer;
+                font-size: 16px;
+            }}
+            .btn:hover {{
+                background: #5568d3;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="success-icon">✅</div>
+            <h1>Payment Successful!</h1>
+            <p>Your payment has been processed successfully.<br>Order ID: <strong>{order_id}</strong></p>
+            <p>You will receive a confirmation shortly.</p>
+            <a href="/" class="btn">Make Another Payment</a>
+        </div>
+    </body>
+    </html>
+    """
 
 
-@app.route("/payment/cancel", methods=["GET", "POST"])
+@app.route('/payment/cancel')
 def payment_cancel():
-    """Handle PayHere cancel callback"""
-    try:
-        order_id = request.args.get("order_id") or request.form.get("order_id")
-        
-        if order_id:
-            # Update order status
-            orders_col.update_one(
-                {"order_id": order_id},
-                {"$set": {
-                    "status": "cancelled",
-                    "payment_status": "cancelled",
-                    "updated": get_utc_now()
-                }}
-            )
-        
-        return f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Payment Cancelled</title>
-            <style>
-                body {{
-                    font-family: Arial, sans-serif;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    height: 100vh;
-                    margin: 0;
-                    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-                }}
-                .container {{
-                    background: white;
-                    padding: 40px;
-                    border-radius: 10px;
-                    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-                    text-align: center;
-                    max-width: 500px;
-                }}
-                .cancel-icon {{
-                    font-size: 60px;
-                    color: #dc3545;
-                    margin-bottom: 20px;
-                }}
-                h1 {{
-                    color: #333;
-                    margin-bottom: 10px;
-                }}
-                p {{
-                    color: #666;
-                    margin-bottom: 30px;
-                }}
-                .btn {{
-                    background: #667eea;
-                    color: white;
-                    padding: 12px 30px;
-                    border: none;
-                    border-radius: 5px;
-                    text-decoration: none;
-                    display: inline-block;
-                    cursor: pointer;
-                    font-size: 16px;
-                    margin: 5px;
-                }}
-                .btn:hover {{
-                    background: #5568d3;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="cancel-icon">❌</div>
-                <h1>Payment Cancelled</h1>
-                <p>Your payment was cancelled.<br>Order ID: <strong>{order_id or 'N/A'}</strong></p>
-                <p>No charges were made to your account.</p>
-                <a href="/store" class="btn">Return to Store</a>
-                <a href="/store#checkout" class="btn">Try Again</a>
-            </div>
-        </body>
-        </html>
-        """
-        
-    except Exception as e:
-        print(f"Payment cancel error: {e}")
-        return f"Error: {e}", 500
-
-
-
+    """Payment cancel page"""
+    order_id = request.args.get('order_id', 'N/A')
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Payment Cancelled</title>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            }}
+            .container {{
+                background: white;
+                padding: 40px;
+                border-radius: 10px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                text-align: center;
+                max-width: 500px;
+            }}
+            .cancel-icon {{
+                font-size: 60px;
+                color: #dc3545;
+                margin-bottom: 20px;
+            }}
+            h1 {{
+                color: #333;
+                margin-bottom: 10px;
+            }}
+            p {{
+                color: #666;
+                margin-bottom: 30px;
+            }}
+            .btn {{
+                background: #667eea;
+                color: white;
+                padding: 12px 30px;
+                border: none;
+                border-radius: 5px;
+                text-decoration: none;
+                display: inline-block;
+                cursor: pointer;
+                font-size: 16px;
+                margin: 5px;
+            }}
+            .btn:hover {{
+                background: #5568d3;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="cancel-icon">❌</div>
+            <h1>Payment Cancelled</h1>
+            <p>Your payment was cancelled.<br>Order ID: <strong>{order_id}</strong></p>
+            <p>No charges were made to your account.</p>
+            <a href="/" class="btn">Try Again</a>
+        </div>
+    </body>
+    </html>
+    """
 @app.route("/api/store/payment/status/<order_id>", methods=["GET"])
 def payment_status(order_id):
     """Check payment status for an order"""
