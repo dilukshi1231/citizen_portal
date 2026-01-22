@@ -18,6 +18,9 @@ import uuid
 from io import StringIO
 from flask.json.provider import DefaultJSONProvider
 from bson import ObjectId
+import base64
+
+import hashlib
 # Try FAISS import
 try:
     import faiss
@@ -33,6 +36,11 @@ try:
 except ImportError:
     ML_AVAILABLE = False
     rec_engine = None
+MERCHANT_ID="1233555"
+MERCHANT_SECRET_ENCODED="MzkwNDE1MzcwMTEwMDAwNjYxNTYzNDcxMzgyNTAyMjkzMTI4NDAwMQ=="
+MERCHANT_SECRET_BASE64="MzkwNDE1MzcwMTEwMDAwNjYxNTYzNDcxMzgyNTAyMjkzMTI4NDAwMQ=="
+MERCHANT_SECRET = base64.b64decode(MERCHANT_SECRET_ENCODED).decode('utf-8')
+print(f"✅ Using decoded merchant secret: {MERCHANT_SECRET}")
 
 load_dotenv()
 
@@ -1490,32 +1498,85 @@ def get_products_by_segment(segment):
     return jsonify(products)
 
 @app.route("/api/store/order", methods=["POST"])
-def create_order():
+def create_store_order():
     """Create new order with unique ID"""
-    payload = request.json or {}
-    
-    # Generate unique order ID with UUID
-    unique_suffix = str(uuid.uuid4())[:8]
-    timestamp = get_utc_now().strftime('%Y%m%d%H%M%S')
-    
-    order = {
-        "order_id": f"ORD{timestamp}-{unique_suffix}",  # More unique ID
-        "user_id": payload.get("user_id") or session.get("user_id"),
-        "items": payload.get("items", []),
-        "total_amount": payload.get("total_amount", 0),
-        "status": "pending",
-        "shipping_address": payload.get("shipping_address", {}),
-        "payment_method": payload.get("payment_method"),
-        "created": get_utc_now(),
-        "updated": get_utc_now()
-    }
-    
     try:
+        print("=" * 50)
+        print("🛒 ORDER CREATION REQUEST")
+        print("=" * 50)
+        
+        payload = request.json or {}
+        print(f"📥 Received payload: {payload}")
+        
+        # Validate items
+        items = payload.get("items", [])
+        if not items or len(items) == 0:
+            raise ValueError("No items in cart")
+        
+        print(f"📦 Items count: {len(items)}")
+        for item in items:
+            print(f"   - {item.get('name')}: {item.get('quantity')} x LKR {item.get('price')}")
+        
+        # Generate unique order ID
+        unique_suffix = str(uuid.uuid4())[:8]
+        timestamp = get_utc_now().strftime('%Y%m%d%H%M%S')
+        order_id = f"ORD{timestamp}-{unique_suffix}"
+        print(f"🆔 Generated Order ID: {order_id}")
+        
+        total_amount = float(payload.get("total_amount", 0))
+        print(f"💰 Total Amount: LKR {total_amount}")
+        
+        if total_amount <= 0:
+            raise ValueError("Invalid total amount")
+        
+        order = {
+            "order_id": order_id,
+            "user_id": payload.get("user_id") or session.get("user_id"),
+            "items": items,
+            "total_amount": total_amount,
+            "status": "pending",
+            "payment_status": "pending",
+            "shipping_address": payload.get("shipping_address", {}),
+            "payment_method": payload.get("payment_method", "payhere"),
+            "created": get_utc_now(),
+            "updated": get_utc_now()
+        }
+        
+        print(f"💾 Saving order to database...")
         result = orders_col.insert_one(order)
-        return jsonify({"status": "ok", "order_id": order["order_id"]})
+        print(f"✅ Order saved with MongoDB ID: {result.inserted_id}")
+        
+        response_data = {
+            "status": "success",
+            "order_id": order_id,
+            "order": serialize_mongo_doc(order)
+        }
+        
+        print(f"📤 Response: order_id={order_id}")
+        print("=" * 50)
+        
+        return jsonify(response_data), 201
+        
+    except ValueError as ve:
+        error_msg = str(ve)
+        print(f"❌ Validation Error: {error_msg}")
+        return jsonify({"error": error_msg}), 400
+        
     except Exception as e:
-        print(f"Error creating order: {e}")
-        return jsonify({"error": "Failed to create order"}), 500
+        error_msg = str(e)
+        print(f"❌ Order Creation Error: {error_msg}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": error_msg}), 500
+@app.route('/api/payhere/return')
+def payhere_return():
+    """Handle PayHere return after payment"""
+    order_id = request.args.get('order_id')
+    return redirect(f'/store?order_success={order_id}')
+@app.route('/api/payhere/cancel')
+def payhere_cancel():
+    """Handle PayHere cancel"""
+    return redirect('/store?payment_cancelled=true')
 
 @app.route("/api/store/payment", methods=["POST"])
 def process_payment():
@@ -3253,6 +3314,133 @@ def questions_by_age():
         print(f"Error in questions_by_age: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/storepay')
+def index():
+    return render_template_string(
+        HTML_TEMPLATE,
+        product=PRODUCT,
+        merchant_id=MERCHANT_ID
+    )
+@app.route('/api/payhere/generate-hash', methods=['POST'])
+def generate_hash():
+    try:
+        print("\n" + "=" * 70)
+        print("🔐 PAYHERE HASH GENERATION - FIXED VERSION")
+        print("=" * 70)
+        
+        data = request.json
+        order_id = data.get('order_id')
+        amount = float(data.get('amount'))
+        currency = data.get('currency', 'LKR')
+        
+        # Format amount to exactly 2 decimal places
+        amount_formatted = "{:.2f}".format(amount)
+        
+        # CRITICAL: Try decoding the merchant secret if it's base64
+        merchant_secret_to_use = MERCHANT_SECRET
+        
+        # Check if it's base64 and decode
+        if MERCHANT_SECRET_BASE64.endswith('=='):
+            try:
+                merchant_secret_to_use = base64.b64decode(MERCHANT_SECRET_BASE64).decode('utf-8')
+                print(f"✅ Using DECODED merchant secret")
+                print(f"   Original: {MERCHANT_SECRET_BASE64[:20]}...")
+                print(f"   Decoded:  {merchant_secret_to_use}")
+            except:
+                merchant_secret_to_use = MERCHANT_SECRET_BASE64
+                print(f"⚠️  Using ORIGINAL merchant secret")
+        
+        print(f"\n📋 Payment Details:")
+        print(f"   Merchant ID: {MERCHANT_ID}")
+        print(f"   Order ID: {order_id}")
+        print(f"   Amount: {amount_formatted}")
+        print(f"   Currency: {currency}")
+        print(f"   Using Secret: {merchant_secret_to_use[:20]}... (length: {len(merchant_secret_to_use)})")
+        
+        # Step 1: Hash the merchant secret (UPPERCASE)
+        merchant_secret_md5 = hashlib.md5(merchant_secret_to_use.encode('utf-8')).hexdigest().upper()
+        print(f"\n🔐 Step 1: Merchant Secret MD5: {merchant_secret_md5}")
+        
+        # Step 2: Build hash string
+        # FORMAT: merchant_id + order_id + amount + currency + merchant_secret_md5
+        hash_string = f"{MERCHANT_ID}{order_id}{amount_formatted}{currency}{merchant_secret_md5}"
+        print(f"\n🔐 Step 2: Hash String: {hash_string}")
+        
+        # Step 3: Generate final hash (UPPERCASE)
+        final_hash = hashlib.md5(hash_string.encode('utf-8')).hexdigest().upper()
+        print(f"\n🔐 Step 3: Final Hash: {final_hash}")
+        
+        print("\n" + "=" * 70)
+        
+        return jsonify({
+            'success': True,
+            'hash': final_hash,
+            'merchant_id': MERCHANT_ID,
+            'order_id': order_id,
+            'amount': amount_formatted,
+            'currency': currency,
+            'debug': {
+                'merchant_secret_used': 'decoded' if merchant_secret_to_use != MERCHANT_SECRET_BASE64 else 'original',
+                'merchant_secret_length': len(merchant_secret_to_use),
+                'merchant_secret_md5': merchant_secret_md5,
+                'hash_string': hash_string
+            }
+        })
+        
+    except Exception as e:
+        print(f"\n❌ ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+@app.route("/payhere-test")
+def payhere_test():
+    return render_template("payhere_test.html") 
+@app.route('/payment-notify', methods=['POST'])
+def payment_notify():
+    """Handle PayHere payment notification (IPN)"""
+    try:
+        # PayHere sends payment details as form data
+        merchant_id = request.form.get('merchant_id')
+        order_id = request.form.get('order_id')
+        payment_id = request.form.get('payment_id')
+        payhere_amount = request.form.get('payhere_amount')
+        payhere_currency = request.form.get('payhere_currency')
+        status_code = request.form.get('status_code')
+        md5sig = request.form.get('md5sig')
+        
+        # Verify hash
+        merchant_secret_hash = hashlib.md5(MERCHANT_SECRET.encode()).hexdigest().upper()
+        local_md5sig = hashlib.md5(
+            f"{merchant_id}{order_id}{payhere_amount}{payhere_currency}{status_code}{merchant_secret_hash}".encode()
+        ).hexdigest().upper()
+        
+        if local_md5sig == md5sig and status_code == '2':
+            print(f"Payment verified! Order: {order_id}, Payment ID: {payment_id}")
+            # Here you would update your database
+            return 'OK', 200
+        else:
+            print(f"Payment verification failed for order: {order_id}")
+            return 'FAILED', 400
+            
+    except Exception as e:
+        print(f"Notify error: {e}")
+        return str(e), 400
+@app.route('/payment-return')
+def payment_return():
+    return '''
+    <h2>Payment Processing Complete</h2>
+    <p>Thank you! Your payment has been processed.</p>
+    <a href="/">Back to Home</a>
+    '''
+@app.route('/payment-cancel')
+def payment_cancel():
+    return '''
+ <h2>Payment Cancelled</h2>
+    <p>Your payment was cancelled.</p>
+    <a href="/">Try Again</a>
+
+'''
+   
 # ============================================
 # INITIALIZATION & STARTUP
 # ============================================

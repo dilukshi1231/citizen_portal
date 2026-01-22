@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PayHere Sandbox Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+        <h1 class="text-3xl font-bold mb-6">🧪 PayHere Sandbox Test</h1>
+        
+        <div class="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 mb-6">
+            <h3 class="font-bold text-yellow-800 mb-2">Test Card Details:</h3>
+            <div class="text-sm text-yellow-700">
+                <p><strong>Card:</strong> 5303732372101006</p>
+                <p><strong>Expiry:</strong> 12/25</p>
+                <p><strong>CVV:</strong> 123</p>
+                <p><strong>Name:</strong> Any Name</p>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <label class="block mb-2 font-semibold">Merchant ID:</label>
+            <input type="text" id="merchant_id" value="1233685" 
+                   class="w-full border rounded px-3 py-2 mb-4">
+            
+            <label class="block mb-2 font-semibold">Merchant Secret:</label>
+            <input type="text" id="merchant_secret" value="MTg4OTg3OTM2NDgyMTc2OTM5NzMwOTQzNTgxMzkzMzgyNTMxMDM0" 
+                   class="w-full border rounded px-3 py-2 mb-4">
+            
+            <label class="block mb-2 font-semibold">Amount (LKR):</label>
+            <input type="number" id="amount" value="1000" 
+                   class="w-full border rounded px-3 py-2 mb-4">
+        </div>
+
+        <button onclick="testPayment()" 
+                class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-semibold mb-4">
+            🚀 Test PayHere Payment
+        </button>
+
+        <div id="logs" class="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-96 overflow-y-auto"></div>
+    </div>
+
+    <script src="https://www.payhere.lk/lib/payhere.js"></script>
+    <script>
+        function log(message, type = 'info') {
+            const logsEl = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'text-red-400' : type === 'success' ? 'text-green-400' : 'text-blue-400';
+            logsEl.innerHTML += `<div class="${color}">[${timestamp}] ${message}</div>`;
+            logsEl.scrollTop = logsEl.scrollHeight;
+            console.log(message);
+        }
+
+        function generateHash(merchantId, orderId, amount, currency, merchantSecret) {
+            log('🔐 Generating hash...');
+            log(`   Merchant ID: ${merchantId}`);
+            log(`   Order ID: ${orderId}`);
+            log(`   Amount: ${amount}`);
+            log(`   Currency: ${currency}`);
+            
+            // Step 1: Hash the merchant secret
+            const merchantSecretHash = CryptoJS.MD5(merchantSecret).toString().toUpperCase();
+            log(`   Secret Hash: ${merchantSecretHash}`);
+            
+            // Step 2: Create hash string
+            const hashString = `${merchantId}${orderId}${amount}${currency}${merchantSecretHash}`;
+            log(`   Hash String: ${hashString}`);
+            
+            // Step 3: Generate final hash
+            const hash = CryptoJS.MD5(hashString).toString().toUpperCase();
+            log(`   Final Hash: ${hash}`, 'success');
+            
+            return hash;
+        }
+
+        async function testPayment() {
+            document.getElementById('logs').innerHTML = '';
+            log('🚀 Starting PayHere test...', 'success');
+            
+            const merchantId = document.getElementById('merchant_id').value.trim();
+            const merchantSecret = document.getElementById('merchant_secret').value.trim();
+            const amount = parseFloat(document.getElementById('amount').value);
+            
+            if (!merchantId || !merchantSecret) {
+                log('❌ Please enter merchant ID and secret', 'error');
+                return;
+            }
+            
+            // Generate order ID
+            const orderId = 'TEST' + Date.now();
+            const amountFormatted = amount.toFixed(2);
+            const currency = 'LKR';
+            
+            log(`📦 Order ID: ${orderId}`);
+            log(`💰 Amount: ${amountFormatted} ${currency}`);
+            
+            // Generate hash (we'll use CryptoJS loaded from CDN)
+            const hash = generateHash(merchantId, orderId, amountFormatted, currency, merchantSecret);
+            
+            // Create payment object
+            const payment = {
+                sandbox: true,
+                merchant_id: merchantId,
+                return_url: window.location.href,
+                cancel_url: window.location.href,
+                notify_url: undefined, // Not needed for test
+                order_id: orderId,
+                items: 'Test Item',
+                amount: amountFormatted,
+                currency: currency,
+                hash: hash,
+                first_name: 'Test',
+                last_name: 'Customer',
+                email: 'test@example.com',
+                phone: '0771234567',
+                address: '123 Test Street',
+                city: 'Colombo',
+                country: 'Sri Lanka'
+            };
+            
+            log('📋 Payment object created');
+            log(JSON.stringify(payment, null, 2));
+            
+            // Configure callbacks
+            log('📞 Configuring PayHere callbacks...');
+            
+            payhere.onCompleted = function(orderId) {
+                log(`✅ Payment completed! Order: ${orderId}`, 'success');
+                alert('✅ Payment Successful!\nOrder ID: ' + orderId);
+            };
+            
+            payhere.onDismissed = function() {
+                log('⚠️ Payment dismissed', 'error');
+                alert('Payment was cancelled');
+            };
+            
+            payhere.onError = function(error) {
+                log(`❌ Payment error: ${error}`, 'error');
+                alert('❌ Payment Error:\n' + error);
+            };
+            
+            // Start payment
+            log('🎬 Starting PayHere payment window...', 'success');
+            
+            try {
+                payhere.startPayment(payment);
+                log('✅ PayHere called successfully');
+            } catch (e) {
+                log(`❌ Error: ${e.message}`, 'error');
+            }
+        }
+    </script>
+    
+    <!-- Load CryptoJS for hash generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</body>
+</html>

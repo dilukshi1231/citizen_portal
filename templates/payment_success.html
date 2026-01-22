@@ -1,0 +1,37 @@
+<!-- templates/payment_success.html -->
+<!doctype html>
+<html>
+<head>
+    <title>Payment Successful</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-lg max-w-md text-center">
+        <div class="text-6xl mb-4">✅</div>
+        <h1 class="text-2xl font-bold text-green-600 mb-4">Payment Successful!</h1>
+        <p class="text-gray-600 mb-6">Your order {{ order_id }} has been processed.</p>
+        <a href="/store" class="bg-blue-600 text-white px-6 py-3 rounded-lg inline-block hover:bg-blue-700">
+            Continue Shopping
+        </a>
+    </div>
+</body>
+</html>
+
+<!-- templates/payment_cancelled.html -->
+<!doctype html>
+<html>
+<head>
+    <title>Payment Cancelled</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-lg max-w-md text-center">
+        <div class="text-6xl mb-4">❌</div>
+        <h1 class="text-2xl font-bold text-red-600 mb-4">Payment Cancelled</h1>
+        <p class="text-gray-600 mb-6">Your payment was cancelled. No charges were made.</p>
+        <a href="/store" class="bg-blue-600 text-white px-6 py-3 rounded-lg inline-block hover:bg-blue-700">
+            Back to Store
+        </a>
+    </div>
+</body>
+</html>

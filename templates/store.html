@@ -4,11 +4,14 @@
     <meta charset="utf-8">
     <title>Public Store - Citizen Services</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.payhere.lk/lib/payhere.js"></script>
+    
     <style>
         .product-card {
             display: flex;
             flex-direction: column;
             height: 100%;
+            transition: all 0.2s;
         }
         .product-image {
             object-fit: cover;
@@ -36,19 +39,6 @@
             font-size: 12px;
             font-weight: bold;
         }
-        @keyframes slide-up {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .animate-slide-up {
-            animation: slide-up 0.3s ease-out;
-        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -74,6 +64,18 @@
     </header>
 
     <div class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Test Card Info Banner -->
+        <div class="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 mb-6">
+            <h3 class="font-bold text-yellow-800 mb-2">🧪 SANDBOX TEST MODE</h3>
+            <p class="text-sm text-yellow-700 mb-2">Use these test card details for payment:</p>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div><strong>Card:</strong> 5303732372101006</div>
+                <div><strong>Expiry:</strong> 12/25</div>
+                <div><strong>CVV:</strong> 123</div>
+                <div><strong>Name:</strong> Any Name</div>
+            </div>
+        </div>
+        
         <div class="flex gap-6">
             <!-- Filters Sidebar -->
             <aside class="w-64 bg-white p-6 rounded-lg shadow-md h-fit sticky top-24">
@@ -92,6 +94,7 @@
                         min="0" 
                         max="500000" 
                         step="1000"
+                        value="500000"
                         class="w-full"
                     />
                     <div class="flex justify-between text-sm text-gray-600 mt-2">
@@ -146,773 +149,381 @@
                     <span>LKR <span id="cart-total">0</span></span>
                 </div>
                 <button onclick="checkout()" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-semibold">
-                    Proceed to Checkout
+                    Proceed to Payment
                 </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Contact Form Modal -->
-    <div id="contact-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-        <div class="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold" id="contact-title">Contact Us</h2>
-                <button onclick="closeContactForm()" class="text-gray-600 hover:text-gray-900 text-2xl">&times;</button>
-            </div>
-            
-            <!-- ACTUAL FORM THAT SENDS EMAILS -->
-            <form id="contact-form" action="https://formspree.io/f/xjgvvgjd" method="POST">
-                <!-- Formspree will forward emails to dilukshikumari99@gmail.com -->
-                <input type="hidden" name="_subject" id="form-subject" value="Public Store Inquiry">
-                <input type="hidden" name="_replyto" id="form-replyto">
-                
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="contact-name">
-                        Your Name *
-                    </label>
-                    <input 
-                        type="text" 
-                        id="contact-name" 
-                        name="name"
-                        required
-                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter your name"
-                    >
-                </div>
-                
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="contact-email">
-                        Your Email *
-                    </label>
-                    <input 
-                        type="email" 
-                        id="contact-email" 
-                        name="email"
-                        required
-                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="your@email.com"
-                    >
-                </div>
-                
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="contact-subject">
-                        Subject *
-                    </label>
-                    <input 
-                        type="text" 
-                        id="contact-subject" 
-                        name="_subject_override"
-                        required
-                        readonly
-                        class="w-full px-3 py-2 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value="Public Store Inquiry"
-                    >
-                </div>
-                
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="contact-message">
-                        Message *
-                    </label>
-                    <textarea 
-                        id="contact-message" 
-                        name="message"
-                        rows="6" 
-                        required
-                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Type your message here..."
-                    ></textarea>
-                </div>
-                
-                <input type="hidden" name="topic" id="form-topic" value="General Inquiry">
-                <input type="hidden" name="_format" value="plain">
-                
-                <div class="mb-4">
-                    <div class="text-xs text-gray-500 mb-2">
-                        * Required fields
-                    </div>
-                </div>
-                
-                <div class="flex gap-3">
-                    <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-semibold">
-                        Send Message
-                    </button>
-                    <button type="button" onclick="closeContactForm()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 font-semibold">
-                        Cancel
-                    </button>
-                </div>
-            </form>
-            
-            <div class="mt-6 pt-6 border-t text-center">
-                <p class="text-sm text-gray-600">Or send direct email to:</p>
-                <a href="mailto:dilukshikumari99@gmail.com" class="text-blue-600 hover:text-blue-800 font-medium break-all">
-                    dilukshikumari99@gmail.com
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Floating Chat Button -->
-    <div id="chat-button" class="fixed bottom-6 right-6 z-50">
-        <button onclick="toggleChatMenu()" class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 rounded-full shadow-2xl hover:shadow-3xl hover:scale-110 transition-all duration-300 flex items-center justify-center group">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
-            </svg>
-            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center animate-pulse">?</span>
-        </button>
-    </div>
-
-    <!-- Chat Menu Popup -->
-    <div id="chat-menu" class="hidden fixed bottom-24 right-6 bg-white rounded-2xl shadow-2xl w-80 z-50 border-2 border-blue-100 animate-slide-up">
-        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 rounded-t-2xl">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h3 class="font-bold text-lg">👋 Need Help?</h3>
-                    <p class="text-xs text-blue-100">We're here to assist you!</p>
-                </div>
-                <button onclick="toggleChatMenu()" class="hover:bg-white/20 rounded-lg p-1 transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-        </div>
-        
-        <div class="p-4 space-y-3">
-            <p class="text-sm text-gray-600 mb-4">Have questions about our products or need assistance? Contact us!</p>
-            
-            <!-- Contact Form Button -->
-            <button onclick="openContactForm('General Inquiry')" class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-lg hover:from-green-600 hover:to-green-700 transition-all flex items-center justify-center space-x-2 shadow-md">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                </svg>
-                <span class="font-semibold">Send Message</span>
-            </button>
-            
-            <!-- Quick Contact Info -->
-            <div class="bg-blue-50 rounded-lg p-3 border border-blue-100">
-                <p class="text-xs text-gray-600 mb-2">📧 Email:</p>
-                <a href="mailto:dilukshikumari99@gmail.com" class="text-sm font-medium text-blue-600 hover:text-blue-700 break-all">
-                    dilukshikumari99@gmail.com
-                </a>
-            </div>
-            
-            <!-- Quick Questions -->
-            <div class="border-t pt-3">
-                <p class="text-xs font-semibold text-gray-700 mb-2">Quick Questions:</p>
-                <div class="space-y-2">
-                    <button onclick="openContactForm('Product Information')" class="w-full text-left text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded transition">
-                        📦 Product Information
-                    </button>
-                    <button onclick="openContactForm('Shipping & Delivery')" class="w-full text-left text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded transition">
-                        🚚 Shipping & Delivery
-                    </button>
-                    <button onclick="openContactForm('Order Status')" class="w-full text-left text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded transition">
-                        📝 Order Status
-                    </button>
-                    <button onclick="openContactForm('Returns & Refunds')" class="w-full text-left text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded transition">
-                        🔄 Returns & Refunds
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Phone Support -->
-            <div class="border-t pt-3">
-                <p class="text-xs font-semibold text-gray-700 mb-2">📞 Call Us:</p>
-                <a href="tel:+94112345678" class="text-sm text-blue-600 hover:text-blue-700">
-                    +94 112 345 678
-                </a>
             </div>
         </div>
     </div>
 
     <script>
-// Store JavaScript
-let cart = [];
-let currentProducts = [];
-let currentFilters = {};
+        // Store state
+        let cart = [];
+        let currentProducts = [];
+        let currentFilters = {};
 
-async function initStore() {
-    await loadCategories();
-    await loadProducts();
-    updateCartCount();
-}
+        // Initialize store
+        async function initStore() {
+            await loadCategories();
+            await loadProducts();
+            updateCartCount();
+            
+            // Check for payment success/cancel in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('order_success')) {
+                showNotification('Payment successful! Order ID: ' + urlParams.get('order_success'), 'success');
+            }
+            if (urlParams.get('payment_cancelled')) {
+                showNotification('Payment was cancelled', 'error');
+            }
+        }
 
-async function loadCategories() {
-    try {
-        const res = await fetch('/api/store/categories');
-        const data = await res.json();
-        const container = document.getElementById('category-filters');
-        container.innerHTML = '';
-        
-        data.categories.forEach(category => {
-            const label = document.createElement('label');
-            label.className = 'flex items-center gap-2 mb-2 cursor-pointer';
-            label.innerHTML = `
-                <input type="checkbox" name="category" value="${category}" class="rounded">
-                <span class="text-sm">${category.charAt(0).toUpperCase() + category.slice(1)}</span>
-            `;
-            container.appendChild(label);
-        });
-    } catch (error) {
-        console.error('Error loading categories:', error);
-    }
-}
-
-async function loadProducts() {
-    const loading = document.getElementById('loading');
-    loading.classList.remove('hidden');
-    
-    const params = new URLSearchParams(currentFilters);
-    
-    try {
-        const res = await fetch(`/api/store/products?${params}`);
-        currentProducts = await res.json();
-        displayProducts(currentProducts);
-    } catch (error) {
-        console.error('Error loading products:', error);
-    } finally {
-        loading.classList.add('hidden');
-    }
-}
-
-function displayProducts(products) {
-    const container = document.getElementById('products-container');
-    
-    if (products.length === 0) {
-        container.innerHTML = '<div class="col-span-full text-center py-20 text-gray-600">No products found.</div>';
-        return;
-    }
-    
-    container.innerHTML = products.map(product => {
-        const discount = product.original_price 
-            ? Math.round((1 - product.price/product.original_price) * 100)
-            : 0;
-        
-        return `
-            <div class="product-card bg-white rounded-lg shadow-md overflow-hidden transition-all duration-200 cursor-pointer" onclick="viewProduct('${product.id}')">
-                <div class="relative">
-                    <img 
-                        src="${product.images[0] || '/static/store/placeholder.jpg'}" 
-                        alt="${product.name}"
-                        class="w-full h-48 object-cover"
-                    />
-                    ${discount > 0 ? `<div class="discount-badge">-${discount}%</div>` : ''}
-                </div>
+        async function loadCategories() {
+            try {
+                const res = await fetch('/api/store/categories');
+                const data = await res.json();
+                const container = document.getElementById('category-filters');
+                container.innerHTML = '';
                 
-                <div class="product-info p-4">
-                    <div class="product-details">
-                        <h3 class="font-semibold text-lg mb-2 h-14 line-clamp-2">${product.name}</h3>
-                        
-                        <div class="mb-3">
-                            ${product.original_price ? 
-                                `<div class="text-gray-500 line-through text-sm">LKR ${product.original_price.toLocaleString()}</div>` 
-                                : '<div class="h-5"></div>'
-                            }
-                            <div class="text-blue-600 font-bold text-xl">LKR ${product.price.toLocaleString()}</div>
+                data.categories.forEach(category => {
+                    const label = document.createElement('label');
+                    label.className = 'flex items-center gap-2 mb-2 cursor-pointer';
+                    label.innerHTML = `
+                        <input type="checkbox" name="category" value="${category}" class="rounded">
+                        <span class="text-sm">${category.charAt(0).toUpperCase() + category.slice(1)}</span>
+                    `;
+                    container.appendChild(label);
+                });
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        async function loadProducts() {
+            const loading = document.getElementById('loading');
+            loading.classList.remove('hidden');
+            
+            const params = new URLSearchParams(currentFilters);
+            
+            try {
+                const res = await fetch(`/api/store/products?${params}`);
+                currentProducts = await res.json();
+                displayProducts(currentProducts);
+            } catch (error) {
+                console.error('Error loading products:', error);
+                showNotification('Failed to load products', 'error');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function displayProducts(products) {
+            const container = document.getElementById('products-container');
+            
+            if (products.length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center py-20 text-gray-600">No products found.</div>';
+                return;
+            }
+            
+            container.innerHTML = products.map(product => {
+                const discount = product.original_price 
+                    ? Math.round((1 - product.price/product.original_price) * 100)
+                    : 0;
+                
+                return `
+                    <div class="product-card bg-white rounded-lg shadow-md overflow-hidden cursor-pointer" onclick="viewProduct('${product.id}')">
+                        <div class="relative">
+                            <img 
+                                src="${product.images && product.images[0] ? product.images[0] : '/static/placeholder.jpg'}" 
+                                alt="${product.name}"
+                                class="w-full h-48 object-cover"
+                                onerror="this.src='/static/placeholder.jpg'"
+                            />
+                            ${discount > 0 ? `<div class="discount-badge">-${discount}%</div>` : ''}
                         </div>
                         
-                        <div class="flex items-center gap-1 mb-4">
-                            <span class="text-yellow-500">${'★'.repeat(Math.floor(product.rating))}</span>
-                            <span class="text-gray-400">${'★'.repeat(5 - Math.floor(product.rating))}</span>
-                            <span class="text-sm text-gray-600">(${product.reviews_count})</span>
+                        <div class="product-info p-4">
+                            <div class="product-details">
+                                <h3 class="font-semibold text-lg mb-2 h-14 line-clamp-2">${product.name}</h3>
+                                
+                                <div class="mb-3">
+                                    ${product.original_price ? 
+                                        `<div class="text-gray-500 line-through text-sm">LKR ${product.original_price.toLocaleString()}</div>` 
+                                        : '<div class="h-5"></div>'
+                                    }
+                                    <div class="text-blue-600 font-bold text-xl">LKR ${product.price.toLocaleString()}</div>
+                                </div>
+                                
+                                <div class="flex items-center gap-1 mb-4">
+                                    <span class="text-yellow-500">${'★'.repeat(Math.floor(product.rating || 4))}</span>
+                                    <span class="text-gray-400">${'★'.repeat(5 - Math.floor(product.rating || 4))}</span>
+                                    <span class="text-sm text-gray-600">(${product.reviews_count || 0})</span>
+                                </div>
+                            </div>
+                            
+                            <button 
+                                onclick="event.stopPropagation(); addToCart('${product.id}')"
+                                class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                                Add to Cart
+                            </button>
                         </div>
                     </div>
-                    
-                    <button 
-                        onclick="event.stopPropagation(); addToCart('${product.id}')"
-                        class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        Add to Cart
-                    </button>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function addToCart(productId) {
-    const product = currentProducts.find(p => p.id === productId);
-    if (!product) return;
-    
-    const existingItem = cart.find(item => item.id === productId);
-    
-    if (existingItem) {
-        existingItem.quantity += 1;
-    } else {
-        cart.push({
-            id: productId,
-            name: product.name,
-            price: product.price,
-            quantity: 1
-        });
-    }
-    
-    updateCart();
-    showNotification(`${product.name} added to cart!`);
-}
-
-function showNotification(message) {
-    const notification = document.createElement('div');
-    notification.className = 'fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-    notification.textContent = message;
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.remove();
-    }, 3000);
-}
-
-function updateCart() {
-    updateCartCount();
-    updateCartModal();
-}
-
-function updateCartCount() {
-    const count = cart.reduce((total, item) => total + item.quantity, 0);
-    document.getElementById('cart-count').textContent = count;
-}
-
-function viewCart() {
-    document.getElementById('cart-modal').classList.remove('hidden');
-    updateCartModal();
-}
-
-function closeCart() {
-    document.getElementById('cart-modal').classList.add('hidden');
-}
-
-function updateCartModal() {
-    const container = document.getElementById('cart-items');
-    const total = document.getElementById('cart-total');
-    
-    if (cart.length === 0) {
-        container.innerHTML = '<p class="text-center text-gray-600 py-8">Your cart is empty</p>';
-        total.textContent = '0';
-        return;
-    }
-    
-    container.innerHTML = cart.map(item => `
-        <div class="flex items-center gap-4 mb-4 pb-4 border-b">
-            <div class="flex-1">
-                <h4 class="font-semibold">${item.name}</h4>
-                <div class="text-blue-600 font-bold">LKR ${item.price.toLocaleString()}</div>
-            </div>
-            <div class="flex items-center gap-2">
-                <button 
-                    onclick="updateQuantity('${item.id}', -1)"
-                    class="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
-                >-</button>
-                <span class="font-semibold w-8 text-center">${item.quantity}</span>
-                <button 
-                    onclick="updateQuantity('${item.id}', 1)"
-                    class="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
-                >+</button>
-            </div>
-        </div>
-    `).join('');
-    
-    const cartTotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
-    total.textContent = cartTotal.toLocaleString();
-}
-
-function updateQuantity(productId, change) {
-    const item = cart.find(item => item.id === productId);
-    if (item) {
-        item.quantity += change;
-        if (item.quantity <= 0) {
-            cart = cart.filter(i => i.id !== productId);
+                `;
+            }).join('');
         }
-        updateCart();
-    }
-}
 
-function applyFilters() {
-    const categoryCheckboxes = document.querySelectorAll('input[name="category"]:checked');
-    const priceRange = document.getElementById('price-range');
-    
-    currentFilters = {
-        category: Array.from(categoryCheckboxes).map(cb => cb.value).join(','),
-        max_price: parseInt(priceRange.value)
-    };
-    
-    loadProducts();
-}
-
-function clearFilters() {
-    document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-    document.getElementById('price-range').value = 500000;
-    currentFilters = {};
-    loadProducts();
-}
-// Update the checkout function in templates/store.html
-
-async function checkout() {
-    if (cart.length === 0) {
-        alert('Your cart is empty');
-        return;
-    }
-    
-    // Show loading
-    const checkoutBtn = document.querySelector('#cart-modal button[onclick="checkout()"]');
-    const originalText = checkoutBtn.textContent;
-    checkoutBtn.disabled = true;
-    checkoutBtn.textContent = '⏳ Processing...';
-    
-    try {
-        const orderData = {
-            items: cart.map(item => ({
-                product_id: item.id,
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity
-            })),
-            total_amount: cart.reduce((total, item) => total + (item.price * item.quantity), 0),
-            payment_method: 'card',
-            shipping_address: {
-                // You can add a form to collect this
-                address: 'Customer Address',
-                city: 'Colombo',
-                postal_code: '00100'
-            }
-        };
-        
-        const orderRes = await fetch('/api/store/order', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(orderData)
-        });
-        
-        const orderResult = await orderRes.json();
-        
-        if (orderResult.status === 'ok') {
-            // Process payment
-            const paymentData = {
-                order_id: orderResult.order_id,
-                amount: orderData.total_amount,
-                method: 'card',
-                items: cart,
-                transaction_id: 'TXN' + Date.now()
-            };
+        function addToCart(productId) {
+            const product = currentProducts.find(p => p.id === productId);
+            if (!product) return;
             
-            const paymentRes = await fetch('/api/store/payment', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(paymentData)
-            });
+            const existingItem = cart.find(item => item.id === productId);
             
-            const paymentResult = await paymentRes.json();
-            
-            if (paymentResult.status === 'ok') {
-                // Show success message
-                showSuccessModal(orderResult.order_id, orderData.total_amount);
-                
-                // Clear cart
-                cart = [];
-                updateCart();
-                closeCart();
+            if (existingItem) {
+                existingItem.quantity += 1;
             } else {
-                throw new Error('Payment processing failed');
+                cart.push({
+                    id: productId,
+                    name: product.name,
+                    price: product.price,
+                    quantity: 1
+                });
             }
-        } else {
-            throw new Error(orderResult.error || 'Order creation failed');
+            
+            updateCart();
+            showNotification(`${product.name} added to cart!`, 'success');
         }
-    } catch (error) {
-        console.error('Checkout error:', error);
-        alert('❌ Checkout failed: ' + error.message + '\n\nPlease try again or contact support.');
-    } finally {
-        checkoutBtn.disabled = false;
-        checkoutBtn.textContent = originalText;
-    }
-}
 
-function showSuccessModal(orderId, amount) {
-    // Create success modal
-    const modal = document.createElement('div');
-    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;';
-    
-    modal.innerHTML = `
-        <div style="background:white;border-radius:16px;padding:40px;max-width:500px;width:90%;text-align:center;animation:slideIn 0.3s ease-out;">
-            <div style="font-size:64px;margin-bottom:20px;">✅</div>
-            <h2 style="color:#28a745;font-size:28px;margin-bottom:16px;">Order Placed Successfully!</h2>
-            <p style="color:#666;margin-bottom:24px;">Thank you for your order. We'll process it soon.</p>
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-20 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            } text-white`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
             
-            <div style="background:#f8f9fa;padding:20px;border-radius:8px;margin-bottom:24px;">
-                <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
-                    <span style="color:#666;">Order ID:</span>
-                    <strong style="color:#0b3b8c;">${orderId}</strong>
-                </div>
-                <div style="display:flex;justify-content:space-between;">
-                    <span style="color:#666;">Total Amount:</span>
-                    <strong style="color:#28a745;font-size:20px;">LKR ${amount.toLocaleString()}</strong>
-                </div>
-            </div>
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        function updateCart() {
+            updateCartCount();
+            updateCartModal();
+        }
+
+        function updateCartCount() {
+            const count = cart.reduce((total, item) => total + item.quantity, 0);
+            document.getElementById('cart-count').textContent = count;
+        }
+
+        function viewCart() {
+            document.getElementById('cart-modal').classList.remove('hidden');
+            updateCartModal();
+        }
+
+        function closeCart() {
+            document.getElementById('cart-modal').classList.add('hidden');
+        }
+
+        function updateCartModal() {
+            const container = document.getElementById('cart-items');
+            const total = document.getElementById('cart-total');
             
-            <div style="background:#fff3cd;border:1px solid #ffc107;padding:16px;border-radius:8px;margin-bottom:24px;">
-                <p style="margin:0;font-size:14px;color:#856404;">
-                    <strong>⏳ Pending Admin Approval</strong><br>
-                    Your order is awaiting review by our admin team. You'll receive a notification once approved.
-                </p>
-            </div>
-            
-            <button onclick="this.parentElement.parentElement.remove()" style="width:100%;padding:16px;background:#0b3b8c;color:white;border:none;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer;">
-                Continue Shopping
-            </button>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Add animation
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-50px);
+            if (cart.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-600 py-8">Your cart is empty</p>';
+                total.textContent = '0';
+                return;
             }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            
+            container.innerHTML = cart.map(item => `
+                <div class="flex items-center gap-4 mb-4 pb-4 border-b">
+                    <div class="flex-1">
+                        <h4 class="font-semibold">${item.name}</h4>
+                        <div class="text-blue-600 font-bold">LKR ${item.price.toLocaleString()}</div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button 
+                            onclick="updateQuantity('${item.id}', -1)"
+                            class="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
+                        >-</button>
+                        <span class="font-semibold w-8 text-center">${item.quantity}</span>
+                        <button 
+                            onclick="updateQuantity('${item.id}', 1)"
+                            class="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
+                        >+</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            const cartTotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+            total.textContent = cartTotal.toLocaleString();
+        }
+
+        function updateQuantity(productId, change) {
+            const item = cart.find(item => item.id === productId);
+            if (item) {
+                item.quantity += change;
+                if (item.quantity <= 0) {
+                    cart = cart.filter(i => i.id !== productId);
+                }
+                updateCart();
             }
         }
-    `;
-    document.head.appendChild(style);
-}
-async function checkout() {
-    if (cart.length === 0) {
-        alert('Your cart is empty');
-        return;
-    }
-    
-    try {
-        const orderData = {
-            items: cart,
-            total_amount: cart.reduce((total, item) => total + (item.price * item.quantity), 0),
-            payment_method: 'card'
-        };
-        
-        const orderRes = await fetch('/api/store/order', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(orderData)
-        });
-        
-        const orderResult = await orderRes.json();
-        
-        if (orderResult.status === 'ok') {
-            const paymentData = {
-                order_id: orderResult.order_id,
-                amount: orderData.total_amount,
-                method: 'card',
-                items: cart,
-                transaction_id: 'TXN' + Date.now()
+
+        function applyFilters() {
+            const categoryCheckboxes = document.querySelectorAll('input[name="category"]:checked');
+            const priceRange = document.getElementById('price-range');
+            
+            currentFilters = {
+                category: Array.from(categoryCheckboxes).map(cb => cb.value).join(','),
+                max_price: parseInt(priceRange.value)
             };
             
-            const paymentRes = await fetch('/api/store/payment', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(paymentData)
-            });
-            
-            const paymentResult = await paymentRes.json();
-            
-            if (paymentResult.status === 'ok') {
-                showNotification('Order placed successfully!');
-                cart = [];
-                updateCart();
-                closeCart();
-            }
+            document.getElementById('max-price').textContent = parseInt(priceRange.value).toLocaleString();
+            loadProducts();
         }
-    } catch (error) {
-        console.error('Checkout error:', error);
-        alert('Checkout failed. Please try again.');
-    }
-}
 
-function viewProduct(productId) {
-    console.log('View product:', productId);
-}
+        function clearFilters() {
+            document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            document.getElementById('price-range').value = 500000;
+            document.getElementById('max-price').textContent = '500,000';
+            currentFilters = {};
+            loadProducts();
+        }
 
-// Chat/Email Functions
-function toggleChatMenu() {
-    const menu = document.getElementById('chat-menu');
-    menu.classList.toggle('hidden');
-}
-
-// Contact Form Functions
-let currentTopic = 'General Inquiry';
-
-function openContactForm(topic) {
-    currentTopic = topic;
-    const modal = document.getElementById('contact-modal');
-    const subjectInput = document.getElementById('contact-subject');
-    const messageInput = document.getElementById('contact-message');
-    const formSubject = document.getElementById('form-subject');
-    const formTopic = document.getElementById('form-topic');
-    const title = document.getElementById('contact-title');
-    
-    // Set title
-    title.textContent = topic;
-    
-    // Set subject based on topic
-    let subject = '';
-    let defaultMessage = '';
-    
-    switch(topic) {
-        case 'Product Information':
-            subject = 'Public Store - Product Information Request';
-            defaultMessage = 'Hello,\n\nI would like to know more about a product:\n\nProduct Name: \nQuestion: \n\nThank you!';
-            break;
-        case 'Shipping & Delivery':
-            subject = 'Public Store - Shipping & Delivery Inquiry';
-            defaultMessage = 'Hello,\n\nI have a question about shipping:\n\nDelivery Address: \nQuestion: \nExpected Delivery Date: \n\nThank you!';
-            break;
-        case 'Order Status':
-            subject = 'Public Store - Order Status Inquiry';
-            defaultMessage = 'Hello,\n\nI would like to check my order status:\n\nOrder ID (if available): \nOrder Date: \nQuestion: \n\nThank you!';
-            break;
-        case 'Returns & Refunds':
-            subject = 'Public Store - Returns & Refunds Request';
-            defaultMessage = 'Hello,\n\nI would like to inquire about returns/refunds:\n\nOrder ID: \nProduct Name: \nReason for Return: \n\nThank you!';
-            break;
-        default:
-            subject = 'Public Store - General Inquiry';
-            defaultMessage = 'Hello,\n\nI have a question:\n\n[Please describe your question here]\n\nThank you!';
-    }
-    
-    subjectInput.value = subject;
-    messageInput.value = defaultMessage;
-    formSubject.value = subject;
-    formTopic.value = topic;
-    
-    // Show modal and close chat menu
-    modal.classList.remove('hidden');
-    document.getElementById('chat-menu').classList.add('hidden');
-}
-
-function closeContactForm() {
-    document.getElementById('contact-modal').classList.add('hidden');
-    document.getElementById('contact-form').reset();
-}
-
-// Setup form submission handling
-document.getElementById('contact-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const form = this;
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalBtnText = submitBtn.textContent;
-    
-    // Update button to show loading
-    submitBtn.textContent = 'Sending...';
-    submitBtn.disabled = true;
-    
-    try {
-        // Get form data
-        const formData = new FormData(form);
-        
-        // Send to Formspree
-        const response = await fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'Accept': 'application/json'
+        // Update price display on range change
+        document.addEventListener('DOMContentLoaded', () => {
+            const priceRange = document.getElementById('price-range');
+            if (priceRange) {
+                priceRange.addEventListener('input', (e) => {
+                    document.getElementById('max-price').textContent = parseInt(e.target.value).toLocaleString();
+                });
             }
         });
-        
-        if (response.ok) {
-            // Success
-            showNotification('Your message has been sent successfully! You should receive a copy at your email.');
-            
-            // Reset form
-            form.reset();
-            closeContactForm();
-            
-            // Also send a copy to user's email if they want
-            const userEmail = document.getElementById('contact-email').value;
-            if (userEmail) {
-                // You could trigger a confirmation email here
-                console.log('User email for confirmation:', userEmail);
+
+        async function checkout() {
+            if (cart.length === 0) {
+                showNotification('Your cart is empty', 'error');
+                return;
             }
+
+            try {
+                const cartTotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+                
+                // Create order first
+                console.log('🛒 STEP 1: Creating order...');
+                console.log('📦 Cart items:', cart);
+                console.log('💰 Total amount:', cartTotal);
+                
+                const orderResponse = await fetch('/api/store/order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        items: cart,
+                        total_amount: cartTotal,
+                        payment_method: 'payhere'
+                    })
+                });
+
+                if (!orderResponse.ok) {
+                    const errorData = await orderResponse.json();
+                    console.error('❌ Order creation failed:', errorData);
+                    throw new Error(errorData.error || 'Failed to create order');
+                }
+
+                const orderData = await orderResponse.json();
+                console.log('✅ Order created successfully:', orderData);
+                console.log('📋 Order ID:', orderData.order_id);
+                const orderId = orderData.order_id;
+
+                // Generate payment hash
+                console.log('\n🔐 STEP 2: Generating payment hash...');
+                const hashPayload = {
+                    order_id: orderId,
+                    amount: cartTotal,
+                    currency: 'LKR'
+                };
+                console.log('📤 Hash request payload:', hashPayload);
+                
+                const hashResponse = await fetch('/api/payhere/generate-hash', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(hashPayload)
+                });
+
+                if (!hashResponse.ok) {
+                    const errorData = await hashResponse.json();
+                    console.error('❌ Hash generation failed:', errorData);
+                    throw new Error(errorData.error || 'Failed to generate payment hash');
+                }
+
+                const hashData = await hashResponse.json();
+                console.log('✅ Hash generated successfully');
+                console.log('🔑 Merchant ID:', hashData.merchant_id);
+                console.log('🔑 Hash:', hashData.hash);
+                console.log('💵 Amount:', hashData.amount);
+                console.log('💱 Currency:', hashData.currency);
             
-        } else {
-            // Error from Formspree
-            const errorData = await response.json();
-            console.error('Formspree error:', errorData);
-            showNotification('Sorry, there was an error sending your message. Please try again or use the email link.');
-        }
-        
-    } catch (error) {
-        console.error('Submission error:', error);
-        showNotification('Network error. Please check your connection and try again.');
-        
-        // Fallback: open mailto link
-        const name = document.getElementById('contact-name').value;
-        const email = document.getElementById('contact-email').value;
-        const subject = document.getElementById('contact-subject').value;
-        const message = document.getElementById('contact-message').value;
-        
-        const mailtoBody = `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`;
-        const mailtoLink = `mailto:dilukshikumari99@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(mailtoBody)}`;
-        
-        setTimeout(() => {
-            if (confirm('Could not send form. Would you like to open your email client instead?')) {
-                window.open(mailtoLink, '_blank');
+
+                // Prepare PayHere payment object
+                const payment = {
+                    sandbox: true, // Set to false in production
+                    merchant_id: hashData.merchant_id,
+                    return_url: window.location.origin + '/api/payhere/return?order_id=' + orderId,
+                    cancel_url: window.location.origin + '/api/payhere/cancel',
+                    notify_url: window.location.origin + '/api/payhere/notify',
+                    order_id: orderId,
+                    items: cart.map(item => item.name).join(', '),
+                    amount: cartTotal.toFixed(2),
+                    currency: 'LKR',
+                    hash: hashData.hash,
+                    first_name: 'Test',
+                    last_name: 'Customer',
+                    email: 'test@example.com',
+                    phone: '0771234567',
+                    address: '123 Test Street',
+                    city: 'Colombo',
+                    country: 'Sri Lanka'
+                };
+
+                // Configure PayHere callbacks
+                payhere.onCompleted = function(orderId) {
+                    console.log('Payment completed. Order ID:', orderId);
+                    cart = [];
+                    updateCart();
+                    closeCart();
+                    showNotification('Payment successful! Order ID: ' + orderId, 'success');
+                    setTimeout(() => {
+                        window.location.href = '/store?order_success=' + orderId;
+                    }, 2000);
+                };
+
+                payhere.onDismissed = function() {
+                    console.log('Payment dismissed');
+                    showNotification('Payment was cancelled', 'error');
+                };
+
+                payhere.onError = function(error) {
+                    console.log('Payment error:', error);
+                    showNotification('Payment failed: ' + error, 'error');
+                };
+
+                // Start payment
+                payhere.startPayment(payment);
+
+            } catch (error) {
+                console.error('Checkout error:', error);
+                showNotification('Checkout failed. Please try again.', 'error');
             }
-        }, 500);
-        
-    } finally {
-        // Restore button
-        submitBtn.textContent = originalBtnText;
-        submitBtn.disabled = false;
-    }
-});
-
-// Alternative: Simple email link
-function sendSimpleEmail(topic) {
-    let subject = '';
-    let body = '';
-    
-    switch(topic) {
-        case 'Product Information':
-            subject = 'Public Store - Product Information Request';
-            body = 'Hello,\n\nI would like to know more about a product.\n\nPlease provide more information.\n\nThank you!';
-            break;
-        case 'Shipping & Delivery':
-            subject = 'Public Store - Shipping & Delivery Inquiry';
-            body = 'Hello,\n\nI have a question about shipping.\n\nPlease let me know about delivery options.\n\nThank you!';
-            break;
-        case 'Order Status':
-            subject = 'Public Store - Order Status Inquiry';
-            body = 'Hello,\n\nI would like to check my order status.\n\nPlease provide an update.\n\nThank you!';
-            break;
-        case 'Returns & Refunds':
-            subject = 'Public Store - Returns & Refunds Request';
-            body = 'Hello,\n\nI would like to inquire about returns/refunds.\n\nPlease advise on the process.\n\nThank you!';
-            break;
-        default:
-            subject = 'Public Store - General Inquiry';
-            body = 'Hello,\n\nI have a question.\n\n[Please describe your question]\n\nThank you!';
-    }
-    
-    const mailtoLink = `mailto:dilukshikumari99@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(mailtoLink, '_blank');
-}
-
-// Close chat menu when clicking outside
-document.addEventListener('click', function(event) {
-    const chatMenu = document.getElementById('chat-menu');
-    const chatButton = document.getElementById('chat-button');
-    
-    if (chatMenu && chatButton && !chatMenu.classList.contains('hidden')) {
-        if (!chatMenu.contains(event.target) && !chatButton.contains(event.target)) {
-            chatMenu.classList.add('hidden');
         }
-    }
-});
 
-// Initialize store on load
-document.addEventListener('DOMContentLoaded', initStore);
+        function viewProduct(productId) {
+            console.log('View product:', productId);
+            // Implement product detail view if needed
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initStore);
     </script>
 </body>
 </html>
