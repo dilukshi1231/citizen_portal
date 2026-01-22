@@ -305,7 +305,7 @@ class ProductRecommendationEngine:
 @app.route("/")
 def home():
     #return render_template("index.html")
-    return render_template("store.html")
+    return render_template("index.html")
 @app.route("/chatbot")
 def chatbot_page():
     """AI Chatbot Interface - requires user login"""
