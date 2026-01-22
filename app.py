@@ -36,11 +36,12 @@ try:
 except ImportError:
     ML_AVAILABLE = False
     rec_engine = None
-MERCHANT_ID="1233555"
-MERCHANT_SECRET_ENCODED="MzkwNDE1MzcwMTEwMDAwNjYxNTYzNDcxMzgyNTAyMjkzMTI4NDAwMQ=="
-MERCHANT_SECRET_BASE64="MzkwNDE1MzcwMTEwMDAwNjYxNTYzNDcxMzgyNTAyMjkzMTI4NDAwMQ=="
-MERCHANT_SECRET = base64.b64decode(MERCHANT_SECRET_ENCODED).decode('utf-8')
-print(f"✅ Using decoded merchant secret: {MERCHANT_SECRET}")
+# ✅ USE THIS:
+MERCHANT_ID = "1233555"
+MERCHANT_SECRET_BASE64 = "MzkwNDE1MzcwMTEwMDAwNjYxNTYzNDcxMzgyNTAyMjkzMTI4NDAwMQ=="
+# DO NOT DECODE - Use the value exactly as PayHere provided it
+MERCHANT_SECRET = MERCHANT_SECRET_BASE64
+print(f"✅ Using merchant secret: {MERCHANT_SECRET[:20]}...")
 
 load_dotenv()
 
@@ -303,8 +304,8 @@ class ProductRecommendationEngine:
 # ============================================
 @app.route("/")
 def home():
-    return render_template("index.html")
-
+    #return render_template("index.html")
+    return render_template("store.html")
 @app.route("/chatbot")
 def chatbot_page():
     """AI Chatbot Interface - requires user login"""
@@ -3314,18 +3315,11 @@ def questions_by_age():
         print(f"Error in questions_by_age: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/storepay')
-def index():
-    return render_template_string(
-        HTML_TEMPLATE,
-        product=PRODUCT,
-        merchant_id=MERCHANT_ID
-    )
 @app.route('/api/payhere/generate-hash', methods=['POST'])
 def generate_hash():
     try:
         print("\n" + "=" * 70)
-        print("🔐 PAYHERE HASH GENERATION - FIXED VERSION")
+        print("🔐 PAYHERE HASH GENERATION - CORRECTED")
         print("=" * 70)
         
         data = request.json
@@ -3336,29 +3330,19 @@ def generate_hash():
         # Format amount to exactly 2 decimal places
         amount_formatted = "{:.2f}".format(amount)
         
-        # CRITICAL: Try decoding the merchant secret if it's base64
-        merchant_secret_to_use = MERCHANT_SECRET
-        
-        # Check if it's base64 and decode
-        if MERCHANT_SECRET_BASE64.endswith('=='):
-            try:
-                merchant_secret_to_use = base64.b64decode(MERCHANT_SECRET_BASE64).decode('utf-8')
-                print(f"✅ Using DECODED merchant secret")
-                print(f"   Original: {MERCHANT_SECRET_BASE64[:20]}...")
-                print(f"   Decoded:  {merchant_secret_to_use}")
-            except:
-                merchant_secret_to_use = MERCHANT_SECRET_BASE64
-                print(f"⚠️  Using ORIGINAL merchant secret")
+        # ✅ USE THE MERCHANT SECRET EXACTLY AS PROVIDED BY PAYHERE
+        # DO NOT DECODE IT!
+        merchant_secret = MERCHANT_SECRET_BASE64  # or just use the string directly
         
         print(f"\n📋 Payment Details:")
         print(f"   Merchant ID: {MERCHANT_ID}")
         print(f"   Order ID: {order_id}")
         print(f"   Amount: {amount_formatted}")
         print(f"   Currency: {currency}")
-        print(f"   Using Secret: {merchant_secret_to_use[:20]}... (length: {len(merchant_secret_to_use)})")
+        print(f"   Merchant Secret (first 20 chars): {merchant_secret[:20]}...")
         
         # Step 1: Hash the merchant secret (UPPERCASE)
-        merchant_secret_md5 = hashlib.md5(merchant_secret_to_use.encode('utf-8')).hexdigest().upper()
+        merchant_secret_md5 = hashlib.md5(merchant_secret.encode('utf-8')).hexdigest().upper()
         print(f"\n🔐 Step 1: Merchant Secret MD5: {merchant_secret_md5}")
         
         # Step 2: Build hash string
@@ -3378,13 +3362,7 @@ def generate_hash():
             'merchant_id': MERCHANT_ID,
             'order_id': order_id,
             'amount': amount_formatted,
-            'currency': currency,
-            'debug': {
-                'merchant_secret_used': 'decoded' if merchant_secret_to_use != MERCHANT_SECRET_BASE64 else 'original',
-                'merchant_secret_length': len(merchant_secret_to_use),
-                'merchant_secret_md5': merchant_secret_md5,
-                'hash_string': hash_string
-            }
+            'currency': currency
         })
         
     except Exception as e:
@@ -3479,13 +3457,14 @@ if __name__ == "__main__":
     else:
         # Development: Use Flask's built-in server
         print("🔧 Running in development mode")
-        print(f"📍 Public Portal: http://127.0.0.1:5000/")
-        print(f"🤖 AI Chatbot: http://127.0.0.1:5000/chatbot")
-        print(f"📊 Dashboard: http://127.0.0.1:5000/dashboard")
-        print(f"👨‍💼 Admin Panel: http://127.0.0.1:5000/admin")
+        print(f"📍 Public Portal: http://localhost:5000/")
+        print(f"🤖 AI Chatbot: http://localhost:5000/chatbot")
+        print(f"📊 Dashboard: http://localhost:5000/dashboard")
+        print(f"🛍️ Store: http://localhost:5000/store")
+        print(f"🎓 Training: http://localhost:5000/training")
+        print(f"👨‍💼 Admin Panel: http://localhost:5000/admin")
+        print(f"🧪 PayHere Test: http://localhost:5000/payhere-test")
         print("=" * 70)
-        app.run(
-            debug=True, 
-            host="0.0.0.0", 
-            port=int(os.getenv("PORT", 5000))
-        )
+        
+        # Run Flask development server
+        app.run(host='localhost', port=5000, debug=True)
