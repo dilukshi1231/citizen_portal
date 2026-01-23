@@ -4372,12 +4372,18 @@ def api_mark_all_notifications_read():
         if not user_id:
             return jsonify({"error": "Not authenticated"}), 401
         
+        print(f"📌 Mark all as read for user: {user_id}")
+        
         # Get user categories
         user = users_col.find_one({"_id": ObjectId(user_id)})
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+            
         user_categories = extract_user_categories(user)
+        print(f"📂 User categories: {user_categories}")
         
         # Get all notifications for user
-        notifications = notifications_col.find(
+        notifications = list(notifications_col.find(
             {
                 "is_active": True,
                 "$or": [
@@ -4387,7 +4393,16 @@ def api_mark_all_notifications_read():
                 ]
             },
             {"_id": 1}
-        )
+        ))
+        
+        print(f"✅ Found {len(notifications)} notifications to mark as read")
+        
+        if not notifications:
+            return jsonify({
+                "success": True,
+                "unread_count": 0,
+                "marked_count": 0
+            })
         
         notification_ids = [n["_id"] for n in notifications]
         current_time = get_utc_now()
@@ -4410,15 +4425,19 @@ def api_mark_all_notifications_read():
             })
         
         if operations:
-            notification_reads_col.bulk_write(operations)
+            result = notification_reads_col.bulk_write(operations)
+            print(f"✅ Marked {result.upserted_count + result.modified_count} notifications as read")
         
         return jsonify({
             "success": True,
-            "unread_count": 0
+            "unread_count": 0,
+            "marked_count": len(notification_ids)
         })
     
     except Exception as e:
-        print(f"Error marking all as read: {e}")
+        print(f"❌ Error marking all as read: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/user/categories", methods=["GET"])
