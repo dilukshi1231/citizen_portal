@@ -4060,7 +4060,390 @@ def example_notification_creation():
 # INITIALIZATION & STARTUP
 # ============================================
 # Replace the bottom section of app.py (after line 2300+) with this:
+@app.route("/api/user/notifications", methods=["GET"])
+def api_get_user_notifications():
+    """Get notifications for current user based on their profile categories"""
+    try:
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"error": "Not authenticated"}), 401
+        
+        # Get user profile to determine categories
+        user = users_col.find_one({"_id": ObjectId(user_id)})
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Extract user categories from profile
+        user_categories = extract_user_categories(user)
+        
+        # Get query parameters
+        lang = request.args.get("lang", "en")
+        unread_only = request.args.get("unread_only", "false").lower() == "true"
+        limit = int(request.args.get("limit", 50))
+        category_filter = request.args.get("category")
+        
+        # Build notification query based on user categories
+        query = {
+            "is_active": True,
+            "$or": [
+                {"target_categories": {"$in": user_categories}},
+                {"target_categories": "all"},
+                {"target_roles": "all"}
+            ]
+        }
+        
+        # Add category filter if specified
+        if category_filter and category_filter != "all":
+            query["category"] = category_filter
+        
+        # Check expiration
+        query["$or"].append({"expires_at": {"$exists": False}})
+        query["$or"].append({"expires_at": {"$gte": get_utc_now()}})
+        
+        # Fetch notifications
+        notifications = list(notifications_col.find(query)
+                           .sort("created_at", -1)
+                           .limit(limit))
+        
+        # Get read status
+        read_notifications = notification_reads_col.find(
+            {"user_id": user_id},
+            {"notification_id": 1}
+        )
+        read_ids = {r["notification_id"] for r in read_notifications}
+        
+        # Filter unread if requested
+        if unread_only:
+            notifications = [n for n in notifications if n["_id"] not in read_ids]
+        
+        # Format notifications
+        result = []
+        for notif in notifications:
+            # Extract language-specific content
+            title = notif["title"]
+            message = notif["message"]
+            
+            if isinstance(title, dict):
+                title = title.get(lang, title.get("en", ""))
+            if isinstance(message, dict):
+                message = message.get(lang, message.get("en", ""))
+            
+            result.append({
+                "id": str(notif["_id"]),
+                "title": title,
+                "message": message,
+                "type": notif["type"],
+                "priority": notif["priority"],
+                "category": notif.get("category"),
+                "action_url": notif.get("action_url"),
+                "created_at": notif["created_at"].isoformat(),
+                "is_read": notif["_id"] in read_ids,
+                "metadata": notif.get("metadata", {}),
+                "target_categories": notif.get("target_categories", [])
+            })
+        
+        # Get unread count
+        unread_count = len([n for n in notifications if n["_id"] not in read_ids])
+        
+        return jsonify({
+            "success": True,
+            "notifications": result,
+            "unread_count": unread_count,
+            "total": len(result),
+            "user_categories": user_categories
+        })
+    
+    except Exception as e:
+        print(f"Error fetching notifications: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+def extract_user_categories(user):
+    """Extract all applicable categories from user profile"""
+    categories = set()
+    
+    # Basic categories
+    categories.add("citizen")  # Everyone is a citizen
+    
+    # From occupation/job
+    occupation = (user.get("occupation") or user.get("job") or "").lower()
+    if occupation:
+        categories.add(occupation)
+        
+        # Map to standard categories
+        if any(word in occupation for word in ["government", "public", "officer", "civil"]):
+            categories.add("government_employee")
+        if any(word in occupation for word in ["teacher", "lecturer", "professor"]):
+            categories.add("educator")
+        if any(word in occupation for word in ["doctor", "nurse", "medical"]):
+            categories.add("healthcare_worker")
+        if any(word in occupation for word in ["engineer", "developer", "programmer"]):
+            categories.add("tech_professional")
+        if any(word in occupation for word in ["business", "entrepreneur", "owner"]):
+            categories.add("business_owner")
+    
+    # From interests and preferences
+    if user.get("learning_interests"):
+        categories.update(user["learning_interests"])
+    
+    if user.get("service_preferences"):
+        categories.update(user["service_preferences"])
+    
+    if user.get("hobbies"):
+        categories.update(user["hobbies"])
+    
+    # From extended profile
+    extended = user.get("extended_profile", {})
+    
+    # Career-based categories
+    career = extended.get("career", {})
+    if career.get("current_job"):
+        categories.add(career["current_job"].lower())
+    
+    if career.get("career_goals"):
+        goals = career["career_goals"]
+        if isinstance(goals, list):
+            categories.update(goals)
+        elif isinstance(goals, str):
+            categories.add(goals.lower())
+    
+    # Education-based categories
+    education = extended.get("education", {})
+    qualification = (education.get("highest_qualification") or "").lower()
+    
+    if qualification:
+        if any(q in qualification for q in ["student", "a_level", "o_level"]):
+            categories.add("student")
+        if "bachelor" in qualification or "degree" in qualification:
+            categories.add("degree_holder")
+        if "master" in qualification or "phd" in qualification or "doctorate" in qualification:
+            categories.add("postgraduate")
+    
+    # Family-based categories
+    family = extended.get("family", {})
+    if user.get("children_count", 0) > 0 or len(family.get("children", [])) > 0:
+        categories.add("parent")
+        
+        # Check children ages for school-related categories
+        children_ages = family.get("children_ages", [])
+        for age in children_ages:
+            if 5 <= age <= 18:
+                categories.add("parent_school_age")
+                break
+    
+    if family.get("marital_status") == "married":
+        categories.add("married")
+    
+    # Age-based categories
+    age = user.get("age")
+    if age:
+        if age < 18:
+            categories.add("minor")
+        elif age <= 25:
+            categories.add("young_adult")
+            categories.add("youth")
+        elif age <= 40:
+            categories.add("young_professional")
+            categories.add("adult")
+        elif age <= 60:
+            categories.add("middle_aged")
+            categories.add("adult")
+        else:
+            categories.add("senior_citizen")
+            categories.add("elderly")
+    
+    # Location-based
+    if user.get("district"):
+        categories.add(f"district_{user['district'].lower().replace(' ', '_')}")
+    
+    # Convert set to list and filter out empty strings
+    return list(filter(None, categories))
+@app.route("/api/user/notifications/unread-count", methods=["GET"])
+def api_get_unread_count():
+    """Get unread notification count for current user"""
+    try:
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"error": "Not authenticated"}), 401
+        
+        # Get user categories
+        user = users_col.find_one({"_id": ObjectId(user_id)})
+        user_categories = extract_user_categories(user)
+        
+        # Get all notifications for user
+        all_notifications = notifications_col.find(
+            {
+                "is_active": True,
+                "$or": [
+                    {"target_categories": {"$in": user_categories}},
+                    {"target_categories": "all"},
+                    {"target_roles": "all"}
+                ]
+            },
+            {"_id": 1}
+        )
+        
+        all_ids = {n["_id"] for n in all_notifications}
+        
+        # Get read notification IDs
+        read_notifications = notification_reads_col.find(
+            {"user_id": user_id},
+            {"notification_id": 1}
+        )
+        
+        read_ids = {r["notification_id"] for r in read_notifications}
+        
+        # Count unread
+        unread_count = len(all_ids - read_ids)
+        
+        return jsonify({
+            "success": True,
+            "unread_count": unread_count
+        })
+    
+    except Exception as e:
+        print(f"Error getting unread count: {e}")
+        return jsonify({"error": str(e)}), 500
+@app.route("/api/user/notifications/<notification_id>/read", methods=["POST"])
+def api_mark_notification_read(notification_id):
+    """Mark a notification as read"""
+    try:
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"error": "Not authenticated"}), 401
+        
+        # Mark as read
+        notification_reads_col.update_one(
+            {"user_id": user_id, "notification_id": ObjectId(notification_id)},
+            {
+                "$set": {
+                    "user_id": user_id,
+                    "notification_id": ObjectId(notification_id),
+                    "read_at": get_utc_now()
+                }
+            },
+            upsert=True
+        )
+        
+        # Update read count
+        notifications_col.update_one(
+            {"_id": ObjectId(notification_id)},
+            {"$inc": {"read_count": 1}}
+        )
+        
+        # Get updated unread count
+        user = users_col.find_one({"_id": ObjectId(user_id)})
+        user_categories = extract_user_categories(user)
+        
+        all_notifications = list(notifications_col.find(
+            {
+                "is_active": True,
+                "$or": [
+                    {"target_categories": {"$in": user_categories}},
+                    {"target_categories": "all"},
+                    {"target_roles": "all"}
+                ]
+            },
+            {"_id": 1}
+        ))
+        
+        read_notifications = list(notification_reads_col.find(
+            {"user_id": user_id},
+            {"notification_id": 1}
+        ))
+        
+        all_ids = {n["_id"] for n in all_notifications}
+        read_ids = {r["notification_id"] for r in read_notifications}
+        unread_count = len(all_ids - read_ids)
+        
+        return jsonify({
+            "success": True,
+            "unread_count": unread_count
+        })
+    
+    except Exception as e:
+        print(f"Error marking as read: {e}")
+        return jsonify({"error": str(e)}), 500
+@app.route("/api/user/notifications/read-all", methods=["POST"])
+def api_mark_all_notifications_read():
+    """Mark all notifications as read for current user"""
+    try:
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"error": "Not authenticated"}), 401
+        
+        # Get user categories
+        user = users_col.find_one({"_id": ObjectId(user_id)})
+        user_categories = extract_user_categories(user)
+        
+        # Get all notifications for user
+        notifications = notifications_col.find(
+            {
+                "is_active": True,
+                "$or": [
+                    {"target_categories": {"$in": user_categories}},
+                    {"target_categories": "all"},
+                    {"target_roles": "all"}
+                ]
+            },
+            {"_id": 1}
+        )
+        
+        notification_ids = [n["_id"] for n in notifications]
+        current_time = get_utc_now()
+        
+        # Bulk insert/update read records
+        operations = []
+        for notif_id in notification_ids:
+            operations.append({
+                "updateOne": {
+                    "filter": {"user_id": user_id, "notification_id": notif_id},
+                    "update": {
+                        "$set": {
+                            "user_id": user_id,
+                            "notification_id": notif_id,
+                            "read_at": current_time
+                        }
+                    },
+                    "upsert": True
+                }
+            })
+        
+        if operations:
+            notification_reads_col.bulk_write(operations)
+        
+        return jsonify({
+            "success": True,
+            "unread_count": 0
+        })
+    
+    except Exception as e:
+        print(f"Error marking all as read: {e}")
+        return jsonify({"error": str(e)}), 500
 
+@app.route("/api/user/categories", methods=["GET"])
+def api_get_user_categories():
+    """Get user's applicable categories"""
+    try:
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"error": "Not authenticated"}), 401
+        
+        user = users_col.find_one({"_id": ObjectId(user_id)})
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        categories = extract_user_categories(user)
+        
+        return jsonify({
+            "success": True,
+            "categories": categories,
+            "total": len(categories)
+        })
+    
+    except Exception as e:
+        print(f"Error getting user categories: {e}")
+        return jsonify({"error": str(e)}), 500
 if __name__ == "__main__":
     # Ensure admin exists
     if admins_col.count_documents({}) == 0:
