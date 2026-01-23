@@ -1,0 +1,506 @@
+<!-- 
+    ADMIN NOTIFICATION MANAGEMENT PANEL
+    Add this as templates/admin_notifications.html
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification Management - Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tab-active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .notification-preview {
+            border-left: 4px solid #667eea;
+            transition: all 0.3s;
+        }
+        
+        .notification-preview:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">📢 Notification Management</h1>
+                    <p class="text-gray-600 mt-2">Create and manage user-segmented notifications</p>
+                </div>
+                <a href="/admin" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg transition">
+                    ← Back to Admin
+                </a>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="bg-white rounded-lg shadow-lg mb-6">
+            <div class="flex border-b">
+                <button onclick="switchTab('create')" id="tab-create" 
+                        class="tab-active px-6 py-4 font-semibold transition">
+                    Create Notification
+                </button>
+                <button onclick="switchTab('history')" id="tab-history" 
+                        class="px-6 py-4 font-semibold text-gray-600 hover:bg-gray-50 transition">
+                    Notification History
+                </button>
+                <button onclick="switchTab('analytics')" id="tab-analytics" 
+                        class="px-6 py-4 font-semibold text-gray-600 hover:bg-gray-50 transition">
+                    Analytics
+                </button>
+            </div>
+
+            <!-- Create Notification Tab -->
+            <div id="content-create" class="p-6">
+                <form id="notification-form" class="space-y-6">
+                    <!-- Target Audience -->
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                        <h3 class="font-bold text-blue-900 mb-3">👥 Target Audience</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" name="target_roles" value="student" 
+                                       class="w-4 h-4 text-blue-600 rounded">
+                                <span class="text-sm">🎓 Students</span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" name="target_roles" value="citizen" 
+                                       class="w-4 h-4 text-blue-600 rounded">
+                                <span class="text-sm">👤 Citizens</span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" name="target_roles" value="officer" 
+                                       class="w-4 h-4 text-blue-600 rounded">
+                                <span class="text-sm">👨‍💼 Officers</span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" name="target_roles" value="admin" 
+                                       class="w-4 h-4 text-blue-600 rounded">
+                                <span class="text-sm">⚙️ Admins</span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="checkbox" name="target_roles" value="all" 
+                                       class="w-4 h-4 text-blue-600 rounded" 
+                                       onchange="toggleAllRoles(this)">
+                                <span class="text-sm font-bold">🌍 Everyone</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Notification Type & Priority -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Notification Type
+                            </label>
+                            <select name="type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="announcement">📢 Announcement</option>
+                                <option value="service_update">🔄 Service Update</option>
+                                <option value="payment_reminder">💰 Payment Reminder</option>
+                                <option value="document_ready">📄 Document Ready</option>
+                                <option value="appointment">📅 Appointment</option>
+                                <option value="system_alert">⚠️ System Alert</option>
+                                <option value="training">🎓 Training</option>
+                                <option value="feedback">💬 Feedback Request</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Priority Level
+                            </label>
+                            <select name="priority" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="low">🟢 Low</option>
+                                <option value="medium" selected>🟡 Medium</option>
+                                <option value="high">🟠 High</option>
+                                <option value="urgent">🔴 Urgent</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Category & Action URL -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Category (Optional)
+                            </label>
+                            <input type="text" name="category" placeholder="e.g., education, health, transport"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Action URL (Optional)
+                            </label>
+                            <input type="url" name="action_url" placeholder="/services/example"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <!-- Title (English & Sinhala) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Title (English) *
+                            </label>
+                            <input type="text" name="title_en" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                   placeholder="Enter notification title in English">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Title (Sinhala)
+                            </label>
+                            <input type="text" name="title_si"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                   placeholder="සිංහලෙන් මාතෘකාව ඇතුලත් කරන්න">
+                        </div>
+                    </div>
+
+                    <!-- Message (English & Sinhala) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Message (English) *
+                            </label>
+                            <textarea name="message_en" required rows="4"
+                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                      placeholder="Enter notification message in English"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Message (Sinhala)
+                            </label>
+                            <textarea name="message_si" rows="4"
+                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                      placeholder="සිංහලෙන් පණිවිඩය ඇතුලත් කරන්න"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Expiration -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            Expires In (Days)
+                        </label>
+                        <input type="number" name="expires_in_days" value="30" min="1" max="365"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <p class="text-sm text-gray-500 mt-1">Notification will be automatically deleted after this period</p>
+                    </div>
+
+                    <!-- Preview -->
+                    <div id="notification-preview" class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6">
+                        <h4 class="font-bold text-gray-700 mb-4">📋 Preview</h4>
+                        <div class="notification-preview bg-white p-4 rounded-lg">
+                            <div class="flex gap-3">
+                                <div id="preview-icon" class="text-2xl">📢</div>
+                                <div class="flex-1">
+                                    <div id="preview-title" class="font-semibold text-gray-800 mb-1">
+                                        Notification Title
+                                    </div>
+                                    <div id="preview-message" class="text-sm text-gray-600 mb-2">
+                                        Notification message will appear here...
+                                    </div>
+                                    <div class="flex gap-2 text-xs">
+                                        <span id="preview-priority" class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded">
+                                            Medium Priority
+                                        </span>
+                                        <span id="preview-audience" class="px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                                            No audience selected
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="flex gap-4">
+                        <button type="submit" 
+                                class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition">
+                            🚀 Create Notification
+                        </button>
+                        <button type="button" onclick="resetForm()" 
+                                class="px-6 py-3 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition">
+                            Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Notification History Tab -->
+            <div id="content-history" class="p-6 hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-gray-800">Recent Notifications</h3>
+                    <button onclick="loadHistory()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                        🔄 Refresh
+                    </button>
+                </div>
+                
+                <div id="notification-history" class="space-y-4">
+                    <div class="text-center text-gray-500 py-8">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div id="content-analytics" class="p-6 hidden">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-lg shadow-lg">
+                        <div class="text-sm opacity-90 mb-2">Total Notifications</div>
+                        <div id="total-notifications" class="text-3xl font-bold">0</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-lg shadow-lg">
+                        <div class="text-sm opacity-90 mb-2">Active This Month</div>
+                        <div id="active-month" class="text-3xl font-bold">0</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-lg shadow-lg">
+                        <div class="text-sm opacity-90 mb-2">Average Read Rate</div>
+                        <div id="read-rate" class="text-3xl font-bold">0%</div>
+                    </div>
+                </div>
+                
+                <div class="bg-white border rounded-lg p-6">
+                    <h4 class="font-bold text-gray-800 mb-4">Notifications by User Role</h4>
+                    <div id="role-breakdown"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab Switching
+        function switchTab(tab) {
+            // Hide all content
+            document.querySelectorAll('[id^="content-"]').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('[id^="tab-"]').forEach(el => {
+                el.classList.remove('tab-active', 'text-white');
+                el.classList.add('text-gray-600');
+            });
+            
+            // Show selected
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+            const tabEl = document.getElementById(`tab-${tab}`);
+            tabEl.classList.add('tab-active');
+            tabEl.classList.remove('text-gray-600');
+            
+            // Load data if needed
+            if (tab === 'history') loadHistory();
+            if (tab === 'analytics') loadAnalytics();
+        }
+
+        // Toggle All Roles
+        function toggleAllRoles(checkbox) {
+            const roleCheckboxes = document.querySelectorAll('input[name="target_roles"]:not([value="all"])');
+            if (checkbox.checked) {
+                roleCheckboxes.forEach(cb => {
+                    cb.checked = false;
+                    cb.disabled = true;
+                });
+            } else {
+                roleCheckboxes.forEach(cb => cb.disabled = false);
+            }
+            updatePreview();
+        }
+
+        // Real-time Preview Update
+        const form = document.getElementById('notification-form');
+        form.addEventListener('input', updatePreview);
+        form.addEventListener('change', updatePreview);
+
+        function updatePreview() {
+            const formData = new FormData(form);
+            
+            // Update icon based on type
+            const typeIcons = {
+                'announcement': '📢',
+                'service_update': '🔄',
+                'payment_reminder': '💰',
+                'document_ready': '📄',
+                'appointment': '📅',
+                'system_alert': '⚠️',
+                'training': '🎓',
+                'feedback': '💬'
+            };
+            document.getElementById('preview-icon').textContent = typeIcons[formData.get('type')] || '🔔';
+            
+            // Update title
+            const title = formData.get('title_en') || 'Notification Title';
+            document.getElementById('preview-title').textContent = title;
+            
+            // Update message
+            const message = formData.get('message_en') || 'Notification message will appear here...';
+            document.getElementById('preview-message').textContent = message;
+            
+            // Update priority
+            const priority = formData.get('priority');
+            const priorityColors = {
+                'low': 'bg-green-100 text-green-800',
+                'medium': 'bg-yellow-100 text-yellow-800',
+                'high': 'bg-orange-100 text-orange-800',
+                'urgent': 'bg-red-100 text-red-800'
+            };
+            const priorityEl = document.getElementById('preview-priority');
+            priorityEl.className = `px-2 py-1 rounded ${priorityColors[priority]}`;
+            priorityEl.textContent = priority.charAt(0).toUpperCase() + priority.slice(1) + ' Priority';
+            
+            // Update audience
+            const roles = formData.getAll('target_roles');
+            const audienceEl = document.getElementById('preview-audience');
+            if (roles.length === 0) {
+                audienceEl.textContent = 'No audience selected';
+                audienceEl.className = 'px-2 py-1 bg-gray-100 text-gray-800 rounded';
+            } else if (roles.includes('all')) {
+                audienceEl.textContent = '🌍 Everyone';
+                audienceEl.className = 'px-2 py-1 bg-purple-100 text-purple-800 rounded';
+            } else {
+                audienceEl.textContent = `👥 ${roles.length} role${roles.length > 1 ? 's' : ''}`;
+                audienceEl.className = 'px-2 py-1 bg-blue-100 text-blue-800 rounded';
+            }
+        }
+
+        // Form Submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            const roles = formData.getAll('target_roles');
+            
+            if (roles.length === 0) {
+                alert('Please select at least one target audience!');
+                return;
+            }
+            
+            const data = {
+                title: {
+                    en: formData.get('title_en'),
+                    si: formData.get('title_si') || formData.get('title_en')
+                },
+                message: {
+                    en: formData.get('message_en'),
+                    si: formData.get('message_si') || formData.get('message_en')
+                },
+                target_roles: roles,
+                type: formData.get('type'),
+                priority: formData.get('priority'),
+                category: formData.get('category') || null,
+                action_url: formData.get('action_url') || null,
+                expires_in_days: parseInt(formData.get('expires_in_days'))
+            };
+            
+            try {
+                const response = await fetch('/api/admin/notifications', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Notification created successfully!');
+                    resetForm();
+                    switchTab('history');
+                } else {
+                    alert('❌ Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ Error creating notification: ' + error.message);
+            }
+        });
+
+        function resetForm() {
+            form.reset();
+            document.querySelectorAll('input[name="target_roles"]').forEach(cb => cb.disabled = false);
+            updatePreview();
+        }
+
+        // Load History
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/admin/notifications');
+                const data = await response.json();
+                
+                const historyEl = document.getElementById('notification-history');
+                
+                if (data.notifications.length === 0) {
+                    historyEl.innerHTML = '<div class="text-center text-gray-500 py-8">No notifications yet</div>';
+                    return;
+                }
+                
+                historyEl.innerHTML = data.notifications.map(notif => `
+                    <div class="notification-preview bg-white border rounded-lg p-4">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="font-semibold text-gray-800">
+                                ${notif.title.en || notif.title}
+                            </div>
+                            <button onclick="deleteNotification('${notif.id}')" 
+                                    class="text-red-600 hover:text-red-800 text-sm">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                        <div class="text-sm text-gray-600 mb-3">
+                            ${notif.message.en || notif.message}
+                        </div>
+                        <div class="flex gap-2 flex-wrap text-xs">
+                            <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                                ${notif.target_roles.join(', ')}
+                            </span>
+                            <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded">
+                                ${notif.type}
+                            </span>
+                            <span class="px-2 py-1 bg-green-100 text-green-800 rounded">
+                                Read: ${notif.read_count || 0}
+                            </span>
+                            <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded">
+                                ${new Date(notif.created_at).toLocaleDateString()}
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        }
+
+        async function deleteNotification(id) {
+            if (!confirm('Are you sure you want to delete this notification?')) return;
+            
+            try {
+                const response = await fetch(`/api/admin/notifications/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Notification deleted');
+                    loadHistory();
+                } else {
+                    alert('❌ Error deleting notification');
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        // Load Analytics (placeholder)
+        async function loadAnalytics() {
+            // This would connect to your analytics endpoint
+            document.getElementById('total-notifications').textContent = '0';
+            document.getElementById('active-month').textContent = '0';
+            document.getElementById('read-rate').textContent = '0%';
+        }
+
+        // Initialize
+        updatePreview();
+    </script>
+</body>
+</html>

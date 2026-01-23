@@ -19,6 +19,8 @@ from io import StringIO
 from flask.json.provider import DefaultJSONProvider
 from bson import ObjectId
 import base64
+from enum import Enum
+
 
 import hashlib
 # Try FAISS import
@@ -93,8 +95,16 @@ training_programs_col = db["training_programs"]
 enrollments_col = db["enrollments"]
 recommendations_col = db["recommendations"]
 segments_col = db["user_segments"]
-
+notifications_col = db["notifications"]
+user_notification_settings_col = db["user_notification_settings"]
+notification_reads_col = db["notification_reads"]
 # Embedding model (lazy-init)
+
+notifications_col.create_index([("target_roles", 1), ("created_at", -1)])
+notifications_col.create_index([("expires_at", 1)], expireAfterSeconds=0)
+notification_reads_col.create_index([("user_id", 1), ("notification_id", 1)], unique=True)
+user_notification_settings_col.create_index([("user_id", 1)], unique=True)
+
 EMBED_MODEL = None
 
 # Paths
@@ -3418,7 +3428,634 @@ def payment_cancel():
     <a href="/">Try Again</a>
 
 '''
-   
+class UserRole(Enum):
+    STUDENT = "student"
+    CITIZEN = "citizen"
+    OFFICER = "officer"
+    ADMIN = "admin"
+    ALL = "all"  # For system-wide announcements
+
+class NotificationPriority(Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    URGENT = "urgent"
+
+class NotificationType(Enum):
+    ANNOUNCEMENT = "announcement"
+    SERVICE_UPDATE = "service_update"
+    PAYMENT_REMINDER = "payment_reminder"
+    DOCUMENT_READY = "document_ready"
+    APPOINTMENT = "appointment"
+    SYSTEM_ALERT = "system_alert"
+    TRAINING = "training"
+    FEEDBACK = "feedback"
+
+# ============================================
+# DATABASE COLLECTIONS
+# ============================================
+# Add these to your MongoDB setup
+notifications_col = db["notifications"]
+user_notification_settings_col = db["user_notification_settings"]
+notification_reads_col = db["notification_reads"]
+
+# Create indexes for better performance
+notifications_col.create_index([("target_roles", 1), ("created_at", -1)])
+notifications_col.create_index([("expires_at", 1)], expireAfterSeconds=0)  # Auto-delete expired
+notification_reads_col.create_index([("user_id", 1), ("notification_id", 1)], unique=True)
+user_notification_settings_col.create_index([("user_id", 1)], unique=True)
+
+# ============================================
+# NOTIFICATION HELPER FUNCTIONS
+# ============================================
+def create_notification(
+    title,
+    message,
+    target_roles,  # List of UserRole values or ["all"]
+    notification_type=NotificationType.ANNOUNCEMENT.value,
+    priority=NotificationPriority.MEDIUM.value,
+    expires_in_days=30,
+    metadata=None,
+    category=None,  # e.g., "education", "health", "transport"
+    action_url=None
+):
+    """
+    Create a new notification for specific user segments
+    
+    Args:
+        title: Notification title (can be dict with 'en' and 'si' keys)
+        message: Notification message (can be dict with 'en' and 'si' keys)
+        target_roles: List of role strings, e.g., ["student", "citizen"] or ["all"]
+        notification_type: Type from NotificationType enum
+        priority: Priority level from NotificationPriority enum
+        expires_in_days: Days until notification expires (None = never)
+        metadata: Additional data (dict)
+        category: Category for filtering (optional)
+        action_url: URL to navigate when clicked (optional)
+    """
+    notification = {
+        "title": title,
+        "message": message,
+        "target_roles": target_roles,
+        "type": notification_type,
+        "priority": priority,
+        "category": category,
+        "action_url": action_url,
+        "metadata": metadata or {},
+        "created_at": datetime.utcnow(),
+        "created_by": None,  # Can be set to admin_id if needed
+        "is_active": True,
+        "read_count": 0,
+        "total_recipients": 0
+    }
+    
+    # Set expiration if specified
+    if expires_in_days:
+        notification["expires_at"] = datetime.utcnow() + timedelta(days=expires_in_days)
+    
+    result = notifications_col.insert_one(notification)
+    return str(result.inserted_id)
+
+def get_user_notifications(user_id, role, lang="en", unread_only=False, limit=50):
+    """
+    Get notifications for a specific user based on their role
+    
+    Args:
+        user_id: User's ID
+        role: User's role (from UserRole enum)
+        lang: Language preference
+        unread_only: If True, only return unread notifications
+        limit: Maximum number of notifications to return
+    """
+    # Build query for notifications targeting this user's role
+    query = {
+        "is_active": True,
+        "$or": [
+            {"target_roles": role},
+            {"target_roles": "all"}
+        ]
+    }
+    
+    # Check if we're filtering for unread
+    if unread_only:
+        # Get list of read notification IDs
+        read_notifications = notification_reads_col.find(
+            {"user_id": user_id},
+            {"notification_id": 1}
+        )
+        read_ids = [r["notification_id"] for r in read_notifications]
+        
+        if read_ids:
+            query["_id"] = {"$nin": read_ids}
+    
+    # Fetch notifications
+    notifications = list(notifications_col.find(query)
+                        .sort("created_at", -1)
+                        .limit(limit))
+    
+    # Get read status for each notification
+    read_ids_set = set()
+    if not unread_only:
+        read_notifications = notification_reads_col.find(
+            {"user_id": user_id},
+            {"notification_id": 1}
+        )
+        read_ids_set = {r["notification_id"] for r in read_notifications}
+    
+    # Format notifications
+    result = []
+    for notif in notifications:
+        # Extract language-specific content
+        title = notif["title"]
+        message = notif["message"]
+        
+        if isinstance(title, dict):
+            title = title.get(lang, title.get("en", ""))
+        if isinstance(message, dict):
+            message = message.get(lang, message.get("en", ""))
+        
+        result.append({
+            "id": str(notif["_id"]),
+            "title": title,
+            "message": message,
+            "type": notif["type"],
+            "priority": notif["priority"],
+            "category": notif.get("category"),
+            "action_url": notif.get("action_url"),
+            "created_at": notif["created_at"].isoformat(),
+            "is_read": notif["_id"] in read_ids_set,
+            "metadata": notif.get("metadata", {})
+        })
+    
+    return result
+
+def mark_notification_as_read(user_id, notification_id):
+    """Mark a notification as read for a specific user"""
+    try:
+        notification_reads_col.update_one(
+            {"user_id": user_id, "notification_id": ObjectId(notification_id)},
+            {
+                "$set": {
+                    "user_id": user_id,
+                    "notification_id": ObjectId(notification_id),
+                    "read_at": datetime.utcnow()
+                }
+            },
+            upsert=True
+        )
+        
+        # Update read count
+        notifications_col.update_one(
+            {"_id": ObjectId(notification_id)},
+            {"$inc": {"read_count": 1}}
+        )
+        
+        return True
+    except Exception as e:
+        print(f"Error marking notification as read: {e}")
+        return False
+def mark_notification_as_read(user_id, notification_id):
+    """Mark a notification as read for a specific user"""
+    try:
+        notification_reads_col.update_one(
+            {"user_id": user_id, "notification_id": ObjectId(notification_id)},
+            {
+                "$set": {
+                    "user_id": user_id,
+                    "notification_id": ObjectId(notification_id),
+                    "read_at": datetime.utcnow()
+                }
+            },
+            upsert=True
+        )
+        
+        # Update read count
+        notifications_col.update_one(
+            {"_id": ObjectId(notification_id)},
+            {"$inc": {"read_count": 1}}
+        )
+        
+        return True
+    except Exception as e:
+        print(f"Error marking notification as read: {e}")
+        return False
+def mark_all_as_read(user_id, role):
+    """Mark all notifications as read for a user"""
+    try:
+        # Get all active notifications for this role
+        notifications = notifications_col.find(
+            {
+                "is_active": True,
+                "$or": [
+                    {"target_roles": role},
+                    {"target_roles": "all"}
+                ]
+            },
+            {"_id": 1}
+        )
+        
+        notification_ids = [n["_id"] for n in notifications]
+        current_time = datetime.utcnow()
+        
+        # Bulk insert/update read records
+        operations = []
+        for notif_id in notification_ids:
+            operations.append({
+                "updateOne": {
+                    "filter": {"user_id": user_id, "notification_id": notif_id},
+                    "update": {
+                        "$set": {
+                            "user_id": user_id,
+                            "notification_id": notif_id,
+                            "read_at": current_time
+                        }
+                    },
+                    "upsert": True
+                }
+            })
+        
+        if operations:
+            notification_reads_col.bulk_write(operations)
+        
+        return True
+    except Exception as e:
+        print(f"Error marking all as read: {e}")
+        return False
+
+def get_unread_count(user_id, role):
+    """Get count of unread notifications for a user"""
+    # Get all notification IDs for this role
+    all_notifications = notifications_col.find(
+        {
+            "is_active": True,
+            "$or": [
+                {"target_roles": role},
+                {"target_roles": "all"}
+            ]
+        },
+        {"_id": 1}
+    )
+    
+    all_ids = {n["_id"] for n in all_notifications}
+    
+    # Get read notification IDs
+    read_notifications = notification_reads_col.find(
+        {"user_id": user_id},
+        {"notification_id": 1}
+    )
+    
+    read_ids = {r["notification_id"] for r in read_notifications}
+    
+    # Count unread
+    unread_count = len(all_ids - read_ids)
+    return unread_count
+
+# ============================================
+# USER NOTIFICATION PREFERENCES
+# ============================================
+def get_user_notification_settings(user_id):
+    """Get user's notification preferences"""
+    settings = user_notification_settings_col.find_one({"user_id": user_id})
+    
+    if not settings:
+        # Return default settings
+        return {
+            "email_enabled": True,
+            "push_enabled": True,
+            "notification_types": {
+                "announcement": True,
+                "service_update": True,
+                "payment_reminder": True,
+                "document_ready": True,
+                "appointment": True,
+                "system_alert": True,
+                "training": True,
+                "feedback": True
+            },
+            "quiet_hours": {
+                "enabled": False,
+                "start": "22:00",
+                "end": "08:00"
+            }
+        }
+    
+    return {
+        "email_enabled": settings.get("email_enabled", True),
+        "push_enabled": settings.get("push_enabled", True),
+        "notification_types": settings.get("notification_types", {}),
+        "quiet_hours": settings.get("quiet_hours", {})
+    }
+
+def update_user_notification_settings(user_id, settings):
+    """Update user's notification preferences"""
+    try:
+        user_notification_settings_col.update_one(
+            {"user_id": user_id},
+            {
+                "$set": {
+                    **settings,
+                    "updated_at": datetime.utcnow()
+                }
+            },
+            upsert=True
+        )
+        return True
+    except Exception as e:
+        print(f"Error updating notification settings: {e}")
+        return False
+
+# ============================================
+# API ENDPOINTS
+# ============================================
+
+@app.route("/api/notifications", methods=["GET"])
+def api_get_notifications():
+    """Get notifications for the current user"""
+    try:
+        # Get user info from session or request
+        user_id = request.args.get("user_id") or session.get("user_id")
+        role = request.args.get("role") or session.get("user_role", "citizen")
+        lang = request.args.get("lang", "en")
+        unread_only = request.args.get("unread_only", "false").lower() == "true"
+        limit = int(request.args.get("limit", 50))
+        
+        if not user_id:
+            return jsonify({"error": "User not authenticated"}), 401
+        
+        notifications = get_user_notifications(
+            user_id=user_id,
+            role=role,
+            lang=lang,
+            unread_only=unread_only,
+            limit=limit
+        )
+        
+        unread_count = get_unread_count(user_id, role)
+        
+        return jsonify({
+            "success": True,
+            "notifications": notifications,
+            "unread_count": unread_count,
+            "total": len(notifications)
+        })
+    
+    except Exception as e:
+        print(f"Error fetching notifications: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/notifications/<notification_id>/read", methods=["POST"])
+def api_mark_read(notification_id):
+    """Mark a notification as read"""
+    try:
+        user_id = request.json.get("user_id") or session.get("user_id")
+        
+        if not user_id:
+            return jsonify({"error": "User not authenticated"}), 401
+        
+        success = mark_notification_as_read(user_id, notification_id)
+        
+        if success:
+            role = session.get("user_role", "citizen")
+            unread_count = get_unread_count(user_id, role)
+            
+            return jsonify({
+                "success": True,
+                "unread_count": unread_count
+            })
+        else:
+            return jsonify({"error": "Failed to mark as read"}), 500
+    
+    except Exception as e:
+        print(f"Error marking notification as read: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/notifications/read-all", methods=["POST"])
+def api_mark_all_read():
+    """Mark all notifications as read"""
+    try:
+        user_id = request.json.get("user_id") or session.get("user_id")
+        role = request.json.get("role") or session.get("user_role", "citizen")
+        
+        if not user_id:
+            return jsonify({"error": "User not authenticated"}), 401
+        
+        success = mark_all_as_read(user_id, role)
+        
+        return jsonify({"success": success})
+    
+    except Exception as e:
+        print(f"Error marking all as read: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/notifications/unread-count", methods=["GET"])
+def api_unread_count():
+    """Get unread notification count"""
+    try:
+        user_id = request.args.get("user_id") or session.get("user_id")
+        role = request.args.get("role") or session.get("user_role", "citizen")
+        
+        if not user_id:
+            return jsonify({"error": "User not authenticated"}), 401
+        
+        count = get_unread_count(user_id, role)
+        
+        return jsonify({
+            "success": True,
+            "unread_count": count
+        })
+    
+    except Exception as e:
+        print(f"Error getting unread count: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/notifications/settings", methods=["GET", "POST"])
+def api_notification_settings():
+    """Get or update notification settings"""
+    try:
+        user_id = request.args.get("user_id") or session.get("user_id")
+        
+        if not user_id:
+            return jsonify({"error": "User not authenticated"}), 401
+        
+        if request.method == "GET":
+            settings = get_user_notification_settings(user_id)
+            return jsonify({
+                "success": True,
+                "settings": settings
+            })
+        
+        else:  # POST
+            settings = request.json
+            success = update_user_notification_settings(user_id, settings)
+            
+            return jsonify({"success": success})
+    
+    except Exception as e:
+        print(f"Error with notification settings: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# ============================================
+# ADMIN ENDPOINTS - CREATE NOTIFICATIONS
+# ============================================
+
+@app.route("/api/admin/notifications", methods=["POST"])
+def api_admin_create_notification():
+    """Admin endpoint to create notifications"""
+    try:
+        # Check if user is admin
+        if not session.get("is_admin"):
+            return jsonify({"error": "Unauthorized"}), 403
+        
+        data = request.json
+        
+        notification_id = create_notification(
+            title=data.get("title"),
+            message=data.get("message"),
+            target_roles=data.get("target_roles", ["all"]),
+            notification_type=data.get("type", NotificationType.ANNOUNCEMENT.value),
+            priority=data.get("priority", NotificationPriority.MEDIUM.value),
+            expires_in_days=data.get("expires_in_days", 30),
+            metadata=data.get("metadata"),
+            category=data.get("category"),
+            action_url=data.get("action_url")
+        )
+        
+        return jsonify({
+            "success": True,
+            "notification_id": notification_id
+        })
+    
+    except Exception as e:
+        print(f"Error creating notification: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/admin/notifications", methods=["GET"])
+def api_admin_get_all_notifications():
+    """Admin endpoint to get all notifications"""
+    try:
+        if not session.get("is_admin"):
+            return jsonify({"error": "Unauthorized"}), 403
+        
+        notifications = list(notifications_col.find().sort("created_at", -1).limit(100))
+        
+        result = []
+        for notif in notifications:
+            result.append({
+                "id": str(notif["_id"]),
+                "title": notif["title"],
+                "message": notif["message"],
+                "target_roles": notif["target_roles"],
+                "type": notif["type"],
+                "priority": notif["priority"],
+                "created_at": notif["created_at"].isoformat(),
+                "read_count": notif.get("read_count", 0),
+                "is_active": notif.get("is_active", True)
+            })
+        
+        return jsonify({
+            "success": True,
+            "notifications": result
+        })
+    
+    except Exception as e:
+        print(f"Error fetching notifications: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/admin/notifications/<notification_id>", methods=["DELETE"])
+def api_admin_delete_notification(notification_id):
+    """Admin endpoint to delete a notification"""
+    try:
+        if not session.get("is_admin"):
+            return jsonify({"error": "Unauthorized"}), 403
+        
+        result = notifications_col.update_one(
+            {"_id": ObjectId(notification_id)},
+            {"$set": {"is_active": False}}
+        )
+        
+        return jsonify({
+            "success": result.modified_count > 0
+        })
+    
+    except Exception as e:
+        print(f"Error deleting notification: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# ============================================
+# EXAMPLE USAGE
+# ============================================
+def example_notification_creation():
+    """
+    Examples of how to create notifications for different user segments
+    """
+    
+    # Example 1: Student-only notification
+    create_notification(
+        title={"en": "Scholarship Application Open", "si": "ශිෂ්‍යත්ව අයදුම්පත් විවෘතයි"},
+        message={
+            "en": "Applications for 2025 scholarships are now open. Deadline: Jan 31, 2025",
+            "si": "2025 ශිෂ්‍යත්ව සඳහා අයදුම්පත් දැන් විවෘතයි. අවසාන දිනය: 2025 ජනවාරි 31"
+        },
+        target_roles=["student"],
+        notification_type=NotificationType.ANNOUNCEMENT.value,
+        priority=NotificationPriority.HIGH.value,
+        category="education",
+        expires_in_days=10
+    )
+    
+    # Example 2: Citizen payment reminder
+    create_notification(
+        title={"en": "Property Tax Due", "si": "දේපල බද්ද ගෙවීමට"},
+        message={
+            "en": "Your property tax payment is due by Jan 25, 2025",
+            "si": "ඔබේ දේපල බද්ද 2025 ජනවාරි 25 වන විට ගෙවිය යුතුය"
+        },
+        target_roles=["citizen"],
+        notification_type=NotificationType.PAYMENT_REMINDER.value,
+        priority=NotificationPriority.URGENT.value,
+        category="finance",
+        action_url="/payments"
+    )
+    
+    # Example 3: Officer training notification
+    create_notification(
+        title={"en": "Mandatory Training Session", "si": "අනිවාර්ය පුහුණු සැසිය"},
+        message={
+            "en": "All officers must attend the digital services training on Jan 28",
+            "si": "සියලුම නිලධාරීන් ජනවාරි 28 දින ඩිජිටල් සේවා පුහුණුවට සහභාගී විය යුතුය"
+        },
+        target_roles=["officer"],
+        notification_type=NotificationType.TRAINING.value,
+        priority=NotificationPriority.HIGH.value,
+        category="training"
+    )
+    
+    # Example 4: System-wide announcement
+    create_notification(
+        title={"en": "System Maintenance", "si": "පද්ධති නඩත්තු කිරීම"},
+        message={
+            "en": "Portal will be down for maintenance on Jan 26, 2025 from 10 PM - 2 AM",
+            "si": "2025 ජනවාරි 26 වන දින රාත්‍රී 10 - පෙ.ව. 2 දක්වා නඩත්තු කටයුතු සඳහා ද්වාරය අක්‍රිය වේ"
+        },
+        target_roles=["all"],
+        notification_type=NotificationType.SYSTEM_ALERT.value,
+        priority=NotificationPriority.URGENT.value
+    )
+    
+    # Example 5: Multiple roles
+    create_notification(
+        title={"en": "New Service Available", "si": "නව සේවාව ලබා ගත හැකිය"},
+        message={
+            "en": "Online driving license renewal is now available",
+            "si": "රියදුරු බලපත්‍ර අලුත් කිරීම දැන් මාර්ගගතව ලබා ගත හැකිය"
+        },
+        target_roles=["citizen", "student"],
+        notification_type=NotificationType.SERVICE_UPDATE.value,
+        priority=NotificationPriority.MEDIUM.value,
+        category="transport",
+        action_url="/services/driving-license"
+    )
+
 # ============================================
 # INITIALIZATION & STARTUP
 # ============================================
