@@ -3471,39 +3471,27 @@ user_notification_settings_col.create_index([("user_id", 1)], unique=True)
 def create_notification(
     title,
     message,
-    target_roles,  # List of UserRole values or ["all"]
-    notification_type=NotificationType.ANNOUNCEMENT.value,
-    priority=NotificationPriority.MEDIUM.value,
+    target_categories,
+    notification_type="announcement",
+    priority="medium",
     expires_in_days=30,
     metadata=None,
-    category=None,  # e.g., "education", "health", "transport"
+    category=None,
     action_url=None
 ):
-    """
-    Create a new notification for specific user segments
-    
-    Args:
-        title: Notification title (can be dict with 'en' and 'si' keys)
-        message: Notification message (can be dict with 'en' and 'si' keys)
-        target_roles: List of role strings, e.g., ["student", "citizen"] or ["all"]
-        notification_type: Type from NotificationType enum
-        priority: Priority level from NotificationPriority enum
-        expires_in_days: Days until notification expires (None = never)
-        metadata: Additional data (dict)
-        category: Category for filtering (optional)
-        action_url: URL to navigate when clicked (optional)
-    """
+    """Create a new notification - FIXED"""
     notification = {
         "title": title,
         "message": message,
-        "target_roles": target_roles,
+        "target_categories": target_categories if isinstance(target_categories, list) else [target_categories],
+        "target_roles": ["all"] if "all" in target_categories else [],
         "type": notification_type,
         "priority": priority,
         "category": category,
         "action_url": action_url,
         "metadata": metadata or {},
-        "created_at": datetime.utcnow(),
-        "created_by": None,  # Can be set to admin_id if needed
+        "created_at": get_utc_now(),
+        "created_by": None,
         "is_active": True,
         "read_count": 0,
         "total_recipients": 0
@@ -3511,9 +3499,10 @@ def create_notification(
     
     # Set expiration if specified
     if expires_in_days:
-        notification["expires_at"] = datetime.utcnow() + timedelta(days=expires_in_days)
+        notification["expires_at"] = get_utc_now() + timedelta(days=expires_in_days)
     
     result = notifications_col.insert_one(notification)
+    print(f"✅ Created notification: {title.get('en') if isinstance(title, dict) else title}")
     return str(result.inserted_id)
 
 def get_user_notifications(user_id, role, lang="en", unread_only=False, limit=50):
@@ -4060,6 +4049,7 @@ def example_notification_creation():
 # INITIALIZATION & STARTUP
 # ============================================
 # Replace the bottom section of app.py (after line 2300+) with this:
+
 @app.route("/api/user/notifications", methods=["GET"])
 def api_get_user_notifications():
     """Get notifications for current user based on their profile categories"""
@@ -4068,42 +4058,46 @@ def api_get_user_notifications():
         if not user_id:
             return jsonify({"error": "Not authenticated"}), 401
         
-        # Get user profile to determine categories
+        # Get user profile
         user = users_col.find_one({"_id": ObjectId(user_id)})
         if not user:
             return jsonify({"error": "User not found"}), 404
         
-        # Extract user categories from profile
+        # Extract user categories
         user_categories = extract_user_categories(user)
         
         # Get query parameters
         lang = request.args.get("lang", "en")
         unread_only = request.args.get("unread_only", "false").lower() == "true"
         limit = int(request.args.get("limit", 50))
-        category_filter = request.args.get("category")
         
-        # Build notification query based on user categories
+        # Build notification query - FIXED
+        current_time = get_utc_now()
         query = {
             "is_active": True,
-            "$or": [
-                {"target_categories": {"$in": user_categories}},
-                {"target_categories": "all"},
-                {"target_roles": "all"}
+            "$and": [
+                {
+                    "$or": [
+                        {"target_categories": {"$in": user_categories}},
+                        {"target_categories": "all"},
+                        {"target_roles": "all"}
+                    ]
+                },
+                {
+                    "$or": [
+                        {"expires_at": {"$exists": False}},
+                        {"expires_at": {"$gt": current_time}}
+                    ]
+                }
             ]
         }
-        
-        # Add category filter if specified
-        if category_filter and category_filter != "all":
-            query["category"] = category_filter
-        
-        # Check expiration
-        query["$or"].append({"expires_at": {"$exists": False}})
-        query["$or"].append({"expires_at": {"$gte": get_utc_now()}})
         
         # Fetch notifications
         notifications = list(notifications_col.find(query)
                            .sort("created_at", -1)
                            .limit(limit))
+        
+        print(f"✅ Found {len(notifications)} total notifications for user categories: {user_categories}")
         
         # Get read status
         read_notifications = notification_reads_col.find(
@@ -4145,6 +4139,8 @@ def api_get_user_notifications():
         # Get unread count
         unread_count = len([n for n in notifications if n["_id"] not in read_ids])
         
+        print(f"✅ Returning {len(result)} notifications, {unread_count} unread")
+        
         return jsonify({
             "success": True,
             "notifications": result,
@@ -4154,16 +4150,18 @@ def api_get_user_notifications():
         })
     
     except Exception as e:
-        print(f"Error fetching notifications: {e}")
+        print(f"❌ Error fetching notifications: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
 def extract_user_categories(user):
-    """Extract all applicable categories from user profile"""
+    """Extract all applicable categories from user profile - FIXED"""
     categories = set()
     
-    # Basic categories
-    categories.add("citizen")  # Everyone is a citizen
+    # Basic categories - EVERYONE gets these
+    categories.add("citizen")
+    categories.add("all")  # Added for "all" target
     
     # From occupation/job
     occupation = (user.get("occupation") or user.get("job") or "").lower()
@@ -4189,23 +4187,15 @@ def extract_user_categories(user):
     if user.get("service_preferences"):
         categories.update(user["service_preferences"])
     
-    if user.get("hobbies"):
-        categories.update(user["hobbies"])
-    
     # From extended profile
     extended = user.get("extended_profile", {})
     
     # Career-based categories
     career = extended.get("career", {})
-    if career.get("current_job"):
-        categories.add(career["current_job"].lower())
-    
     if career.get("career_goals"):
         goals = career["career_goals"]
         if isinstance(goals, list):
             categories.update(goals)
-        elif isinstance(goals, str):
-            categories.add(goals.lower())
     
     # Education-based categories
     education = extended.get("education", {})
@@ -4216,8 +4206,6 @@ def extract_user_categories(user):
             categories.add("student")
         if "bachelor" in qualification or "degree" in qualification:
             categories.add("degree_holder")
-        if "master" in qualification or "phd" in qualification or "doctorate" in qualification:
-            categories.add("postgraduate")
     
     # Family-based categories
     family = extended.get("family", {})
@@ -4231,33 +4219,130 @@ def extract_user_categories(user):
                 categories.add("parent_school_age")
                 break
     
-    if family.get("marital_status") == "married":
-        categories.add("married")
-    
     # Age-based categories
     age = user.get("age")
     if age:
         if age < 18:
             categories.add("minor")
+            categories.add("student")
         elif age <= 25:
             categories.add("young_adult")
             categories.add("youth")
         elif age <= 40:
             categories.add("young_professional")
-            categories.add("adult")
         elif age <= 60:
             categories.add("middle_aged")
-            categories.add("adult")
         else:
             categories.add("senior_citizen")
-            categories.add("elderly")
-    
-    # Location-based
-    if user.get("district"):
-        categories.add(f"district_{user['district'].lower().replace(' ', '_')}")
     
     # Convert set to list and filter out empty strings
-    return list(filter(None, categories))
+    result = list(filter(None, categories))
+    print(f"📋 User categories: {result}")
+    return result
+def create_sample_notifications():
+    """Create sample notifications for testing"""
+    try:
+        # Check if we already have notifications
+        existing = notifications_col.count_documents({})
+        if existing > 0:
+            print(f"ℹ️  {existing} notifications already exist, skipping sample creation")
+            return
+        
+        print("🔔 Creating sample notifications...")
+        
+        # 1. Government employee notification
+        create_notification(
+            title={
+                "en": "GOVERNMENT EMPLOYEES ONLY: Salary Update",
+                "si": "රජයේ සේවකයන්ට පමණක්: වැටුප් යාවත්කාලීනය"
+            },
+            message={
+                "en": "New salary scales for public servants. Check your grade now.",
+                "si": "රාජ්‍ය සේවකයන් සඳහා නව වැටුප් පරිමාණ. ඔබේ ශ්‍රේණිය දැන් පරීක්ෂා කරන්න."
+            },
+            target_categories=["government_employee", "public"],
+            notification_type="announcement",
+            priority="urgent",
+            category="employment",
+            expires_in_days=7
+        )
+        
+        # 2. Parent notification
+        create_notification(
+            title={
+                "en": "PARENTS ONLY: School Registration",
+                "si": "දෙමාපියන්ට පමණක්: පාසල් ලියාපදිංචිය"
+            },
+            message={
+                "en": "Grade 1 admission for 2027. Register your child before Feb 15.",
+                "si": "2027 සඳහා 1 ශ්‍රේණිය ඇතුළත් කිරීම. පෙබරවාරි 15 ට පෙර ඔබේ දරුවා ලියාපදිංචි කරන්න."
+            },
+            target_categories=["parent", "parent_school_age"],
+            notification_type="announcement",
+            priority="high",
+            category="education",
+            expires_in_days=14
+        )
+        
+        # 3. Tech professionals notification
+        create_notification(
+            title={
+                "en": "TECH PROFESSIONALS ONLY: Hackathon",
+                "si": "තාක්ෂණික වෘත්තිකයන්ට පමණක්: හැකතෝන්"
+            },
+            message={
+                "en": "Join Colombo AI Hackathon 2026. Win LKR 500,000! Register now.",
+                "si": "කොළඹ AI හැකතෝන් 2026 සමඟ එක්වන්න. රු. 500,000 ජයග්‍රහණය කරන්න!"
+            },
+            target_categories=["tech_professional", "programmer", "developer", "engineer"],
+            notification_type="training",
+            priority="medium",
+            category="technology",
+            action_url="/training",
+            expires_in_days=30
+        )
+        
+        # 4. Student notification
+        create_notification(
+            title={
+                "en": "STUDENTS ONLY: Free A/L Classes",
+                "si": "සිසුන්ට පමණක්: නොමිලේ උ/පෙළ පන්ති"
+            },
+            message={
+                "en": "Government scholarship: Free A/L tuition for all students. Apply now!",
+                "si": "රජයේ ශිෂ්‍යත්වය: සියලුම සිසුන් සඳහා නොමිලේ උ/පෙළ ඉගැන්වීම. දැන් අයදුම් කරන්න!"
+            },
+            target_categories=["student", "youth", "young_adult"],
+            notification_type="training",
+            priority="high",
+            category="education",
+            action_url="/training",
+            expires_in_days=20
+        )
+        
+        # 5. All users notification
+        create_notification(
+            title={
+                "en": "System Maintenance Notice",
+                "si": "පද්ධති නඩත්තු දැන්වීම"
+            },
+            message={
+                "en": "Portal will be down for maintenance on Jan 26 from 10 PM - 2 AM",
+                "si": "ජනවාරි 26 රාත්‍රී 10 - පෙ.ව. 2 දක්වා නඩත්තු කටයුතු සඳහා ද්වාරය අක්‍රිය වේ"
+            },
+            target_categories=["all"],
+            notification_type="system_alert",
+            priority="urgent",
+            category="system",
+            expires_in_days=3
+        )
+        
+        print("✅ Created 5 sample notifications")
+        
+    except Exception as e:
+        print(f"❌ Error creating sample notifications: {e}")
+
+
 @app.route("/api/user/notifications/unread-count", methods=["GET"])
 def api_get_unread_count():
     """Get unread notification count for current user"""
@@ -4464,6 +4549,7 @@ def api_get_user_categories():
         print(f"Error getting user categories: {e}")
         return jsonify({"error": str(e)}), 500
 if __name__ == "__main__":
+    create_sample_notifications()
     # Ensure admin exists
     if admins_col.count_documents({}) == 0:
         pwd = os.getenv("ADMIN_PWD", "admin123")
